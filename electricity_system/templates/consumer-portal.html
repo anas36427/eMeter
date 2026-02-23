@@ -1,0 +1,351 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerGrid - Consumer Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <style>
+        :root {
+            --primary: #0B4F9F;
+            --primary-light: #1565C0;
+            --accent: #00B4D8;
+            --gray-100: #F8FAFC;
+            --gray-200: #F1F5F9;
+            --gray-300: #E2E8F0;
+            --gray-500: #94A3B8;
+            --gray-600: #64748B;
+            --gray-700: #475569;
+            --gray-900: #1E293B;
+            --success: #06C270;
+            --danger: #EF4444;
+            --sidebar-width: 280px;
+            --topbar-height: 70px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--gray-100); color: var(--gray-900); overflow-x: hidden; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                </div>
+                <div class="logo-text">
+                    <h4>PowerGrid</h4>
+                    <span>Consumer Portal</span>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul>
+                <li class="active">
+                    <a href="{% url 'consumer_dashboard' %}">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'consumer_bills' %}">
+                        <i class="bi bi-receipt"></i>
+                        <span>My Bills</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <a href="{% url 'logout' %}" class="logout-btn">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navbar -->
+        <nav class="topbar">
+            <div class="topbar-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Search bills, transactions...">
+                </div>
+            </div>
+            <div class="topbar-right">
+                <button class="icon-btn">
+                    <i class="bi bi-bell-fill"></i>
+                    <span class="badge">1</span>
+                </button>
+                <div class="user-menu">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ consumer.name }}" alt="Consumer">
+                    <div class="user-info">
+                        <span class="user-name">{{ consumer.name }}</span>
+                        <span class="user-role">{{ consumer.meter_number }}</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Content -->
+        <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Welcome Back, {{ consumer.name }}!</h1>
+                    <p class="page-subtitle">View your bills and manage payments</p>
+                </div>
+            </div>
+
+            <!-- Current Bill Card -->
+            {% if current_bill %}
+            <div class="bill-card">
+                <div class="bill-header">
+                    <div class="bill-info">
+                        <p style="margin-bottom: 8px; opacity: 0.9;">Current Bill Amount</p>
+                        <h2>₹{{ current_bill.total_amount|floatformat:2 }}</h2>
+                        <p>Due Date: {{ current_bill.due_date }}</p>
+                    </div>
+                    <div class="bill-status-badge">
+                        {{ current_bill.status|title }}
+                    </div>
+                </div>
+                
+                <div class="bill-details-grid">
+                    <div class="bill-detail-item">
+                        <span>Billing Period</span>
+                        <strong>{{ current_bill.billing_period|date:"M Y" }}</strong>
+                    </div>
+                    <div class="bill-detail-item">
+                        <span>Units Consumed</span>
+                        <strong>{{ current_bill.units }} kWh</strong>
+                    </div>
+                    <div class="bill-detail-item">
+                        <span>Rate per kWh</span>
+                        <strong>₹{{ current_bill.rate_per_unit }}</strong>
+                    </div>
+                </div>
+                
+                <div class="bill-actions">
+                    <a href="{% url 'make_payment' current_bill.id %}" class="btn btn-white">
+                        <i class="bi bi-credit-card"></i>
+                        Pay Now
+                    </a>
+                    <button class="btn btn-outline-white" onclick="downloadInvoice()">
+                        <i class="bi bi-download"></i>
+                        Download Invoice
+                    </button>
+                    <button class="btn btn-outline-white" data-bs-toggle="modal" data-bs-target="#billDetailsModal">
+                        <i class="bi bi-eye"></i>
+                        View Details
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="bill-card" style="background: linear-gradient(135deg, #06C270 0%, #10B981 100%);">
+                <div class="bill-header">
+                    <div class="bill-info">
+                        <h2>All Bills Paid!</h2>
+                        <p>You have no pending bills</p>
+                    </div>
+                    <div class="bill-status-badge" style="background: rgba(255,255,255,0.3);">
+                        Paid
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row g-4">
+                <!-- Payment History -->
+                <div class="col-lg-8">
+                    <div class="data-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-clock-history"></i>
+                                Payment History
+                            </h5>
+                        </div>
+                        <div class="payment-history-list">
+                            {% for payment in payment_history %}
+                            <div class="payment-history-item">
+                                <div class="payment-info-left">
+                                    <div class="payment-icon paid">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <h6>{{ payment.bill.billing_period|date:"F Y" }}</h6>
+                                        <p>Paid on {{ payment.payment_date|date:"M d, Y" }} • Ref: {{ payment.transaction_id }}</p>
+                                    </div>
+                                </div>
+                                <div class="payment-amount">
+                                    <h5>₹{{ payment.amount|floatformat:2 }}</h5>
+                                    <span>Paid</span>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="payment-history-item">
+                                <p class="text-center py-4 w-100">No payment history</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="col-lg-4">
+                    <div class="data-card mb-4">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-graph-up"></i>
+                                Usage Overview
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            {% if recent_readings %}
+                            <div class="usage-stat">
+                                <div class="usage-label">This Month</div>
+                                <div class="usage-value">{{ recent_readings.0.units_consumed }} kWh</div>
+                                {% if usage_comparison != 0 %}
+                                <div class="usage-comparison">
+                                    <i class="bi bi-arrow-{% if usage_comparison > 0 %}up text-danger{% else %}down text-success{% endif %}"></i>
+                                    <span>{{ usage_comparison|floatformat:1 }}% {% if usage_comparison > 0 %}more{% else %}less{% endif %} than last month</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <p class="text-center py-3">No usage data</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-info-circle"></i>
+                                Account Info
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="info-item">
+                                <span class="info-label">Meter Number</span>
+                                <span class="info-value">{{ consumer.meter_number }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Consumer ID</span>
+                                <span class="info-value">{{ consumer.consumer_number }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Connection Type</span>
+                                <span class="info-value">{{ consumer.get_connection_type_display }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Registered Address</span>
+                                <span class="info-value">{{ consumer.address }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bill Details Modal -->
+    {% if current_bill %}
+    <div class="modal fade" id="billDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt"></i>
+                        Invoice Details - {{ current_bill.billing_period|date:"F Y" }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="invoice-details">
+                        <div class="invoice-header-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Bill To:</h6>
+                                    <p class="mb-1"><strong>{{ consumer.name }}</strong></p>
+                                    <p class="mb-1">{{ consumer.address }}</p>
+                                    <p class="mb-1">Phone: {{ consumer.phone }}</p>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <h6>Invoice Details:</h6>
+                                    <p class="mb-1"><strong>Invoice #:</strong> INV-{{ current_bill.id }}</p>
+                                    <p class="mb-1"><strong>Date:</strong> {{ current_bill.created_at|date:"M d, Y" }}</p>
+                                    <p class="mb-1"><strong>Due Date:</strong> {{ current_bill.due_date }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="invoice-table">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Units</th>
+                                        <th>Rate</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Electricity Consumption</td>
+                                        <td>{{ current_bill.units }} kWh</td>
+                                        <td>₹{{ current_bill.rate_per_unit }}/kWh</td>
+                                        <td class="text-end">₹{{ current_bill.energy_charges|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Fixed Service Charge</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td class="text-end">₹{{ current_bill.fixed_charges|floatformat:2 }}</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
+                                        <td class="text-end"><strong>₹{{ current_bill.total_amount|floatformat:2 }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="{% url 'make_payment' current_bill.id %}" class="btn btn-primary">
+                        <i class="bi bi-credit-card"></i>
+                        Pay Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <script src="{% static 'consumer.js' %}"></script>
+    <script>
+        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
+

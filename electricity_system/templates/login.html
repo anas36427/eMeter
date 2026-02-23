@@ -1,0 +1,448 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerGrid - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0B4F9F;
+            --primary-dark: #073A75;
+            --primary-light: #1565C0;
+            --accent: #00B4D8;
+            --gray-200: #E2E8F0;
+            --gray-300: #CBD5E1;
+            --gray-500: #94A3B8;
+            --gray-600: #64748B;
+            --gray-700: #475569;
+            --gray-900: #1E293B;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(0, 180, 216, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 8s ease-in-out infinite;
+        }
+        
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 180, 216, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 10s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .login-box {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .login-left {
+            flex: 1;
+            padding: 60px 50px;
+            background: linear-gradient(135deg, rgba(0, 180, 216, 0.05) 0%, rgba(11, 79, 159, 0.05) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border-right: 1px solid var(--gray-200);
+        }
+        
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(0, 180, 216, 0.3);
+        }
+        
+        .login-left h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 16px;
+        }
+        
+        .login-left p {
+            font-size: 16px;
+            color: var(--gray-600);
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .feature-list {
+            text-align: left;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .feature-text h6 {
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 0 0 4px;
+            font-size: 15px;
+        }
+        
+        .feature-text p {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin: 0;
+        }
+        
+        .login-right {
+            flex: 1;
+            padding: 60px 50px;
+        }
+        
+        .login-header { margin-bottom: 40px; }
+        
+        .login-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+        
+        .login-header p { color: var(--gray-600); font-size: 15px; }
+        
+        .role-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: var(--gray-200);
+            padding: 6px;
+            border-radius: 12px;
+        }
+        
+        .role-tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .role-tab.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group { margin-bottom: 24px; }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .form-control {
+            padding: 14px 16px;
+            border: 2px solid var(--gray-300);
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(0, 180, 216, 0.1);
+        }
+        
+        .password-toggle { position: relative; }
+        
+        .password-toggle button {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .form-check-label { font-size: 14px; color: var(--gray-700); }
+        
+        .forgot-link {
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(11, 79, 159, 0.3);
+        }
+        
+        .login-footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+        
+        .login-footer a {
+            color: var(--accent);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .alert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .login-box { flex-direction: column; }
+            .login-left {
+                padding: 40px 30px;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+            .login-right { padding: 40px 30px; }
+            .login-left h1 { font-size: 32px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="login-left">
+            <div class="login-logo">
+                <i class="bi bi-lightning-charge-fill"></i>
+            </div>
+            <h1>PowerGrid</h1>
+            <p>Modern Electricity Billing Management System</p>
+            
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>Secure Access</h6>
+                        <p>Protected login system</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>Real-time Data</h6>
+                        <p>Live meter readings</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>Analytics</h6>
+                        <p>Track consumption patterns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="login-right">
+            <div class="login-header">
+                <h2>Welcome Back</h2>
+                <p>Sign in to your account to continue</p>
+            </div>
+            
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                
+                <div class="role-tabs">
+                    <button type="button" class="role-tab active" data-role="admin" onclick="selectRole('admin')">Admin</button>
+                    <button type="button" class="role-tab" data-role="meter_reader" onclick="selectRole('meter_reader')">Reader</button>
+                    <button type="button" class="role-tab" data-role="consumer" onclick="selectRole('consumer')">Consumer</button>
+                </div>
+                
+                <input type="hidden" name="role" id="selectedRole" value="admin">
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="bi bi-person-fill"></i>
+                        Username
+                    </label>
+                    <input type="text" class="form-control" name="username" placeholder="Enter your username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="bi bi-lock-fill"></i>
+                        Password
+                    </label>
+                    <div class="password-toggle">
+                        <input type="password" class="form-control" name="password" id="passwordInput" placeholder="Enter your password" required>
+                        <button type="button" onclick="togglePassword()">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="remember-forgot">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe">Remember me</label>
+                    </div>
+                    <a href="#" class="forgot-link">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    Sign In
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <p>Don't have an account? <a href="#">Contact Administrator</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+        
+        function selectRole(role) {
+            document.querySelectorAll('.role-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[data-role="${role}"]`).classList.add('active');
+            document.getElementById('selectedRole').value = role;
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,553 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PowerGrid - Admin Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'styles.css' %}" />
+    <style>
+      :root {
+        --primary: #0b4f9f;
+        --primary-dark: #073a75;
+        --primary-light: #1565c0;
+        --accent: #00b4d8;
+        --accent-light: #48cae4;
+        --success: #06c270;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --dark: #0f172a;
+        --gray-900: #1e293b;
+        --gray-800: #334155;
+        --gray-700: #475569;
+        --gray-600: #64748b;
+        --gray-500: #94a3b8;
+        --gray-400: #cbd5e1;
+        --gray-300: #e2e8f0;
+        --gray-200: #f1f5f9;
+        --gray-100: #f8fafc;
+        --white: #ffffff;
+        --sidebar-width: 280px;
+        --topbar-height: 70px;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--gray-100);
+        color: var(--gray-900);
+        overflow-x: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon">
+            <i class="bi bi-lightning-charge-fill"></i>
+          </div>
+          <div class="logo-text">
+            <h4>PowerGrid</h4>
+            <span>Admin Portal</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li class="active">
+            <a href="{% url 'admin_dashboard' %}">
+              <i class="bi bi-grid-fill"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'manage_consumers' %}">
+              <i class="bi bi-people-fill"></i>
+              <span>Manage Consumers</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'meter_readings' %}">
+              <i class="bi bi-speedometer2"></i>
+              <span>Meter Readings</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'bills' %}">
+              <i class="bi bi-receipt"></i>
+              <span>Bills</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'payments' %}">
+              <i class="bi bi-cash-coin"></i>
+              <span>Payments</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="{% url 'logout' %}" class="logout-btn">
+          <i class="bi bi-box-arrow-left"></i>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Top Navbar -->
+      <nav class="topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle" id="sidebarToggle">
+            <i class="bi bi-list"></i>
+          </button>
+          <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input
+              type="text"
+              placeholder="Search consumers, bills, readings..."
+            />
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn">
+            <i class="bi bi-bell-fill"></i>
+            <span class="badge">3</span>
+          </button>
+          <div class="user-menu">
+            <img
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin"
+              alt="Admin"
+            />
+            <div class="user-info">
+              <span class="user-name">{{ user.username }}</span>
+              <span class="user-role">System Administrator</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Dashboard Content -->
+      <div class="content-area">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Dashboard Overview</h1>
+            <p class="page-subtitle">
+              Monitor your electricity billing operations
+            </p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-outline-primary">
+              <i class="bi bi-download"></i>
+              Export Report
+            </button>
+            <button
+              class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#generateBillModal"
+            >
+              <i class="bi bi-plus-lg"></i>
+              Generate Bill
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card stat-primary">
+            <div class="stat-icon">
+              <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ total_consumers }}</h3>
+              <p>Total Consumers</p>
+              <div class="stat-trend positive">
+                <i class="bi bi-arrow-up"></i>
+                <span>{{ active_consumers }} active</span>
+              </div>
+            </div>
+            <div class="stat-chart">
+              <svg viewBox="0 0 100 30">
+                <polyline
+                  points="0,20 20,15 40,18 60,10 80,12 100,5"
+                  stroke="currentColor"
+                  fill="none"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div class="stat-card stat-success">
+            <div class="stat-icon">
+              <i class="bi bi-receipt"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ total_bills }}</h3>
+              <p>Bills Generated</p>
+              <div class="stat-trend positive">
+                <i class="bi bi-arrow-up"></i>
+                <span>{{ paid_bills }} paid</span>
+              </div>
+            </div>
+            <div class="stat-chart">
+              <svg viewBox="0 0 100 30">
+                <polyline
+                  points="0,25 20,20 40,15 60,18 80,10 100,8"
+                  stroke="currentColor"
+                  fill="none"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div class="stat-card stat-warning">
+            <div class="stat-icon">
+              <i class="bi bi-currency-rupee"></i>
+            </div>
+            <div class="stat-content">
+              <h3>₹{{ total_revenue|floatformat:2 }}</h3>
+              <p>Total Revenue</p>
+              <div class="stat-trend positive">
+                <i class="bi bi-arrow-up"></i>
+                <span>From paid bills</span>
+              </div>
+            </div>
+            <div class="stat-chart">
+              <svg viewBox="0 0 100 30">
+                <polyline
+                  points="0,22 20,18 40,20 60,12 80,15 100,6"
+                  stroke="currentColor"
+                  fill="none"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div class="stat-card stat-danger">
+            <div class="stat-icon">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ unpaid_bills }}</h3>
+              <p>Pending Payments</p>
+              <div class="stat-trend negative">
+                <i class="bi bi-arrow-down"></i>
+                <span>{{ overdue_bills }} overdue</span>
+              </div>
+            </div>
+            <div class="stat-chart">
+              <svg viewBox="0 0 100 30">
+                <polyline
+                  points="0,15 20,18 40,12 60,20 80,16 100,22"
+                  stroke="currentColor"
+                  fill="none"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tables Section -->
+        <div class="row g-4 mt-1">
+          <!-- Consumer List -->
+          <div class="col-lg-8">
+            <div class="data-card">
+              <div class="card-header-custom">
+                <h5 class="card-title-custom">
+                  <i class="bi bi-people"></i>
+                  Recent Consumers
+                </h5>
+                <div class="card-actions">
+                  <a
+                    href="{% url 'manage_consumers' %}"
+                    class="btn btn-sm btn-primary"
+                    >View All</a
+                  >
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table custom-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Meter No</th>
+                      <th>Address</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for consumer in recent_consumers %}
+                    <tr>
+                      <td>
+                        <div class="user-cell">
+                          <img
+                            src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ consumer.name }}"
+                            alt=""
+                          />
+                          <span>{{ consumer.name }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="meter-no"
+                          >{{ consumer.meter_number }}</span
+                        >
+                      </td>
+                      <td>{{ consumer.address|truncatechars:30 }}</td>
+                      <td>
+                        <span
+                          class="badge-status {% if consumer.status == 'active' %}active{% else %}inactive{% endif %}"
+                          >{{ consumer.status }}</span
+                        >
+                      </td>
+                      <td>
+                        <div class="action-buttons">
+                          <button class="btn-action" title="View">
+                            <i class="bi bi-eye"></i>
+                          </button>
+                          <button class="btn-action" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                          </button>
+                          <button class="btn-action" title="Bill">
+                            <i class="bi bi-receipt"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center py-4">
+                        No consumers found
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Readings -->
+          <div class="col-lg-4">
+            <div class="data-card mb-4">
+              <div class="card-header-custom">
+                <h5 class="card-title-custom">
+                  <i class="bi bi-speedometer2"></i>
+                  Recent Readings
+                </h5>
+              </div>
+              <div class="recent-list">
+                {% for reading in recent_readings %}
+                <div class="recent-item">
+                  <div class="recent-icon primary">
+                    <i class="bi bi-lightning-charge"></i>
+                  </div>
+                  <div class="recent-info">
+                    <h6>{{ reading.consumer.meter_number }}</h6>
+                    <p>{{ reading.units_consumed }} kWh</p>
+                    <span class="recent-time">{{ reading.reading_date }}</span>
+                  </div>
+                </div>
+                {% empty %}
+                <p class="text-center py-3">No readings yet</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="data-card">
+              <div class="card-header-custom">
+                <h5 class="card-title-custom">
+                  <i class="bi bi-receipt"></i>
+                  Bill Status
+                </h5>
+              </div>
+              <div class="bill-stats">
+                <div class="bill-stat-item">
+                  <div class="bill-stat-label">
+                    <span class="dot paid"></span>
+                    Paid Bills
+                  </div>
+                  <div class="bill-stat-value">{{ paid_bills }}</div>
+                  <div class="bill-stat-bar">
+                    <div
+                      class="bill-stat-progress"
+                      style="width: {% if total_bills > 0 %}{{ paid_bills|div:total_bills|mul:100 }}{% else %}0{% endif %}%"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bill-stat-item">
+                  <div class="bill-stat-label">
+                    <span class="dot pending"></span>
+                    Pending
+                  </div>
+                  <div class="bill-stat-value">{{ unpaid_bills }}</div>
+                  <div class="bill-stat-bar">
+                    <div
+                      class="bill-stat-progress pending"
+                      style="width: {% if total_bills > 0 %}{{ unpaid_bills|div:total_bills|mul:100 }}{% else %}0{% endif %}%"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bill-stat-item">
+                  <div class="bill-stat-label">
+                    <span class="dot overdue"></span>
+                    Overdue
+                  </div>
+                  <div class="bill-stat-value">{{ overdue_bills }}</div>
+                  <div class="bill-stat-bar">
+                    <div
+                      class="bill-stat-progress overdue"
+                      style="width: {% if total_bills > 0 %}{{ overdue_bills|div:total_bills|mul:100 }}{% else %}0{% endif %}%"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate Bill Modal -->
+    <div class="modal fade" id="generateBillModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-receipt"></i>
+              Generate New Bill
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <form method="POST" action="{% url 'generate_bill' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Select Consumer</label>
+                <select class="form-select" name="consumer" required>
+                  <option value="">Choose consumer...</option>
+                  {% for consumer in consumers %}
+                  <option value="{{ consumer.id }}">
+                    {{ consumer.name }} ({{ consumer.meter_number }})
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Billing Period</label>
+                <input
+                  type="month"
+                  class="form-control"
+                  name="billing_period"
+                  required
+                />
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Units Consumed</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    name="units"
+                    required
+                  />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Rate per kWh (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    name="rate_per_unit"
+                    value="7.50"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Fixed Charges (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  class="form-control"
+                  name="fixed_charges"
+                  value="125.00"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Due Date</label>
+                <input
+                  type="date"
+                  class="form-control"
+                  name="due_date"
+                  required
+                />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg"></i>
+                Generate Bill
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <script>
+      // Set minimum due date to today
+      document.querySelector('input[name="due_date"]').min = new Date()
+        .toISOString()
+        .split("T")[0];
+
+      // Sidebar toggle
+      document
+        .getElementById("sidebarToggle")
+        ?.addEventListener("click", function () {
+          const sidebar = document.getElementById("sidebar");
+          sidebar.classList.toggle("active");
+        });
+    </script>
+  </body>
+</html>

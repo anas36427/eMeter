@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerGrid - Consumer Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                </div>
+                <div class="logo-text">
+                    <h4>PowerGrid</h4>
+                    <span>Consumer Portal</span>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul>
+                <li class="active">
+                    <a href="consumer-portal.html">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="current-bill.html">
+                        <i class="bi bi-receipt"></i>
+                        <span>Current Bill</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="payment-history.html">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Payment History</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="consumption.html">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>Consumption</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="profile.html">
+                        <i class="bi bi-person-circle"></i>
+                        <span>My Profile</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <a href="login.html" class="logout-btn">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navbar -->
+        <nav class="topbar">
+            <div class="topbar-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Search bills, transactions...">
+                </div>
+            </div>
+            <div class="topbar-right">
+                <button class="icon-btn">
+                    <i class="bi bi-bell-fill"></i>
+                    <span class="badge">1</span>
+                </button>
+                <div class="user-menu">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" alt="Consumer">
+                    <div class="user-info">
+                        <span class="user-name">John Martinez</span>
+                        <span class="user-role">MTR-2024-001</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Content -->
+        <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Welcome Back, John!</h1>
+                    <p class="page-subtitle">View your bills and manage payments</p>
+                </div>
+            </div>
+
+            <!-- Current Bill Card -->
+            <div class="bill-card">
+                <div class="bill-header">
+                    <div class="bill-info">
+                        <p style="margin-bottom: 8px; opacity: 0.9;">Current Bill Amount</p>
+                        <h2>₹3,500.00</h2>
+                        <p>Due Date: February 28, 2026</p>
+                    </div>
+                    <div class="bill-status-badge">
+                        Unpaid
+                    </div>
+                </div>
+                
+                <div class="bill-details-grid">
+                    <div class="bill-detail-item">
+                        <span>Billing Period</span>
+                        <strong>Jan 2026</strong>
+                    </div>
+                    <div class="bill-detail-item">
+                        <span>Units Consumed</span>
+                        <strong>450 kWh</strong>
+                    </div>
+                    <div class="bill-detail-item">
+                        <span>Rate per kWh</span>
+                        <strong>₹7.50</strong>
+                    </div>
+                </div>
+                
+                <div class="bill-actions">
+                    <button class="btn btn-white">
+                        <i class="bi bi-credit-card"></i>
+                        Pay Now
+                    </button>
+                    <button class="btn btn-outline-white" onclick="downloadInvoice()">
+                        <i class="bi bi-download"></i>
+                        Download Invoice
+                    </button>
+                    <button class="btn btn-outline-white" data-bs-toggle="modal" data-bs-target="#billDetailsModal">
+                        <i class="bi bi-eye"></i>
+                        View Details
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Payment History -->
+                <div class="col-lg-8">
+                    <div class="data-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-clock-history"></i>
+                                Payment History
+                            </h5>
+                            <div class="card-actions">
+                                <select class="form-select form-select-sm">
+                                    <option>Last 6 Months</option>
+                                    <option>Last Year</option>
+                                    <option>All Time</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="payment-history-list">
+                            <div class="payment-history-item">
+                                <div class="payment-info-left">
+                                    <div class="payment-icon paid">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <h6>December 2025</h6>
+                                        <p>Paid on Jan 5, 2026 • Ref: TXN2026001</p>
+                                    </div>
+                                </div>
+                                <div class="payment-amount">
+                                    <h5>₹3,300.00</h5>
+                                    <span>Paid</span>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-history-item">
+                                <div class="payment-info-left">
+                                    <div class="payment-icon paid">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <h6>November 2025</h6>
+                                        <p>Paid on Dec 3, 2025 • Ref: TXN2025234</p>
+                                    </div>
+                                </div>
+                                <div class="payment-amount">
+                                    <h5>₹3,050.00</h5>
+                                    <span>Paid</span>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-history-item">
+                                <div class="payment-info-left">
+                                    <div class="payment-icon paid">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <h6>October 2025</h6>
+                                        <p>Paid on Nov 8, 2025 • Ref: TXN2025189</p>
+                                    </div>
+                                </div>
+                                <div class="payment-amount">
+                                    <h5>₹3,480.00</h5>
+                                    <span>Paid</span>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-history-item">
+                                <div class="payment-info-left">
+                                    <div class="payment-icon paid">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <h6>September 2025</h6>
+                                        <p>Paid on Oct 2, 2025 • Ref: TXN2025145</p>
+                                    </div>
+                                </div>
+                                <div class="payment-amount">
+                                    <h5>₹2,810.00</h5>
+                                    <span>Paid</span>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-history-item">
+                                <div class="payment-info-left">
+                                    <div class="payment-icon paid">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <h6>August 2025</h6>
+                                        <p>Paid on Sep 5, 2025 • Ref: TXN2025098</p>
+                                    </div>
+                                </div>
+                                <div class="payment-amount">
+                                    <h5>₹3,790.00</h5>
+                                    <span>Paid</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="col-lg-4">
+                    <div class="data-card mb-4">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-graph-up"></i>
+                                Usage Overview
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="usage-stat">
+                                <div class="usage-label">This Month</div>
+                                <div class="usage-value">450 kWh</div>
+                                <div class="usage-comparison">
+                                    <i class="bi bi-arrow-up text-danger"></i>
+                                    <span>15% more than last month</span>
+                                </div>
+                            </div>
+                            <div class="usage-chart-placeholder">
+                                <svg viewBox="0 0 200 80">
+                                    <polyline points="0,60 25,55 50,45 75,50 100,35 125,40 150,25 175,30 200,20" 
+                                              stroke="url(#gradient)" fill="none" stroke-width="3" stroke-linecap="round"/>
+                                    <defs>
+                                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" style="stop-color:#0B4F9F;stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:#00B4D8;stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-info-circle"></i>
+                                Account Info
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="info-item">
+                                <span class="info-label">Meter Number</span>
+                                <span class="info-value">MTR-2024-001</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Customer ID</span>
+                                <span class="info-value">CUST-001247</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Connection Type</span>
+                                <span class="info-value">Residential</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Registered Address</span>
+                                <span class="info-value">123 Oak Street, Downtown</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bill Details Modal -->
+    <div class="modal fade" id="billDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt"></i>
+                        Invoice Details - January 2026
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="invoice-details">
+                        <div class="invoice-header-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Bill To:</h6>
+                                    <p class="mb-1"><strong>John Martinez</strong></p>
+                                    <p class="mb-1">123 Oak Street, Downtown</p>
+                                    <p class="mb-1">Phone: (555) 123-4567</p>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <h6>Invoice Details:</h6>
+                                    <p class="mb-1"><strong>Invoice #:</strong> INV-2026-001247</p>
+                                    <p class="mb-1"><strong>Date:</strong> Feb 1, 2026</p>
+                                    <p class="mb-1"><strong>Due Date:</strong> Feb 28, 2026</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="invoice-table">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Units</th>
+                                        <th>Rate</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Electricity Consumption</td>
+                                        <td>450 kWh</td>
+                                        <td>₹7.50/kWh</td>
+                                        <td class="text-end">₹3,375.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Fixed Service Charge</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td class="text-end">₹125.00</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
+                                        <td class="text-end"><strong>₹3,500.00</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="meter-reading-info">
+                            <h6>Meter Reading Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="reading-box">
+                                        <label>Previous Reading</label>
+                                        <strong>1250 kWh</strong>
+                                        <small>Dec 31, 2025</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="reading-box">
+                                        <label>Current Reading</label>
+                                        <strong>1700 kWh</strong>
+                                        <small>Jan 31, 2026</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="reading-box highlight">
+                                        <label>Consumption</label>
+                                        <strong>450 kWh</strong>
+                                        <small>30 Days</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadInvoice()">
+                        <i class="bi bi-download"></i>
+                        Download PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script src="consumer.js"></script>
+</body>
+</html>

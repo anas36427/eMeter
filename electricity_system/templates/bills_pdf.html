@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; color: #1a1a2e; padding: 40px; }
+
+    .header { background: linear-gradient(135deg, #1a1a2e, #0f3460);
+              color: white; padding: 30px 40px;
+              display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 28px; font-weight: 700; }
+    .logo span { color: #e94560; }
+    .bill-no { text-align: right; font-size: 13px; opacity: 0.8; }
+    .bill-no strong { display: block; font-size: 18px; opacity: 1; color: white; }
+
+    .body { padding: 36px 40px; }
+    .section { margin-bottom: 28px; }
+    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                     letter-spacing: 2px; color: #6b7280; margin-bottom: 14px;
+                     border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .info-item label { display: block; font-size: 11px; color: #9ca3af; margin-bottom: 3px; }
+    .info-item span { font-size: 14px; font-weight: 600; }
+
+    .reading-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .reading-box { background: #f8fafc; border-radius: 8px; padding: 14px; text-align: center; }
+    .reading-box .label { font-size: 10px; color: #9ca3af; margin-bottom: 6px; }
+    .reading-box .value { font-size: 22px; font-weight: 700; }
+    .reading-box .unit { font-size: 11px; color: #6b7280; }
+    .reading-box.highlight { background: #e94560; color: white; }
+    .reading-box.highlight .label,
+    .reading-box.highlight .unit { color: rgba(255,255,255,0.75); }
+
+    .charges-table { width: 100%; border-collapse: collapse; }
+    .charges-table td { padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+    .charges-table td:last-child { text-align: right; font-weight: 600; }
+    .charges-table tr.total td { border-top: 2px solid #1a1a2e; border-bottom: none;
+                                  font-size: 15px; font-weight: 700; padding-top: 12px; }
+
+    .due-banner { background: #fff7ed; border: 1.5px solid #fed7aa;
+                  border-radius: 10px; padding: 16px 24px;
+                  display: flex; justify-content: space-between; align-items: center; }
+    .due-amount { font-size: 26px; font-weight: 800; color: #ea580c; }
+    .due-label { font-size: 12px; color: #92400e; margin-bottom: 4px; }
+    .due-date { font-size: 12px; color: #b45309; text-align: right; }
+    .due-date strong { display: block; font-size: 15px; }
+
+    .footer { margin-top: 40px; border-top: 1px solid #e5e7eb;
+               padding-top: 16px; text-align: center;
+               font-size: 11px; color: #9ca3af; }
+
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px;
+                    font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .status-paid { background: #d1fae5; color: #065f46; }
+    .status-unpaid { background: #fee2e2; color: #991b1b; }
+    .status-overdue { background: #fef3c7; color: #92400e; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div class="logo">Power<span>Grid</span></div>
+      <div style="font-size:12px; opacity:0.7; margin-top:4px;">Electricity Billing Statement</div>
+    </div>
+    <div class="bill-no">
+      Bill Number
+      <strong>{{ bill.bill_number }}</strong>
+      {{ bill.billing_period|date:"F Y" }}
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- Consumer Info -->
+    <div class="section">
+      <div class="section-title">Consumer Information</div>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Consumer Name</label>
+          <span>{{ bill.consumer.name }}</span>
+        </div>
+        <div class="info-item">
+          <label>Meter Number</label>
+          <span>{{ bill.consumer.meter_number }}</span>
+        </div>
+        <div class="info-item">
+          <label>Consumer Number</label>
+          <span>{{ bill.consumer.consumer_number }}</span>
+        </div>
+        <div class="info-item">
+          <label>Address</label>
+          <span>{{ bill.consumer.address }}</span>
+        </div>
+        <div class="info-item">
+          <label>Billing Period</label>
+          <span>{{ bill.billing_period|date:"F Y" }}</span>
+        </div>
+        <div class="info-item">
+          <label>Issue Date</label>
+          <span>{{ bill.created_at|date:"d M Y" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meter Readings -->
+    <div class="section">
+      <div class="section-title">Meter Readings</div>
+      <div class="reading-grid">
+        <div class="reading-box">
+          <div class="label">Previous Reading</div>
+          <div class="value">{{ bill.meter_reading.previous_reading }}</div>
+          <div class="unit">kWh</div>
+        </div>
+        <div class="reading-box">
+          <div class="label">Current Reading</div>
+          <div class="value">{{ bill.meter_reading.current_reading }}</div>
+          <div class="unit">kWh</div>
+        </div>
+        <div class="reading-box highlight">
+          <div class="label">Units Consumed</div>
+          <div class="value">{{ bill.units }}</div>
+          <div class="unit">kWh</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charges -->
+    <div class="section">
+      <div class="section-title">Charge Breakdown</div>
+      <table class="charges-table">
+        <tr>
+          <td>Energy Charges ({{ bill.units }} kWh × ₹{{ bill.rate_per_unit }})</td>
+          <td>₹{{ bill.energy_charges }}</td>
+        </tr>
+        <tr>
+          <td>Fixed / Service Charge</td>
+          <td>₹{{ bill.fixed_charges }}</td>
+        </tr>
+        <tr class="total">
+          <td>Total Amount Due</td>
+          <td>₹{{ bill.total_amount }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Due Banner -->
+    <div class="due-banner">
+      <div>
+        <div class="due-label">Amount Due</div>
+        <div class="due-amount">₹{{ bill.total_amount }}</div>
+        <span class="status-badge status-{{ bill.status }}">{{ bill.status|upper }}</span>
+      </div>
+      <div class="due-date">
+        Due Date
+        <strong>{{ bill.due_date|date:"d M Y" }}</strong>
+        {% if bill.status == 'paid' %}
+          <div style="color:#065f46; margin-top:6px;">
+            Paid on {{ bill.paid_date|date:"d M Y" }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    PowerGrid Utility Services India &nbsp;|&nbsp; support@powergrid.in &nbsp;|&nbsp; 1800-XXX-PWRG<br>
+    Please retain this bill for your records.
+  </div>
+
+</body>
+</html>

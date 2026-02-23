@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerGrid - Meter Reader Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                </div>
+                <div class="logo-text">
+                    <h4>PowerGrid</h4>
+                    <span>Reader Portal</span>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="meter-reader.html">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="active">
+                    <a href="assigned-consumers.html">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Assigned Consumers</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="submit-reading.html">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Submit Reading</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="reading-history.html">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Reading History</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <a href="login.html" class="logout-btn">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navbar -->
+        <nav class="topbar">
+            <div class="topbar-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Search consumers, meters...">
+                </div>
+            </div>
+            <div class="topbar-right">
+                <button class="icon-btn">
+                    <i class="bi bi-bell-fill"></i>
+                    <span class="badge">2</span>
+                </button>
+                <div class="user-menu">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Reader" alt="Reader">
+                    <div class="user-info">
+                        <span class="user-name">James Wilson</span>
+                        <span class="user-role">Meter Reader</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Content -->
+        <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Submit Meter Reading</h1>
+                    <p class="page-subtitle">Record electricity consumption for your assigned consumers</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Submit Reading Form -->
+                <div class="col-lg-8">
+                    <div class="data-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-pencil-square"></i>
+                                New Reading Entry
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <form id="submitReadingForm">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-person-fill text-primary"></i>
+                                            Consumer Name *
+                                        </label>
+                                        <select class="form-select" id="consumerSelect" required>
+                                            <option value="">Select consumer...</option>
+                                            <option value="1" data-meter="MTR-2024-001" data-previous="1250">John Martinez (MTR-2024-001)</option>
+                                            <option value="2" data-meter="MTR-2024-002" data-previous="980">Sarah Johnson (MTR-2024-002)</option>
+                                            <option value="3" data-meter="MTR-2024-004" data-previous="1450">Emma Williams (MTR-2024-004)</option>
+                                            <option value="4" data-meter="MTR-2024-005" data-previous="750">David Brown (MTR-2024-005)</option>
+                                            <option value="5" data-meter="MTR-2024-008" data-previous="1100">Lisa Anderson (MTR-2024-008)</option>
+                                        </select>
+                                        <div class="invalid-feedback">
+                                            Please select a consumer.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-hash text-primary"></i>
+                                            Meter Number
+                                        </label>
+                                        <input type="text" class="form-control" id="meterNumber" readonly placeholder="Auto-filled">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-clock text-primary"></i>
+                                            Previous Reading (kWh)
+                                        </label>
+                                        <input type="number" class="form-control" id="previousReading" readonly placeholder="Auto-filled">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-speedometer text-primary"></i>
+                                            Current Reading (kWh) *
+                                        </label>
+                                        <input type="number" class="form-control" id="currentReading" required min="0" placeholder="Enter current reading">
+                                        <div class="invalid-feedback">
+                                            Please enter a valid current reading.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-calendar-check text-primary"></i>
+                                            Reading Date *
+                                        </label>
+                                        <input type="date" class="form-control" id="readingDate" required>
+                                        <div class="invalid-feedback">
+                                            Please select a reading date.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-clock-fill text-primary"></i>
+                                            Reading Time *
+                                        </label>
+                                        <input type="time" class="form-control" id="readingTime" required>
+                                        <div class="invalid-feedback">
+                                            Please select a reading time.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-geo-alt text-primary"></i>
+                                            Location/Address
+                                        </label>
+                                        <input type="text" class="form-control" id="location" placeholder="Enter location">
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-image text-primary"></i>
+                                            Upload Meter Photo (Optional)
+                                        </label>
+                                        <div class="file-upload-area">
+                                            <input type="file" class="form-control" id="meterPhoto" accept="image/*">
+                                            <div class="file-upload-hint">
+                                                <i class="bi bi-cloud-upload"></i>
+                                                <p>Click to upload or drag and drop</p>
+                                                <span>PNG, JPG up to 5MB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-chat-left-text text-primary"></i>
+                                            Remarks (Optional)
+                                        </label>
+                                        <textarea class="form-control" id="remarks" rows="3" placeholder="Enter any additional notes or observations..."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="consumption-summary mt-4" id="consumptionSummary" style="display: none;">
+                                    <h6><i class="bi bi-calculator"></i> Consumption Summary</h6>
+                                    <div class="summary-grid">
+                                        <div class="summary-item">
+                                            <span>Previous Reading</span>
+                                            <strong id="summaryPrevious">0 kWh</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>Current Reading</span>
+                                            <strong id="summaryCurrent">0 kWh</strong>
+                                        </div>
+                                        <div class="summary-item highlight">
+                                            <span>Units Consumed</span>
+                                            <strong id="summaryConsumed">0 kWh</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions mt-4">
+                                    <button type="reset" class="btn btn-secondary">
+                                        <i class="bi bi-x-lg"></i>
+                                        Clear Form
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-lg"></i>
+                                        Submit Reading
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Stats & Quick Actions -->
+                <div class="col-lg-4">
+                    <div class="data-card mb-4">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-calendar-day"></i>
+                                Today's Progress
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="progress-stats">
+                                <div class="progress-stat-item">
+                                    <div class="progress-stat-icon completed">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="progress-stat-info">
+                                        <h4>23</h4>
+                                        <p>Readings Completed</p>
+                                    </div>
+                                </div>
+                                <div class="progress-stat-item">
+                                    <div class="progress-stat-icon pending">
+                                        <i class="bi bi-clock-fill"></i>
+                                    </div>
+                                    <div class="progress-stat-info">
+                                        <h4>7</h4>
+                                        <p>Pending Readings</p>
+                                    </div>
+                                </div>
+                                <div class="progress-circle">
+                                    <svg viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#E2E8F0" stroke-width="8"/>
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#00B4D8" stroke-width="8" 
+                                                stroke-dasharray="282.7" stroke-dashoffset="70.675" 
+                                                transform="rotate(-90 50 50)" stroke-linecap="round"/>
+                                    </svg>
+                                    <div class="progress-text">
+                                        <span class="progress-percentage">75%</span>
+                                        <span class="progress-label">Complete</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title-custom">
+                                <i class="bi bi-lightning-fill"></i>
+                                Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="quick-actions">
+                                <button class="quick-action-btn">
+                                    <i class="bi bi-list-check"></i>
+                                    <span>View Assigned List</span>
+                                </button>
+                                <button class="quick-action-btn">
+                                    <i class="bi bi-clock-history"></i>
+                                    <span>Recent Readings</span>
+                                </button>
+                                <button class="quick-action-btn">
+                                    <i class="bi bi-geo-alt"></i>
+                                    <span>Route Map</span>
+                                </button>
+                                <button class="quick-action-btn">
+                                    <i class="bi bi-question-circle"></i>
+                                    <span>Help & Support</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script src="meter-reader.js"></script>
+</body>
+</html>
