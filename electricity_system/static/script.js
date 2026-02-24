@@ -1,6 +1,11 @@
+// Helper to prefer data-id selectors but fall back to id
+function elBy(name) {
+    return document.querySelector('[data-id="' + name + '"]') || document.getElementById(name);
+}
+
 // Sidebar Toggle
-document.getElementById('sidebarToggle')?.addEventListener('click', function() {
-    const sidebar = document.getElementById('sidebar');
+elBy('sidebarToggle')?.addEventListener('click', function() {
+    const sidebar = elBy('sidebar');
     sidebar.classList.toggle('active');
 });
 
@@ -23,8 +28,9 @@ function generateBill() {
     document.body.insertAdjacentHTML('beforeend', alertHtml);
     
     // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('generateBillModal'));
-    modal.hide();
+    const modalEl = elBy('generateBillModal') || document.getElementById('generateBillModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
     
     // Remove alert after 5 seconds
     setTimeout(() => {

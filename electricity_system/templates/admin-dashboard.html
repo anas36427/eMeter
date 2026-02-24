@@ -59,7 +59,7 @@
   </head>
   <body>
     <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar" data-id="sidebar">
       <div class="sidebar-header">
         <div class="logo-container">
           <div class="logo-icon">
@@ -120,7 +120,7 @@
       <!-- Top Navbar -->
       <nav class="topbar">
         <div class="topbar-left">
-          <button class="sidebar-toggle" id="sidebarToggle">
+          <button class="sidebar-toggle" id="sidebarToggle" data-id="sidebarToggle">
             <i class="bi bi-list"></i>
           </button>
           <div class="search-box">
@@ -435,7 +435,7 @@
     </div>
 
     <!-- Generate Bill Modal -->
-    <div class="modal fade" id="generateBillModal" tabindex="-1">
+    <div class="modal fade" id="generateBillModal" data-id="generateBillModal" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
@@ -541,13 +541,11 @@
         .toISOString()
         .split("T")[0];
 
-      // Sidebar toggle
-      document
-        .getElementById("sidebarToggle")
-        ?.addEventListener("click", function () {
-          const sidebar = document.getElementById("sidebar");
-          sidebar.classList.toggle("active");
-        });
+      // Sidebar toggle (use elBy helper defined in script.js)
+      elBy('sidebarToggle')?.addEventListener('click', function () {
+          const sidebar = elBy('sidebar');
+          if (sidebar) sidebar.classList.toggle('active');
+      });
     </script>
   </body>
 </html>

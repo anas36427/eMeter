@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import get_messages
 
 
 urlpatterns = [
@@ -18,7 +19,8 @@ urlpatterns = [
     path('admin/readings/', views.meter_readings, name='meter_readings'),
     path('admin/bills/', views.bills, name='bills'),
     path('admin/payments/', views.payments, name='payments'),
-    
+    path('api/messages/', get_messages),
+
     # Consumer URLs
     path('consumer/', views.consumer_dashboard, name='consumer_dashboard'),
     path('consumer/bills/', views.consumer_bills, name='consumer_bills'),
@@ -35,6 +37,9 @@ urlpatterns = [
     path('api/consumers/', views.api_consumer_list, name='api_consumer_list'),
     path('api/bills/', views.api_bills_list, name='api_bills_list'),
     path('api/submit-reading/', views.api_submit_reading, name='api_submit_reading'),
+
+    # Serve SPA
+    path('app/', views.spa_index, name='spa_index'),
 
     #Generate PDF bill
     # path('consumer/bills/<int:bill_id>/pdf/', views.generate_pdf_bill, name='generate_pdf_bill'),

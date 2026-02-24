@@ -23,6 +23,16 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Message
+from .serializers import MessageSerializer
+
+@api_view(['GET'])
+def get_messages(request):
+    messages = Message.objects.all()
+    serializer = MessageSerializer(messages, many=True)
+    return Response(serializer.data)
 
 def login_view(request):
     """Handle user login"""
@@ -762,4 +772,9 @@ def download_bill_pdf(request, bill_id):
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="bill-{bill.bill_number}.pdf"'
     return response
+
+
+def spa_index(request):
+    """Render the single-page application index served from static/frontend."""
+    return render(request, 'frontend_index.html')
 

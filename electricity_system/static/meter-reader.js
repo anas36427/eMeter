@@ -1,11 +1,18 @@
+// Helper to prefer data-id selectors but fall back to id
+function elBy(name) {
+    return document.querySelector('[data-id="' + name + '"]') || document.getElementById(name);
+}
+
 // Auto-fill functionality for consumer selection
-document.getElementById('consumerSelect')?.addEventListener('change', function() {
+elBy('consumerSelect')?.addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const meterNumber = selectedOption.getAttribute('data-meter');
     const previousReading = selectedOption.getAttribute('data-previous');
     
-    document.getElementById('meterNumber').value = meterNumber || '';
-    document.getElementById('previousReading').value = previousReading || '';
+    const meterEl = elBy('meterNumber');
+    const prevEl = elBy('previousReading');
+    if (meterEl) meterEl.value = meterNumber || '';
+    if (prevEl) prevEl.value = previousReading || '';
     
     // Trigger calculation if current reading exists
     calculateConsumption();
@@ -13,33 +20,36 @@ document.getElementById('consumerSelect')?.addEventListener('change', function()
 
 // Calculate consumption in real-time
 function calculateConsumption() {
-    const previousReading = parseFloat(document.getElementById('previousReading')?.value) || 0;
-    const currentReading = parseFloat(document.getElementById('currentReading')?.value) || 0;
+    const previousReading = parseFloat(elBy('previousReading')?.value) || 0;
+    const currentReading = parseFloat(elBy('currentReading')?.value) || 0;
     
     if (previousReading && currentReading && currentReading >= previousReading) {
         const consumed = currentReading - previousReading;
         
         // Show summary
-        const summary = document.getElementById('consumptionSummary');
+        const summary = elBy('consumptionSummary');
         if (summary) {
             summary.style.display = 'block';
-            document.getElementById('summaryPrevious').textContent = previousReading + ' kWh';
-            document.getElementById('summaryCurrent').textContent = currentReading + ' kWh';
-            document.getElementById('summaryConsumed').textContent = consumed + ' kWh';
+            const sPrev = elBy('summaryPrevious');
+            const sCurr = elBy('summaryCurrent');
+            const sCons = elBy('summaryConsumed');
+            if (sPrev) sPrev.textContent = previousReading + ' kWh';
+            if (sCurr) sCurr.textContent = currentReading + ' kWh';
+            if (sCons) sCons.textContent = consumed + ' kWh';
         }
     } else {
-        const summary = document.getElementById('consumptionSummary');
+        const summary = elBy('consumptionSummary');
         if (summary) {
             summary.style.display = 'none';
         }
     }
 }
 
-document.getElementById('currentReading')?.addEventListener('input', calculateConsumption);
+elBy('currentReading')?.addEventListener('input', calculateConsumption);
 
 // Set today's date by default
 const today = new Date().toISOString().split('T')[0];
-const readingDateInput = document.getElementById('readingDate');
+const readingDateInput = elBy('readingDate');
 if (readingDateInput) {
     readingDateInput.value = today;
     readingDateInput.max = today; // Prevent future dates
@@ -49,19 +59,19 @@ if (readingDateInput) {
 const now = new Date();
 const hours = String(now.getHours()).padStart(2, '0');
 const minutes = String(now.getMinutes()).padStart(2, '0');
-const readingTimeInput = document.getElementById('readingTime');
+const readingTimeInput = elBy('readingTime');
 if (readingTimeInput) {
     readingTimeInput.value = `${hours}:${minutes}`;
 }
 
 // Form submission for meter reading
-document.getElementById('submitReadingForm')?.addEventListener('submit', function(e) {
+elBy('submitReadingForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     
     if (this.checkValidity()) {
         // Validate current reading is greater than previous
-        const previousReading = parseFloat(document.getElementById('previousReading').value);
-        const currentReading = parseFloat(document.getElementById('currentReading').value);
+        const previousReading = parseFloat(elBy('previousReading').value);
+        const currentReading = parseFloat(elBy('currentReading').value);
         
         if (currentReading < previousReading) {
             showAlert('Error: Current reading must be greater than or equal to previous reading', 'danger');
@@ -74,7 +84,8 @@ document.getElementById('submitReadingForm')?.addEventListener('submit', functio
         // Reset form after short delay
         setTimeout(() => {
             this.reset();
-            document.getElementById('consumptionSummary').style.display = 'none';
+            const summaryEl = elBy('consumptionSummary');
+            if (summaryEl) summaryEl.style.display = 'none';
             
             // Reset date and time to defaults
             if (readingDateInput) readingDateInput.value = today;
@@ -129,7 +140,7 @@ function showAlert(message, type = 'success') {
 }
 
 // File upload preview
-document.getElementById('meterPhoto')?.addEventListener('change', function(e) {
+elBy('meterPhoto')?.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
         const fileSize = (file.size / 1024 / 1024).toFixed(2); // Convert to MB

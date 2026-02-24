@@ -34,7 +34,7 @@
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar" data-id="sidebar">
         <div class="sidebar-header">
             <div class="logo-container">
                 <div class="logo-icon">
@@ -77,7 +77,7 @@
         <!-- Top Navbar -->
         <nav class="topbar">
             <div class="topbar-left">
-                <button class="sidebar-toggle" id="sidebarToggle">
+                <button class="sidebar-toggle" id="sidebarToggle" data-id="sidebarToggle">
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="search-box">
@@ -342,8 +342,10 @@
     <script src="{% static 'script.js' %}"></script>
     <script src="{% static 'consumer.js' %}"></script>
     <script>
-        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('active');
+        // Use elBy helper from script.js
+        elBy('sidebarToggle')?.addEventListener('click', function() {
+            const sb = elBy('sidebar');
+            if (sb) sb.classList.toggle('active');
         });
     </script>
 </body>

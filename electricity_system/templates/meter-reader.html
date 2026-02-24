@@ -34,7 +34,7 @@
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar" data-id="sidebar">
         <div class="sidebar-header">
             <div class="logo-container">
                 <div class="logo-icon">
@@ -77,7 +77,7 @@
         <!-- Top Navbar -->
         <nav class="topbar">
             <div class="topbar-left">
-                <button class="sidebar-toggle" id="sidebarToggle">
+                <button class="sidebar-toggle" id="sidebarToggle" data-id="sidebarToggle">
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="search-box">
@@ -134,7 +134,7 @@
                                             <i class="bi bi-person-fill text-primary"></label>
                                         </i>
                                             Consumer Name *
-                                        <select class="form-select" id="consumerSelect" name="consumer" required onchange="updateConsumerInfo()">
+                                            <select class="form-select" id="consumerSelect" data-id="consumerSelect" name="consumer" required onchange="updateConsumerInfo()">
                                             <option value="">Select consumer...</option>
                                             {% for item in consumer_data %}
                                             <option value="{{ item.consumer.id }}" 
@@ -151,7 +151,7 @@
                                             <i class="bi bi-hash text-primary"></i>
                                             Meter Number
                                         </label>
-                                        <input type="text" class="form-control" id="meterNumber" readonly placeholder="Auto-filled">
+                                        <input type="text" class="form-control" id="meterNumber" data-id="meterNumber" readonly placeholder="Auto-filled">
                                     </div>
 
                                     <div class="col-md-6">
@@ -159,7 +159,7 @@
                                             <i class="bi bi-clock text-primary"></i>
                                             Previous Reading (kWh)
                                         </label>
-                                        <input type="number" class="form-control" id="previousReading" name="previous_reading" readonly placeholder="Auto-filled">
+                                        <input type="number" class="form-control" id="previousReading" data-id="previousReading" name="previous_reading" readonly placeholder="Auto-filled">
                                     </div>
 
                                     <div class="col-md-6">
@@ -167,7 +167,7 @@
                                             <i class="bi bi-speedometer text-primary"></i>
                                             Current Reading (kWh) *
                                         </label>
-                                        <input type="number" class="form-control" id="currentReading" name="current_reading" required min="0" placeholder="Enter current reading" oninput="calculateConsumption()">
+                                        <input type="number" class="form-control" id="currentReading" data-id="currentReading" name="current_reading" required min="0" placeholder="Enter current reading" oninput="calculateConsumption()">
                                     </div>
 
                                     <div class="col-md-6">
@@ -175,7 +175,7 @@
                                             <i class="bi bi-calendar-check text-primary"></i>
                                             Reading Date *
                                         </label>
-                                        <input type="date" class="form-control" id="readingDate" name="reading_date" required value="{{ today }}">
+                                        <input type="date" class="form-control" id="readingDate" data-id="readingDate" name="reading_date" required value="{{ today }}">
                                     </div>
 
                                     <div class="col-md-6">
@@ -183,7 +183,7 @@
                                             <i class="bi bi-clock-fill text-primary"></i>
                                             Reading Time *
                                         </label>
-                                        <input type="time" class="form-control" id="readingTime" name="reading_time" required>
+                                        <input type="time" class="form-control" id="readingTime" data-id="readingTime" name="reading_time" required>
                                     </div>
 
                                     <div class="col-md-12">
@@ -191,24 +191,24 @@
                                             <i class="bi bi-chat-left-text text-primary"></i>
                                             Remarks (Optional)
                                         </label>
-                                        <textarea class="form-control" id="remarks" name="remarks" rows="3" placeholder="Enter any additional notes or observations..."></textarea>
+                                        <textarea class="form-control" id="remarks" data-id="remarks" name="remarks" rows="3" placeholder="Enter any additional notes or observations..."></textarea>
                                     </div>
                                 </div>
 
-                                <div class="consumption-summary mt-4" id="consumptionSummary" style="display: none;">
+                                <div class="consumption-summary mt-4" id="consumptionSummary" data-id="consumptionSummary" style="display: none;">
                                     <h6><i class="bi bi-calculator"></i> Consumption Summary</h6>
                                     <div class="summary-grid">
                                         <div class="summary-item">
                                             <span>Previous Reading</span>
-                                            <strong id="summaryPrevious">0 kWh</strong>
+                                            <strong id="summaryPrevious" data-id="summaryPrevious">0 kWh</strong>
                                         </div>
                                         <div class="summary-item">
                                             <span>Current Reading</span>
-                                            <strong id="summaryCurrent">0 kWh</strong>
+                                            <strong id="summaryCurrent" data-id="summaryCurrent">0 kWh</strong>
                                         </div>
                                         <div class="summary-item highlight">
                                             <span>Units Consumed</span>
-                                            <strong id="summaryConsumed">0 kWh</strong>
+                                            <strong id="summaryConsumed" data-id="summaryConsumed">0 kWh</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -304,47 +304,57 @@
     <script src="{% static 'script.js' %}"></script>
     <script src="{% static 'meter-reader.js' %}"></script>
     <script>
+        // Use helper elBy (defined in script.js)
         // Set current time
         const now = new Date();
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
-        document.getElementById('readingTime').value = `${hours}:${minutes}`;
+        const rt = elBy('readingTime');
+        if (rt) rt.value = `${hours}:${minutes}`;
         
         // Set max date to today
-        document.getElementById('readingDate').max = new Date().toISOString().split('T')[0];
+        const rd = elBy('readingDate');
+        if (rd) rd.max = new Date().toISOString().split('T')[0];
         
         // Update consumer info on selection
         function updateConsumerInfo() {
-            const select = document.getElementById('consumerSelect');
+            const select = elBy('consumerSelect');
+            if (!select) return;
             const option = select.options[select.selectedIndex];
             
-            document.getElementById('meterNumber').value = option.dataset.meter || '';
-            document.getElementById('previousReading').value = option.dataset.previous || '0';
+            const meterEl = elBy('meterNumber');
+            const prevEl = elBy('previousReading');
+            if (meterEl) meterEl.value = option.dataset.meter || '';
+            if (prevEl) prevEl.value = option.dataset.previous || '0';
             
             calculateConsumption();
         }
         
         // Calculate consumption
         function calculateConsumption() {
-            const previousReading = parseFloat(document.getElementById('previousReading').value) || 0;
-            const currentReading = parseFloat(document.getElementById('currentReading').value) || 0;
+            const previousReading = parseFloat(elBy('previousReading').value) || 0;
+            const currentReading = parseFloat(elBy('currentReading').value) || 0;
             
             if (previousReading && currentReading && currentReading >= previousReading) {
                 const consumed = currentReading - previousReading;
                 
-                const summary = document.getElementById('consumptionSummary');
+                const summary = elBy('consumptionSummary');
                 if (summary) {
                     summary.style.display = 'block';
-                    document.getElementById('summaryPrevious').textContent = previousReading + ' kWh';
-                    document.getElementById('summaryCurrent').textContent = currentReading + ' kWh';
-                    document.getElementById('summaryConsumed').textContent = consumed + ' kWh';
+                    const sPrev = elBy('summaryPrevious');
+                    const sCurr = elBy('summaryCurrent');
+                    const sCons = elBy('summaryConsumed');
+                    if (sPrev) sPrev.textContent = previousReading + ' kWh';
+                    if (sCurr) sCurr.textContent = currentReading + ' kWh';
+                    if (sCons) sCons.textContent = consumed + ' kWh';
                 }
             }
         }
         
         // Sidebar toggle
-        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('active');
+        elBy('sidebarToggle')?.addEventListener('click', function() {
+            const sb = elBy('sidebar');
+            if (sb) sb.classList.toggle('active');
         });
     </script>
 </body>
