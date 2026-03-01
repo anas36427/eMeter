@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from datetime import datetime, timedelta
@@ -27,6 +28,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Message
 from .serializers import MessageSerializer
+
+
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
+
+def get_csrf(request):
+    get_token(request)
+    return JsonResponse({'status': 'ok'})
 
 @api_view(['GET'])
 def get_messages(request):
@@ -75,6 +84,80 @@ def logout_view(request):
     """Handle user logout"""
     logout(request)
     return redirect('login')
+
+
+@csrf_exempt
+def api_login(request):
+    """JSON login endpoint for SPA clients"""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'detail': 'Invalid JSON body'}, status=400)
+
+    username = data.get('username')
+    password = data.get('password')
+    role = data.get('role', 'admin')
+
+    if not username or not password:
+        return JsonResponse({'detail': 'Username and password are required'}, status=400)
+
+    user = authenticate(request, username=username, password=password)
+
+    if user is None:
+        return JsonResponse({'detail': 'Invalid credentials'}, status=401)
+
+    # Verify/assign role
+    profile, _ = UserProfile.objects.get_or_create(user=user, defaults={'role': role})
+    if profile.role != role:
+        # Reject mismatched role to avoid privilege confusion
+        return JsonResponse({'detail': 'Role mismatch for this user'}, status=403)
+
+    login(request, user)
+
+    # Ensure CSRF cookie for subsequent state-changing requests
+    csrf_token = get_token(request)
+    response = JsonResponse({
+        'success': True,
+        'username': user.username,
+        'role': profile.role,
+    })
+    response.set_cookie('csrftoken', csrf_token, httponly=False, samesite='Lax')
+    return response
+
+
+@login_required
+def api_me(request):
+    """Return current user and role for SPA auth guard"""
+    profile, _ = UserProfile.objects.get_or_create(user=request.user, defaults={'role': 'consumer'})
+    return JsonResponse({
+        'authenticated': True,
+        'username': request.user.username,
+        'role': profile.role,
+    })
+
+
+@login_required
+def api_dashboard_stats(request):
+    """JSON stats for SPA dashboard"""
+    total_consumers = Consumer.objects.count()
+    active_consumers = Consumer.objects.filter(status='active').count()
+    total_bills = Bill.objects.count()
+    paid_bills = Bill.objects.filter(status='paid').count()
+    unpaid_bills = Bill.objects.filter(status='unpaid').count()
+    overdue_bills = Bill.objects.filter(status='overdue').count()
+    total_revenue = Bill.objects.filter(status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
+    return JsonResponse({
+        'total_consumers': total_consumers,
+        'active_consumers': active_consumers,
+        'total_bills': total_bills,
+        'paid_bills': paid_bills,
+        'unpaid_bills': unpaid_bills,
+        'overdue_bills': overdue_bills,
+        'total_revenue': round(total_revenue, 2),
+    })
 
 
 @login_required
@@ -158,6 +241,10 @@ def manage_consumers(request):
         'status_filter': status_filter,
     }
     
+    # If HTMX requests the partial table, render only the list
+    if request.headers.get('HX-Request') or request.headers.get('Hx-Request') or request.META.get('HTTP_HX_REQUEST'):
+        return render(request, 'partials/consumers_list.html', {'consumers': consumers})
+
     return render(request, 'manage-consumers.html', context)
 
 @login_required
@@ -232,6 +319,11 @@ def generate_bill(request):
             billing_period=billing_period,
             due_date=due_date
         )
+
+        # If this is an HTMX request, return a small HTML fragment (no PDF)
+        if request.headers.get('HX-Request') or request.headers.get('Hx-Request') or request.META.get('HTTP_HX_REQUEST'):
+            html = render_to_string('partials/generate_bill_response.html', {'bill': bill}, request=request)
+            return HttpResponse(html)
 
         # ── Generate PDF using reportlab ──
         buffer = io.BytesIO()
@@ -348,7 +440,11 @@ def bills(request):
     
     if status_filter:
         bills = bills.filter(status=status_filter)
-    
+
+    # HTMX partial support
+    if request.headers.get('HX-Request') or request.headers.get('Hx-Request') or request.META.get('HTTP_HX_REQUEST'):
+        return render(request, 'partials/bills_list.html', {'bills': bills})
+
     return render(request, 'bills.html', {'bills': bills, 'status_filter': status_filter})
 
 
@@ -420,6 +516,13 @@ def consumer_bills(request):
     
     bills = Bill.objects.filter(consumer=consumer).order_by('-billing_period')
     return render(request, 'consumer-bills.html', {'bills': bills})
+
+
+@login_required
+def bill_details_partial(request, bill_id):
+    """Return bill details fragment for HTMX"""
+    bill = get_object_or_404(Bill, id=bill_id)
+    return render(request, 'partials/consumer_bill_details.html', {'bill': bill})
 
 
 @login_required
@@ -518,7 +621,7 @@ def submit_reading(request):
                 pass
         
         # Create meter reading
-        MeterReading.objects.create(
+        reading = MeterReading.objects.create(
             consumer=consumer,
             previous_reading=previous_reading,
             current_reading=current_reading,
@@ -527,7 +630,19 @@ def submit_reading(request):
             remarks=remarks,
             created_by=request.user
         )
-        
+
+        # If this is an HTMX request, return a small fragment that HTMX will swap
+        if request.headers.get('HX-Request') or request.headers.get('Hx-Request') or request.META.get('HTTP_HX_REQUEST'):
+            units = (current_reading - previous_reading) if current_reading >= previous_reading else 0
+            context = {
+                'consumer_id': consumer.id,
+                'previous_reading': current_reading,
+                'current_reading': current_reading,
+                'units_consumed': units,
+            }
+            html = render_to_string('partials/reading_response.html', context, request=request)
+            return HttpResponse(html)
+
         messages.success(request, 'Reading submitted successfully!')
         return redirect('meter_reader_dashboard')
     
@@ -632,6 +747,137 @@ def api_bills_list(request):
     )
     
     return JsonResponse({'bills': list(bills)})
+
+
+# ─── ADDITIONAL API ENDPOINTS FOR FRONTEND ─────────────────────────────────
+
+@login_required
+def api_logout(request):
+    """JSON logout endpoint for SPA clients"""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    logout(request)
+    return JsonResponse({'success': True, 'message': 'Logged out successfully'})
+
+
+@login_required
+def api_consumer_detail(request, consumer_id):
+    """Get, update, or delete a consumer"""
+    consumer = get_object_or_404(Consumer, id=consumer_id)
+    
+    if request.method == 'GET':
+        data = {
+            'id': consumer.id,
+            'name': consumer.name,
+            'meter_number': consumer.meter_number,
+            'consumer_number': consumer.consumer_number,
+            'email': consumer.email,
+            'phone': consumer.phone,
+            'address': consumer.address,
+            'status': consumer.status,
+        }
+        return JsonResponse(data)
+    
+    if request.method in ['PUT', 'PATCH']:
+        data = json.loads(request.body)
+        for key, value in data.items():
+            if hasattr(consumer, key):
+                setattr(consumer, key, value)
+        consumer.save()
+        return JsonResponse({'success': True, 'message': 'Consumer updated successfully'})
+    
+    if request.method == 'DELETE':
+        consumer.delete()
+        return JsonResponse({'success': True, 'message': 'Consumer deleted successfully'})
+    
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+
+@login_required
+def api_consumer_search(request):
+    """Search consumers by meter number"""
+    meter_number = request.GET.get('meter_number', '')
+    if not meter_number:
+        return JsonResponse({'detail': 'meter_number parameter required'}, status=400)
+    
+    consumers = Consumer.objects.filter(meter_number__icontains=meter_number)
+    results = list(consumers.values('id', 'name', 'meter_number', 'consumer_number', 'status'))
+    return JsonResponse({'consumers': results})
+
+
+@login_required
+def api_readings_list(request):
+    """Get all meter readings"""
+    readings = MeterReading.objects.select_related('consumer').order_by('-reading_date')
+    results = []
+    for reading in readings:
+        results.append({
+            'id': reading.id,
+            'consumer_id': reading.consumer.id,
+            'consumer_name': reading.consumer.name,
+            'meter_number': reading.consumer.meter_number,
+            'previous_reading': reading.previous_reading,
+            'current_reading': reading.current_reading,
+            'units_consumed': reading.units_consumed,
+            'reading_date': reading.reading_date.strftime('%Y-%m-%d') if reading.reading_date else None,
+            'created_at': reading.created_at.strftime('%Y-%m-%d %H:%M') if reading.created_at else None,
+        })
+    return JsonResponse({'readings': results})
+
+
+@login_required
+def api_bill_detail(request, bill_id):
+    """Get or update a bill"""
+    bill = get_object_or_404(Bill, id=bill_id)
+    
+    if request.method == 'GET':
+        data = {
+            'id': bill.id,
+            'consumer_id': bill.consumer.id,
+            'consumer_name': bill.consumer.name,
+            'meter_number': bill.consumer.meter_number,
+            'units': bill.units,
+            'rate_per_unit': bill.rate_per_unit,
+            'fixed_charges': bill.fixed_charges,
+            'energy_charges': bill.energy_charges,
+            'total_amount': bill.total_amount,
+            'status': bill.status,
+            'billing_period': bill.billing_period.strftime('%Y-%m') if bill.billing_period else None,
+            'due_date': bill.due_date.strftime('%Y-%m-%d') if bill.due_date else None,
+            'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+        }
+        return JsonResponse(data)
+    
+    if request.method == 'PATCH':
+        data = json.loads(request.body)
+        if 'status' in data:
+            bill.status = data['status']
+            if data['status'] == 'paid':
+                bill.paid_date = datetime.now().date()
+            bill.save()
+        return JsonResponse({'success': True, 'message': 'Bill updated successfully'})
+    
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+
+@login_required
+def api_mark_bill_paid(request, bill_id):
+    """Mark a bill as paid"""
+    bill = get_object_or_404(Bill, id=bill_id)
+    bill.status = 'paid'
+    bill.paid_date = datetime.now().date()
+    bill.save()
+    return JsonResponse({'success': True, 'message': 'Bill marked as paid'})
+
+
+@login_required
+def api_mark_bill_unpaid(request, bill_id):
+    """Mark a bill as unpaid"""
+    bill = get_object_or_404(Bill, id=bill_id)
+    bill.status = 'unpaid'
+    bill.paid_date = None
+    bill.save()
+    return JsonResponse({'success': True, 'message': 'Bill marked as unpaid'})
 
 
 @csrf_exempt
@@ -777,4 +1023,3 @@ def download_bill_pdf(request, bill_id):
 def spa_index(request):
     """Render the single-page application index served from static/frontend."""
     return render(request, 'frontend_index.html')
-

@@ -1,0 +1,17 @@
+<div class="alert alert-success" role="alert">
+    <strong>Bill generated.</strong>
+    <p>Bill #{{ bill.bill_number }} for {{ bill.consumer.name }} was created.</p>
+    <p><a href="{% url 'download_bill_pdf' bill.id %}" class="btn btn-sm btn-outline-primary">Download PDF</a></p>
+</div>
+<script>
+// Close the Bootstrap modal after HTMX swap
+(function(){
+    try {
+        const modalEl = document.getElementById('generateBillModal');
+        if (modalEl) {
+            var bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            bsModal.hide();
+        }
+    } catch (e) {}
+})();
+</script>

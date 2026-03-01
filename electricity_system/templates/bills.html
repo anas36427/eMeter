@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Bills{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@1.9.2"></script>
+<script src="https://unpkg.com/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
+{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Bills</h2>
+    <div style="width: 320px;">
+      <input id="billsSearch" class="form-control" placeholder="Filter by status or consumer" name="search"
+             hx-get="{% url 'bills_list_partial' %}"
+             hx-target="#billsList"
+             hx-trigger="keyup changed delay:500ms"
+             hx-include="#billsSearch" />
+    </div>
+  </div>
+
+  <div id="billsList" hx-get="{% url 'bills_list_partial' %}" hx-trigger="load"></div>
+</div>
+{% endblock %}

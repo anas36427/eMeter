@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Manage Consumers{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@1.9.2"></script>
+<script src="https://unpkg.com/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
+{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Manage Consumers</h2>
+    <div style="width: 320px;">
+      <input id="consumerSearch" class="form-control" placeholder="Search consumers..." name="search"
+             hx-get="{% url 'manage_consumers_partial' %}"
+             hx-target="#consumersList"
+             hx-trigger="keyup changed delay:500ms"
+             hx-include="#consumerSearch" />
+    </div>
+  </div>
+
+  <div id="consumersList" hx-get="{% url 'manage_consumers_partial' %}" hx-trigger="load"></div>
+</div>
+{% endblock %}

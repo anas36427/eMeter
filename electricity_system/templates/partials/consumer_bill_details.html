@@ -1,0 +1,67 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-receipt"></i>
+        Invoice Details - {{ bill.billing_period|date:"F Y" }}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    <div class="invoice-details">
+        <div class="invoice-header-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Bill To:</h6>
+                    <p class="mb-1"><strong>{{ bill.consumer.name }}</strong></p>
+                    <p class="mb-1">{{ bill.consumer.address }}</p>
+                    <p class="mb-1">Phone: {{ bill.consumer.phone }}</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <h6>Invoice Details:</h6>
+                    <p class="mb-1"><strong>Invoice #:</strong> INV-{{ bill.id }}</p>
+                    <p class="mb-1"><strong>Date:</strong> {{ bill.created_at|date:"M d, Y" }}</p>
+                    <p class="mb-1"><strong>Due Date:</strong> {{ bill.due_date }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="invoice-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Units</th>
+                        <th>Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Electricity Consumption</td>
+                        <td>{{ bill.units }} kWh</td>
+                        <td>₹{{ bill.rate_per_unit }}/kWh</td>
+                        <td class="text-end">₹{{ bill.energy_charges|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Fixed Service Charge</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="text-end">₹{{ bill.fixed_charges|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
+                        <td class="text-end"><strong>₹{{ bill.total_amount|floatformat:2 }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    <a href="{% url 'make_payment' bill.id %}" class="btn btn-primary">
+        <i class="bi bi-credit-card"></i>
+        Pay Now
+    </a>
+</div>

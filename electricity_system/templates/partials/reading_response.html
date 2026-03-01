@@ -1,0 +1,21 @@
+<div class="alert alert-success" role="alert">
+    <strong>Reading submitted.</strong> Current reading: {{ current_reading }} kWh — Units consumed: {{ units_consumed }} kWh.
+</div>
+<script>
+// If the form is still present, update the previous reading and summary
+(function(){
+    try {
+        const prev = document.querySelector('[data-id="previousReading"]');
+        const curr = document.querySelector('[data-id="currentReading"]');
+        const meter = document.querySelector('[data-id="meterNumber"]');
+        if (prev && curr) prev.value = '{{ previous_reading }}';
+        // Clear current input
+        if (curr) curr.value = '';
+        // Recompute UI summary if present
+        const summary = document.querySelector('[data-id="consumptionSummary"]');
+        if (summary) summary.style.display = 'none';
+    } catch (e) {
+        // no-op
+    }
+})();
+</script>
