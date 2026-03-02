@@ -13,9 +13,10 @@ import random
 import string
 import io
 
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from .models import Consumer, MeterReading, Bill, Payment, UserProfile
 from .forms import (ConsumerForm, MeterReadingForm, BillForm, PaymentForm, 
-                    LoginForm, ConsumerRegistrationForm)
+                    LoginForm, ConsumerRegistrationForm)   
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from reportlab.lib import colors
@@ -727,11 +728,49 @@ def api_calculate_bill(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+
+
+@csrf_exempt
 @login_required
+@ensure_csrf_cookie
+@csrf_exempt
+@login_required
+@ensure_csrf_cookie
 def api_consumer_list(request):
-    """Get list of consumers for dropdown"""
-    consumers = Consumer.objects.filter(status='active').values('id', 'name', 'meter_number', 'consumer_number')
-    return JsonResponse({'consumers': list(consumers)})
+    if request.method == 'GET':
+        consumers = Consumer.objects.all().values(
+            'id', 'name', 'meter_number', 'consumer_number', 'address', 'status'
+        )
+        return JsonResponse({'consumers': list(consumers)})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            # Auto-generate unique consumer number
+            consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
+            while Consumer.objects.filter(consumer_number=consumer_number).exists():
+                consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
+
+            consumer = Consumer.objects.create(
+                name=data.get('name'),
+                phone=data.get('phone', ''),
+                address=data.get('address', ''),
+                meter_number=data.get('meter_number'),
+                status=data.get('status', 'active'),
+                consumer_number=consumer_number,
+                created_at=timezone.now(),
+                updated_at=timezone.now(),
+            )
+            return JsonResponse({
+                'success': True,
+                'id': consumer.id,
+                'consumer_number': consumer.consumer_number,
+            }, status=201)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
 @login_required
