@@ -13,8 +13,10 @@ import random
 import string
 import io
 
+from django.db import OperationalError
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
-from .models import Consumer, MeterReading, Bill, Payment, UserProfile
+from django.conf import settings
+from .models import Consumer, MeterReading, Bill, Payment, UserProfile, BillingSettings
 from .forms import (ConsumerForm, MeterReadingForm, BillForm, PaymentForm, 
                     LoginForm, ConsumerRegistrationForm)   
 from django.http import HttpResponse
@@ -29,6 +31,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Message
 from .serializers import MessageSerializer
+from rest_framework.authtoken.models import Token
 
 
 from django.middleware.csrf import get_token
@@ -86,10 +89,10 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-
 @csrf_exempt
 def api_login(request):
     """JSON login endpoint for SPA clients"""
+    print(f"DEBUG: api_login hit with method {request.method}")
     if request.method != 'POST':
         return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
@@ -101,6 +104,7 @@ def api_login(request):
     username = data.get('username')
     password = data.get('password')
     role = data.get('role', 'admin')
+    print(f"DEBUG: Attempting login for {username} with requested role: {role}")
 
     if not username or not password:
         return JsonResponse({'detail': 'Username and password are required'}, status=400)
@@ -108,41 +112,58 @@ def api_login(request):
     user = authenticate(request, username=username, password=password)
 
     if user is None:
+        print(f"DEBUG: Authentication failed for {username}")
         return JsonResponse({'detail': 'Invalid credentials'}, status=401)
 
     # Verify/assign role
     profile, _ = UserProfile.objects.get_or_create(user=user, defaults={'role': role})
+    print(f"DEBUG: User {username} found with profile role: {profile.role}")
     if profile.role != role:
-        # Reject mismatched role to avoid privilege confusion
+        print(f"DEBUG: Role mismatch! App sent '{role}', DB has '{profile.role}'")
         return JsonResponse({'detail': 'Role mismatch for this user'}, status=403)
 
     login(request, user)
-
-    # Ensure CSRF cookie for subsequent state-changing requests
+    request.session.save()            # 👈 force session write
     csrf_token = get_token(request)
-    response = JsonResponse({
+    token, created = Token.objects.get_or_create(user=user)
+    print(f"DEBUG: Login successful for {user.username}. Token: {token.key}")
+    return JsonResponse({
         'success': True,
         'username': user.username,
         'role': profile.role,
+        'token': token.key,
+        'csrftoken': csrf_token,
     })
-    response.set_cookie('csrftoken', csrf_token, httponly=False, samesite='Lax')
-    return response
 
-
-@login_required
+# @login_required
+# def api_me(request):
+#     """Return current user and role for SPA auth guard"""
+#     profile, _ = UserProfile.objects.get_or_create(user=request.user, defaults={'role': 'consumer'})
+#     return JsonResponse({
+#         'authenticated': True,
+#         'username': request.user.username,
+#         'role': profile.role,
+#     })
+@csrf_exempt
 def api_me(request):
-    """Return current user and role for SPA auth guard"""
-    profile, _ = UserProfile.objects.get_or_create(user=request.user, defaults={'role': 'consumer'})
+    if not request.user.is_authenticated:
+        return JsonResponse({'authenticated': False}, status=200)
+    profile, _ = UserProfile.objects.get_or_create(
+        user=request.user, defaults={'role': 'consumer'}
+    )
     return JsonResponse({
         'authenticated': True,
         'username': request.user.username,
         'role': profile.role,
     })
 
-
-@login_required
+# 1.
+@csrf_exempt
+@api_view(['GET'])
 def api_dashboard_stats(request):
     """JSON stats for SPA dashboard"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     total_consumers = Consumer.objects.count()
     active_consumers = Consumer.objects.filter(status='active').count()
     total_bills = Bill.objects.count()
@@ -457,7 +478,6 @@ def payments(request):
 
 
 # Consumer Portal Views
-
 @login_required
 def consumer_dashboard(request):
     """Consumer dashboard view"""
@@ -559,7 +579,6 @@ def make_payment(request, bill_id):
 
 
 # Meter Reader Views
-
 @login_required
 def meter_reader_dashboard(request):
     """Meter reader dashboard"""
@@ -667,10 +686,15 @@ def submit_reading(request):
 
 
 # API Views for AJAX calls
+# API Views for AJAX calls
 
-@login_required
+# .1
+@csrf_exempt
 def api_get_consumer(request, consumer_id):
     """Get consumer details for API"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
     consumer = get_object_or_404(Consumer, id=consumer_id)
     last_reading = MeterReading.objects.filter(consumer=consumer).order_by('-reading_date').first()
     
@@ -682,14 +706,19 @@ def api_get_consumer(request, consumer_id):
         'address': consumer.address,
         'status': consumer.status,
         'previous_reading': last_reading.current_reading if last_reading else 0,
+        # Safe fallbacks from model properties/methods
+        'load_kw': getattr(consumer, 'load_kw', 1.0),
+        'meter_type': getattr(consumer, 'meter_type', '10'),
     }
     
     return JsonResponse(data)
 
-
-@login_required
+# .2
+@csrf_exempt
 def api_get_bill(request, bill_id):
     """Get bill details for API"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     bill = get_object_or_404(Bill, id=bill_id)
     
     data = {
@@ -706,10 +735,12 @@ def api_get_bill(request, bill_id):
     
     return JsonResponse(data)
 
-
-@login_required
+# .3 
+@csrf_exempt
 def api_calculate_bill(request):
     """Calculate bill amount"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     if request.method == 'GET':
         units = float(request.GET.get('units', 0))
         rate = float(request.GET.get('rate', 7.50))
@@ -727,36 +758,42 @@ def api_calculate_bill(request):
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-
-
-
+# 4. 
+@api_view(['GET', 'POST'])
 @csrf_exempt
-@login_required
-@ensure_csrf_cookie
-@csrf_exempt
-@login_required
-@ensure_csrf_cookie
 def api_consumer_list(request):
+    # print(f"DEBUG: api_consumer_list auth: {request.auth}")
+    # print(f"DEBUG: User authenticated: {request.user.is_authenticated}")
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
     if request.method == 'GET':
         consumers = Consumer.objects.all().values(
-            'id', 'name', 'meter_number', 'consumer_number', 'address', 'status'
+            'id', 'name', 'meter_number', 'consumer_number', 'address', 'status', 'load_kw', 'meter_type'
         )
         return JsonResponse({'consumers': list(consumers)})
 
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-
-            # Auto-generate unique consumer number
+            # Validate required fields
+            if not data.get('name') or not data.get('meter_number'):
+                return JsonResponse({'success': False, 'error': 'Name and Meter Number are required.'}, status=400)
+            # Check for duplicate meter number
+            if Consumer.objects.filter(meter_number=data['meter_number']).exists():
+                return JsonResponse({'success': False, 'error': 'A consumer with this meter number already exists.'}, status=400)
             consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
             while Consumer.objects.filter(consumer_number=consumer_number).exists():
                 consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
-
             consumer = Consumer.objects.create(
                 name=data.get('name'),
                 phone=data.get('phone', ''),
+                email=data.get('email') or None,
                 address=data.get('address', ''),
                 meter_number=data.get('meter_number'),
+                load_kw=float(data.get('load_kw', 1.0)),
+                meter_type=data.get('meter_type', '10'),
+                connection_type=data.get('connection_type', 'residential'),
                 status=data.get('status', 'active'),
                 consumer_number=consumer_number,
                 created_at=timezone.now(),
@@ -766,31 +803,27 @@ def api_consumer_list(request):
                 'success': True,
                 'id': consumer.id,
                 'consumer_number': consumer.consumer_number,
+                'name': consumer.name,
+                'meter_number': consumer.meter_number,
             }, status=201)
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
-
-@login_required
+# 5. 
+@csrf_exempt
 def api_bills_list(request):
-    """Get bills for consumer"""
-    try:
-        consumer = request.user.consumer
-    except Consumer.DoesNotExist:
-        consumer = Consumer.objects.get(email=request.user.email)
-    
-    bills = Bill.objects.filter(consumer=consumer).values(
-        'id', 'units', 'total_amount', 'status', 'billing_period', 'due_date'
+    """Get all bills for admin"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    bills = Bill.objects.select_related('consumer').all().values(
+        'id', 'consumer__name', 'units', 'total_amount', 'status', 'billing_period', 'due_date'
     )
-    
     return JsonResponse({'bills': list(bills)})
 
-
-# ─── ADDITIONAL API ENDPOINTS FOR FRONTEND ─────────────────────────────────
-
-@login_required
+# 6. 
+@csrf_exempt
 def api_logout(request):
     """JSON logout endpoint for SPA clients"""
     if request.method != 'POST':
@@ -798,12 +831,14 @@ def api_logout(request):
     logout(request)
     return JsonResponse({'success': True, 'message': 'Logged out successfully'})
 
-
-@login_required
+# 7. 
+@csrf_exempt
 def api_consumer_detail(request, consumer_id):
     """Get, update, or delete a consumer"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     consumer = get_object_or_404(Consumer, id=consumer_id)
-    
+
     if request.method == 'GET':
         data = {
             'id': consumer.id,
@@ -816,7 +851,7 @@ def api_consumer_detail(request, consumer_id):
             'status': consumer.status,
         }
         return JsonResponse(data)
-    
+
     if request.method in ['PUT', 'PATCH']:
         data = json.loads(request.body)
         for key, value in data.items():
@@ -824,51 +859,94 @@ def api_consumer_detail(request, consumer_id):
                 setattr(consumer, key, value)
         consumer.save()
         return JsonResponse({'success': True, 'message': 'Consumer updated successfully'})
-    
+
     if request.method == 'DELETE':
         consumer.delete()
         return JsonResponse({'success': True, 'message': 'Consumer deleted successfully'})
-    
+
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
-@login_required
+# 8. 
+@csrf_exempt
+@api_view(['GET'])
 def api_consumer_search(request):
-    """Search consumers by meter number"""
-    meter_number = request.GET.get('meter_number', '')
-    if not meter_number:
-        return JsonResponse({'detail': 'meter_number parameter required'}, status=400)
+    """Search consumers by meter number, name, or ID"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    query = request.GET.get('meter_number', '')  # Param name remains for compatibility
+    if not query:
+        return JsonResponse({'detail': 'search parameter required'}, status=400)
     
-    consumers = Consumer.objects.filter(meter_number__icontains=meter_number)
-    results = list(consumers.values('id', 'name', 'meter_number', 'consumer_number', 'status'))
+    try:
+        consumers = Consumer.objects.filter(
+            Q(meter_number__icontains=query) |
+            Q(name__icontains=query) |
+            Q(consumer_number__icontains=query) |
+            Q(id__icontains=query if query.isdigit() else '0')
+        )
+        # Trigger query to check for missing columns
+        list(consumers[:1]) 
+    except Exception as e:
+        if 'no such column' in str(e):
+            consumers = consumers.defer('load_kw', 'meter_type')
+        else:
+            raise e
+
+    results = []
+    for c in consumers:
+        # Get last reading to help UI
+        last_reading = MeterReading.objects.filter(consumer=c).order_by('-reading_date').first()
+        results.append({
+            'id': c.id,
+            'name': c.name,
+            'meter_number': c.meter_number,
+            'consumer_number': c.consumer_number,
+            'status': c.status,
+            'previous_reading': last_reading.current_reading if last_reading else 0,
+            'load_kw': getattr(c, 'load_kw', 1.0),
+            'meter_type': getattr(c, 'meter_type', '10'),
+            'address': c.address
+        })
     return JsonResponse({'consumers': results})
 
 
-@login_required
+#9
+@csrf_exempt
+@api_view(['GET', 'POST'])
 def api_readings_list(request):
-    """Get all meter readings"""
-    readings = MeterReading.objects.select_related('consumer').order_by('-reading_date')
-    results = []
-    for reading in readings:
-        results.append({
-            'id': reading.id,
-            'consumer_id': reading.consumer.id,
-            'consumer_name': reading.consumer.name,
-            'meter_number': reading.consumer.meter_number,
-            'previous_reading': reading.previous_reading,
-            'current_reading': reading.current_reading,
-            'units_consumed': reading.units_consumed,
-            'reading_date': reading.reading_date.strftime('%Y-%m-%d') if reading.reading_date else None,
-            'created_at': reading.created_at.strftime('%Y-%m-%d %H:%M') if reading.created_at else None,
-        })
-    return JsonResponse({'readings': results})
+    """Get all meter readings (GET) or submit a new one (POST)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    if request.method == 'GET':
+        readings = MeterReading.objects.select_related('consumer').order_by('-reading_date')
+        results = []
+        for reading in readings:
+            results.append({
+                'id': reading.id,
+                'consumer_id': reading.consumer.id,
+                'consumer_name': reading.consumer.name,
+                'meter_number': reading.consumer.meter_number,
+                'previous_reading': reading.previous_reading,
+                'current_reading': reading.current_reading,
+                'units_consumed': reading.units_consumed,
+                'reading_date': reading.reading_date.strftime('%Y-%m-%d') if reading.reading_date else None,
+                'created_at': reading.created_at.strftime('%Y-%m-%d %H:%M') if reading.created_at else None,
+            })
+        return JsonResponse({'readings': results})
+    
+    if request.method == 'POST':
+        return api_submit_reading(request)
 
-
-@login_required
+#10
+@csrf_exempt
 def api_bill_detail(request, bill_id):
     """Get or update a bill"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     bill = get_object_or_404(Bill, id=bill_id)
-    
+
     if request.method == 'GET':
         data = {
             'id': bill.id,
@@ -886,7 +964,7 @@ def api_bill_detail(request, bill_id):
             'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
         }
         return JsonResponse(data)
-    
+
     if request.method == 'PATCH':
         data = json.loads(request.body)
         if 'status' in data:
@@ -895,48 +973,46 @@ def api_bill_detail(request, bill_id):
                 bill.paid_date = datetime.now().date()
             bill.save()
         return JsonResponse({'success': True, 'message': 'Bill updated successfully'})
-    
+
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
-
-@login_required
+#11
+@csrf_exempt
 def api_mark_bill_paid(request, bill_id):
     """Mark a bill as paid"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     bill = get_object_or_404(Bill, id=bill_id)
     bill.status = 'paid'
     bill.paid_date = datetime.now().date()
     bill.save()
     return JsonResponse({'success': True, 'message': 'Bill marked as paid'})
 
-
-@login_required
+#12
+@csrf_exempt
 def api_mark_bill_unpaid(request, bill_id):
     """Mark a bill as unpaid"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     bill = get_object_or_404(Bill, id=bill_id)
     bill.status = 'unpaid'
     bill.paid_date = None
     bill.save()
     return JsonResponse({'success': True, 'message': 'Bill marked as unpaid'})
 
-
+#13
 @csrf_exempt
 def api_submit_reading(request):
     """API endpoint for submitting meter reading"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            
             consumer_id = data.get('consumer_id')
             current_reading = float(data.get('current_reading', 0))
             reading_date = data.get('reading_date')
-            
             consumer = get_object_or_404(Consumer, id=consumer_id)
-            
-            # Get previous reading
             last_reading = MeterReading.objects.filter(consumer=consumer).order_by('-reading_date').first()
             previous_reading = last_reading.current_reading if last_reading else 0
-            
-            # Create reading
             reading = MeterReading.objects.create(
                 consumer=consumer,
                 previous_reading=previous_reading,
@@ -944,23 +1020,125 @@ def api_submit_reading(request):
                 reading_date=reading_date,
                 created_by=request.user if request.user.is_authenticated else None
             )
-            
             return JsonResponse({
                 'success': True,
                 'reading_id': reading.id,
                 'units_consumed': reading.units_consumed
             })
-            
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    
+
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-
-@login_required
+#14
+@csrf_exempt
 def download_bill_pdf(request, bill_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
     """Download bill as PDF"""
     bill = get_object_or_404(Bill, id=bill_id)
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, spaceAfter=20)
+    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, textColor=colors.HexColor('#0b4f9f'))
+    
+    elements.append(Paragraph("PowerGrid", title_style))
+    elements.append(Paragraph("Electricity Billing Statement", styles['Normal']))
+    elements.append(Spacer(1, 20))
+    
+    elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", styles['Normal']))
+    if bill.billing_period:
+        elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", styles['Normal']))
+    elements.append(Spacer(1, 20))
+    
+    consumer_data = [
+        ['Consumer Name:', bill.consumer.name],
+        ['Meter Number:', bill.consumer.meter_number],
+        ['Consumer Number:', bill.consumer.consumer_number],
+        ['Address:', bill.consumer.address or 'N/A'],
+    ]
+    consumer_table = Table(consumer_data, colWidths=[2*inch, 4*inch])
+    consumer_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(consumer_table)
+    elements.append(Spacer(1, 20))
+    
+    reading_data = [
+        ['Previous Reading', 'Current Reading', 'Units Consumed'],
+        [str(bill.meter_reading.previous_reading) if bill.meter_reading else '0',
+         str(bill.meter_reading.current_reading) if bill.meter_reading else '0',
+         str(bill.units)]
+    ]
+    reading_table = Table(reading_data, colWidths=[2*inch, 2*inch, 2*inch])
+    reading_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0b4f9f')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+    ]))
+    elements.append(reading_table)
+    elements.append(Spacer(1, 20))
+    
+    charges_data = [
+        ['Description', 'Amount'],
+        [f'Energy Charges ({bill.units} kWh × ₹{bill.rate_per_unit})', f'₹{bill.energy_charges:.2f}'],
+        ['Fixed / Service Charges', f'₹{bill.fixed_charges:.2f}'],
+        ['Total Amount Due', f'₹{bill.total_amount:.2f}'],
+    ]
+    charges_table = Table(charges_data, colWidths=[4*inch, 2*inch])
+    charges_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -2), 1, colors.grey),
+        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#0b4f9f')),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
+    ]))
+    elements.append(charges_table)
+    elements.append(Spacer(1, 20))
+    
+    elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", styles['Normal']))
+    
+    doc.build(elements)
+    pdf_file = buffer.getvalue()
+    buffer.close()
+    
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="bill-{bill.bill_number}.pdf"'
+    return response
+
+#             return JsonResponse({
+#                 'success': True,
+#                 'reading_id': reading.id,
+#                 'units_consumed': reading.units_consumed
+#             })
+            
+#         except Exception as e:
+#             return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+#     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+# @login_required
+# def download_bill_pdf(request, bill_id):
+#     """Download bill as PDF"""
+#     bill = get_object_or_404(Bill, id=bill_id)
     
     # Generate PDF using reportlab
     buffer = io.BytesIO()
@@ -1060,5 +1238,378 @@ def download_bill_pdf(request, bill_id):
 
 
 def spa_index(request):
-    """Render the single-page application index served from static/frontend."""
-    return render(request, 'frontend_index.html')
+    """Render the single-page application index from energy-hub-ui/dist."""
+    dist_dir = os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist')
+    index_path = os.path.join(dist_dir, 'index.html')
+    
+    try:
+        with open(index_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            # Patch asset paths to use Django's /static/ prefix
+            content = content.replace('src="/assets/', 'src="/static/assets/')
+            content = content.replace('href="/assets/', 'href="/static/assets/')
+            content = content.replace('src="/favicon.ico"', 'src="/static/favicon.ico"')
+            return HttpResponse(content)
+    except FileNotFoundError:
+        return HttpResponse(
+            f"Vite build not found at {index_path}. Please run 'npm run build' in energy-hub-ui.",
+            status=404
+        )
+
+
+# ==========================================
+# Mobile App API Endpoints
+# ==========================================
+
+#15 - Combined: Submit Reading + Generate Bill (with cumulative arrears)
+@csrf_exempt
+@api_view(['POST'])
+def api_submit_reading_and_generate_bill(request):
+    """Submit a meter reading and auto-generate a bill with cumulative unpaid arrears."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        consumer_id = data.get('consumer_id')
+        current_reading = float(data.get('current_reading', 0))
+        reading_date = data.get('reading_date')
+
+        if not consumer_id or not reading_date:
+            return JsonResponse({'error': 'consumer_id and reading_date are required'}, status=400)
+
+        consumer = get_object_or_404(Consumer, id=consumer_id)
+
+        # Get previous reading
+        last_reading = MeterReading.objects.filter(
+            consumer=consumer
+        ).order_by('-reading_date').first()
+        previous_reading = last_reading.current_reading if last_reading else 0
+
+        if current_reading < previous_reading:
+            return JsonResponse({
+                'error': 'Current reading must be >= previous reading',
+                'previous_reading': previous_reading
+            }, status=400)
+
+        # Create the meter reading
+        reading = MeterReading.objects.create(
+            consumer=consumer,
+            previous_reading=previous_reading,
+            current_reading=current_reading,
+            reading_date=reading_date,
+            reading_time=datetime.now().time(),
+            created_by=request.user,
+            created_at=timezone.now()
+        )
+
+        # Calculate units consumed
+        units_consumed = current_reading - previous_reading
+
+        # Parse reading date for billing period and due date
+        try:
+            reading_date_obj = datetime.strptime(reading_date, '%Y-%m-%d').date()
+        except ValueError:
+            reading_date_obj = datetime.now().date()
+
+        due_date = reading_date_obj + timedelta(days=30)
+
+        # Create the bill (will trigger model.save() logic)
+        bill = Bill.objects.create(
+            consumer=consumer,
+            meter_reading=reading,
+            units=units_consumed,
+            billing_period=reading_date_obj.replace(day=1),
+            due_date=due_date,
+            created_at=timezone.now()
+        )
+
+        return JsonResponse({
+            'success': True,
+            'reading': {
+                'id': reading.id,
+                'previous_reading': previous_reading,
+                'current_reading': current_reading,
+                'units_consumed': units_consumed,
+                'reading_date': reading_date,
+            },
+            'bill': {
+                'id': bill.id,
+                'bill_number': bill.bill_number,
+                'consumer_name': consumer.name,
+                'consumer_number': consumer.consumer_number,
+                'meter_number': consumer.meter_number,
+                'address': consumer.address,
+                'load_kw': getattr(consumer, 'load_kw', 1.0),
+                'meter_type': getattr(consumer, 'meter_type', '10'),
+                'units': units_consumed,
+                'rate_per_unit': getattr(bill, 'rate_per_unit', 8.56),
+                'energy_charges': bill.energy_charges,
+                'fixed_charges': getattr(bill, 'fixed_charges', units_consumed * 0), # Simplified for UI if missing
+                'duty_charge': getattr(bill, 'duty_charge', 0),
+                'meter_rent': getattr(bill, 'meter_rent', 0),
+                'regulatory_surcharge': getattr(bill, 'regulatory_surcharge', 0),
+                'late_payment_surcharge': getattr(bill, 'late_payment_surcharge', 0),
+                'arrears': getattr(bill, 'arrears', 0),
+                'grand_total': bill.total_amount,
+                'billing_period': reading_date_obj.strftime('%B %Y'),
+                'due_date': due_date.strftime('%Y-%m-%d'),
+                'status': bill.status,
+            }
+        })
+
+    except OperationalError as e:
+        error_msg = str(e)
+        if "readonly" in error_msg.lower():
+            error_msg = "Database is read-only. Please stop the server and run: cd /Users/anasahmad/Documents/eMeter.web/electricity_system && chmod 664 db.sqlite3 && python3 manage.py migrate"
+        return JsonResponse({'success': False, 'error': error_msg}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def api_get_settings(request):
+    """Retrieve current billing settings"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    settings = BillingSettings.get_settings()
+    data = {
+        'rate_per_unit': settings.rate_per_unit,
+        'fixed_charge_per_kw': settings.fixed_charge_per_kw,
+        'phase_1_rent': settings.phase_1_rent,
+        'phase_3_rent': settings.phase_3_rent,
+        'duty_percentage': settings.duty_percentage,
+    }
+    return JsonResponse(data)
+
+@csrf_exempt
+@api_view(['POST'])
+def api_update_settings(request):
+    """Update billing settings (Restricted to admin by mobile role logic)"""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        settings = BillingSettings.get_settings()
+        
+        # Check if we got a mock object (no _state attribute is a good check for Django models)
+        if not hasattr(settings, '_state'):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Database error: Settings table is missing or database is locked. Please contact administrator.'
+            }, status=500)
+
+        if 'rate_per_unit' in data:
+            settings.rate_per_unit = float(data['rate_per_unit'])
+        if 'fixed_charge_per_kw' in data:
+            settings.fixed_charge_per_kw = float(data['fixed_charge_per_kw'])
+        if 'phase_1_rent' in data:
+            settings.phase_1_rent = float(data['phase_1_rent'])
+        if 'phase_3_rent' in data:
+            settings.phase_3_rent = float(data['phase_3_rent'])
+        if 'duty_percentage' in data:
+            settings.duty_percentage = float(data['duty_percentage'])
+            
+        settings.save()
+        return JsonResponse({'success': True, 'message': 'Settings updated successfully'})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': f'Invalid numeric value: {str(e)}'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Server Error: {str(e)}'}, status=500)
+
+@csrf_exempt
+def api_send_bill_sms(request):
+    """Send bill summary SMS to consumer's phone number via Twilio."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        bill_id = data.get('bill_id')
+
+        if not bill_id:
+            return JsonResponse({'error': 'bill_id is required'}, status=400)
+
+        bill = get_object_or_404(Bill, id=bill_id)
+        consumer = bill.consumer
+
+        if not consumer.phone:
+            return JsonResponse({
+                'success': False,
+                'error': 'Consumer does not have a phone number on file'
+            }, status=400)
+
+        # Compose SMS message
+        message_body = (
+            f"Dear {consumer.name}, your electricity bill has been generated.\n"
+            f"Bill#: {bill.bill_number}\n"
+            f"Units: {bill.units} kWh\n"
+            f"Amount: Rs.{bill.total_amount:.2f}\n"
+            f"Due: {bill.due_date.strftime('%d-%b-%Y') if bill.due_date else 'N/A'}\n"
+            f"- PowerGrid eMeter, AMU"
+        )
+
+        # Try sending via Twilio
+        twilio_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '')
+        twilio_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '')
+        # Prefer WhatsApp if available/configured, otherwise SMS
+        twilio_sender = getattr(settings, 'TWILIO_WHATSAPP_FROM', '') or getattr(settings, 'TWILIO_PHONE_NUMBER', '')
+
+        if not all([twilio_sid, twilio_token, twilio_sender]):
+            # Twilio not configured — return the message content for display
+            return JsonResponse({
+                'success': True,
+                'sms_sent': False,
+                'reason': 'Twilio credentials not configured. SMS not sent.',
+                'message_preview': message_body,
+                'phone': consumer.phone,
+            })
+
+        try:
+            from twilio.rest import Client
+            client = Client(twilio_sid, twilio_token)
+
+            # Ensure phone has country code
+            phone = consumer.phone.strip()
+            if not phone.startswith('+'):
+                phone = '+91' + phone.lstrip('0')
+
+            # Use WhatsApp format for the recipient if sending via WhatsApp
+            to_phone = phone
+            if twilio_sender.startswith('whatsapp:'):
+                if not to_phone.startswith('whatsapp:'):
+                    to_phone = f'whatsapp:{to_phone}'
+
+            print(f"DEBUG: Attempting to send Twilio message from {twilio_sender} to {to_phone}")
+            sms = client.messages.create(
+                body=message_body,
+                from_=twilio_sender,
+                to=to_phone
+            )
+            print(f"DEBUG: Twilio message sent successfully. SID: {sms.sid}")
+
+            return JsonResponse({
+                'success': True,
+                'sms_sent': True,
+                'message_sid': sms.sid,
+                'phone': phone,
+                'message_preview': message_body,
+            })
+
+        except ImportError:
+            return JsonResponse({
+                'success': True,
+                'sms_sent': False,
+                'reason': 'Twilio library not installed. Run: pip install twilio',
+                'message_preview': message_body,
+                'phone': consumer.phone,
+            })
+        except Exception as sms_error:
+            return JsonResponse({
+                'success': True,
+                'sms_sent': False,
+                'reason': f'SMS send failed: {str(sms_error)}',
+                'message_preview': message_body,
+                'phone': consumer.phone,
+            })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+#17 - Edit Today's Reading Only
+@csrf_exempt
+def api_edit_today_reading(request, reading_id):
+    """Edit a meter reading — only allowed if reading_date is today."""
+    if request.method not in ['PUT', 'PATCH']:
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    try:
+        reading = get_object_or_404(MeterReading, id=reading_id)
+
+        # Check if reading is from today
+        today = datetime.now().date()
+        if reading.reading_date != today:
+            return JsonResponse({
+                'success': False,
+                'error': 'You can only edit readings from today',
+                'reading_date': str(reading.reading_date),
+                'today': str(today),
+            }, status=403)
+
+        data = json.loads(request.body)
+        new_current_reading = float(data.get('current_reading', reading.current_reading))
+
+        if new_current_reading < reading.previous_reading:
+            return JsonResponse({
+                'error': 'Current reading must be >= previous reading',
+                'previous_reading': reading.previous_reading,
+            }, status=400)
+
+        # Update the reading
+        reading.current_reading = new_current_reading
+        reading.units_consumed = new_current_reading - reading.previous_reading
+        reading.save()
+
+        # Update linked bill if exists
+        linked_bill = Bill.objects.filter(meter_reading=reading).first()
+        if linked_bill:
+            units = reading.units_consumed
+            linked_bill.units = units
+            linked_bill.energy_charges = units * linked_bill.rate_per_unit
+
+            # Recalculate arrears
+            unpaid_bills = Bill.objects.filter(
+                consumer=reading.consumer,
+                status__in=['unpaid', 'overdue', 'pending']
+            ).exclude(id=linked_bill.id)
+            arrears = sum(b.total_amount for b in unpaid_bills)
+
+            linked_bill.total_amount = linked_bill.energy_charges + linked_bill.fixed_charges + arrears
+            linked_bill.save()
+
+            return JsonResponse({
+                'success': True,
+                'reading': {
+                    'id': reading.id,
+                    'current_reading': reading.current_reading,
+                    'units_consumed': reading.units_consumed,
+                },
+                'bill_updated': True,
+                'bill': {
+                    'id': linked_bill.id,
+                    'bill_number': linked_bill.bill_number,
+                    'units': linked_bill.units,
+                    'energy_charges': round(linked_bill.energy_charges, 2),
+                    'arrears': round(arrears, 2),
+                    'grand_total': round(linked_bill.total_amount, 2),
+                }
+            })
+
+        return JsonResponse({
+            'success': True,
+            'reading': {
+                'id': reading.id,
+                'current_reading': reading.current_reading,
+                'units_consumed': reading.units_consumed,
+            },
+            'bill_updated': False,
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

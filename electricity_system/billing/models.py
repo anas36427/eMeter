@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, OperationalError
 
 class Message(models.Model):
     text = models.CharField(max_length=200)
@@ -20,6 +20,18 @@ class Consumer(models.Model):
         ('commercial', 'Commercial'),
         ('industrial', 'Industrial')
     ], default='residential')
+    LOAD_CHOICES = [
+        (1.0, '1 KW'),
+        (2.0, '2 KW'),
+        (3.0, '3 KW'),
+        (4.0, '4 KW'),
+        (5.0, '5 KW'),
+    ]
+    load_kw = models.FloatField(choices=LOAD_CHOICES, default=1.0)
+    meter_type = models.CharField(max_length=20, choices=[
+        ('10', 'Standard (10)'),
+        ('25', 'Enhanced (25)')
+    ], default='10')
     status = models.CharField(max_length=20, choices=[
         ('active', 'Active'),
         ('inactive', 'Inactive'),
@@ -59,9 +71,14 @@ class Bill(models.Model):
     meter_reading = models.ForeignKey(MeterReading, on_delete=models.CASCADE, null=True, blank=True)
     bill_number = models.CharField(max_length=20, unique=True, blank=True)
     units = models.FloatField(default=0)
-    rate_per_unit = models.FloatField(default=7.50)
-    fixed_charges = models.FloatField(default=125.00)
+    rate_per_unit = models.FloatField(default=8.56)
+    fixed_charges = models.FloatField(default=0)
     energy_charges = models.FloatField(blank=True, default=0)
+    duty_charge = models.FloatField(default=0)
+    regulatory_surcharge = models.FloatField(default=0)
+    meter_rent = models.FloatField(default=0)
+    arrears = models.FloatField(default=0)
+    late_payment_surcharge = models.FloatField(default=0)
     total_amount = models.FloatField(blank=True, default=0)
     status = models.CharField(max_length=20, choices=[
         ('unpaid', 'Unpaid'),
@@ -76,15 +93,57 @@ class Bill(models.Model):
     created_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        self.energy_charges = self.units * self.rate_per_unit
-        self.total_amount = self.energy_charges + self.fixed_charges
+        # Fetch current system settings with Safe Mode fallback
+        try:
+            settings = BillingSettings.get_settings()
+        except:
+            # Fallback mock settings
+            class MockSettings:
+                rate_per_unit = 8.56
+                fixed_charge_per_kw = 400.0
+                phase_1_rent = 10.0
+                phase_3_rent = 25.0
+                duty_percentage = 7.5
+            settings = MockSettings()
         
-        # Auto-generate bill_number if not provided
+        self.rate_per_unit = getattr(settings, 'rate_per_unit', 8.56)
+        self.energy_charges = round(self.units * self.rate_per_unit, 2)
+        
+        # Calculate fixed charges based on load
+        load = getattr(self.consumer, 'load_kw', 1.0)
+        fixed_rate = getattr(settings, 'fixed_charge_per_kw', 400.0)
+        self.fixed_charges = load * fixed_rate
+            
+        # Calculate duty charge (X% of Energy + Fixed)
+        duty_pct = getattr(settings, 'duty_percentage', 7.5)
+        self.duty_charge = round((self.energy_charges + self.fixed_charges) * (duty_pct / 100), 2)
+        
+        # Determine meter rent based on meter_type (phase)
+        m_type = getattr(self.consumer, 'meter_type', '10')
+        p1_rent = getattr(settings, 'phase_1_rent', 10.0)
+        p3_rent = getattr(settings, 'phase_3_rent', 25.0)
+        self.meter_rent = p1_rent if m_type == '10' else p3_rent
+            
+        # Late Payment Surcharge (1.5% of arrears)
+        if hasattr(self, 'arrears') and self.arrears > 0:
+            self.late_payment_surcharge = round(self.arrears * 0.015, 2)
+            
+        self.total_amount = round(
+            self.energy_charges + 
+            self.fixed_charges + 
+            self.duty_charge + 
+            getattr(self, 'regulatory_surcharge', 0) + 
+            self.meter_rent + 
+            getattr(self, 'arrears', 0) + 
+            getattr(self, 'late_payment_surcharge', 0),
+            0
+        )
+        
         if not self.bill_number:
             import random
             import string
             self.bill_number = 'BILL' + ''.join(random.choices(string.digits, k=8))
-        
+            
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -128,3 +187,40 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+
+class BillingSettings(models.Model):
+    """Global settings for billing rates"""
+    rate_per_unit = models.FloatField(default=8.56)
+    fixed_charge_per_kw = models.FloatField(default=400.0)
+    phase_1_rent = models.FloatField(default=10.0)
+    phase_3_rent = models.FloatField(default=25.0)
+    duty_percentage = models.FloatField(default=7.5)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Billing Settings"
+
+    def __str__(self):
+        return f"Settings updated at {self.updated_at}"
+
+    @classmethod
+    def get_settings(cls):
+        try:
+            settings, created = cls.objects.get_or_create(id=1)
+            return settings
+        except Exception as e:
+            # Fallback Mock if table doesn't exist or DB error
+            print(f"ERROR: Failed to fetch BillingSettings: {str(e)}")
+            class MockSettings:
+                rate_per_unit = 8.56
+                fixed_charge_per_kw = 400.0
+                phase_1_rent = 10.0
+                phase_3_rent = 25.0
+                duty_percentage = 7.5
+                updated_at = None
+                def save(self, *args, **kwargs):
+                    print("WARNING: Attempted to save MockSettings. This change will NOT be persisted.")
+                    pass
+            return MockSettings()
+

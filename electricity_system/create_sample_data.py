@@ -105,7 +105,7 @@ def create_sample_data():
                         payment_method=random.choice(['credit_card', 'debit_card', 'online']),
                         status='success'
                     )
-                    bill.paid_date = paid_date.date()
+                    bill.paid_date = paid_date
                     bill.save()
                     print(f"    Created payment for bill")
     

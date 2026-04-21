@@ -12,10 +12,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,7 +27,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-s(++$8^mg#8qqq
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # ALLOWED_HOSTS - Add your domain here for production
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '.onrender.com', '.pythonanywhere.com']
 
 
 # Application definition
@@ -45,7 +41,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'billing',
     'rest_framework',
-    'rest_framework.authtoken',
     'corsheaders',
 ]
 
@@ -61,22 +56,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'electricity_system.authentication.CsrfExemptSessionAuthentication',
-    ],
-}
-
 ROOT_URLCONF = 'electricity_system.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            BASE_DIR / 'templates',
-            BASE_DIR.parent / 'energy-hub-ui' / 'dist',
-        ],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -94,20 +79,25 @@ WSGI_APPLICATION = 'electricity_system.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-import os
+# For PostgreSQL (uncomment the following and comment out SQLite):
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'emeter_db',
+#         'USER': 'emeter_user',
+#         'PASSWORD': 'emeter123',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 
-
+# For SQLite (comment out PostgreSQL above and uncomment below):
 DATABASES = {
     'default': {
-        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.environ.get('DB_NAME', 'emeter_db'),
-        'USER': os.environ.get('DB_USER', 'emeter_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'emeter123'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5433'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 
 # Password validation
@@ -146,10 +136,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-    BASE_DIR.parent / 'energy-hub-ui' / 'dist',
-]
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
@@ -160,8 +147,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
-
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 # Security settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = False
@@ -175,9 +161,18 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
-# CORS settings - Allow all origins for mobile development
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+# CORS settings - Allow React frontend to connect
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://localhost:8081",
+    "http://localhost:8083",       
+    "http://127.0.0.1:8081",
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:8083",       
+]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
@@ -187,13 +182,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8081',
     'http://127.0.0.1:8081',
     'http://localhost:8083',      
-    'http://127.0.0.1:8083',
-    'http://10.131.109.32:8083',
-    'http://10.86.112.32:8000',
-    'http://10.91.159.32:8000',
-    'http://10.86.158.33:8000',
-    'http://10.86.158.33:8081',
+    'http://127.0.0.1:8083',      
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -204,10 +195,3 @@ SESSION_COOKIE_AGE = 28800
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = False
-
-# Twilio Settings (SMS or WhatsApp)
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
-TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
-# For SMS use: '+1234567890'. For WhatsApp use: 'whatsapp:+14155238886'
-TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')
-TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
