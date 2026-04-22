@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "eMeter Reader",
+    "slug": "emeter-reader",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A1628"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.amu.emeterreader"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A1628"
+      },
+      "package": "com.amu.emeterreader",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-image-picker",
+      "expo-asset"
+    ]
+  }
+}

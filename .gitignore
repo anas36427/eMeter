@@ -12,3 +12,10 @@ env/
 coverage/
 *.sqlite3
 static/frontend/dist/
+
+# Mobile App
+eMeterApp/node_modules/
+eMeterApp/.expo/
+eMeterApp/dist/
+eMeterApp/web-build/
+eMeterApp/.env
