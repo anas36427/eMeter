@@ -12,7 +12,7 @@ import json
 import random
 import string
 import io
-
+import os
 from django.db import OperationalError
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.conf import settings
@@ -782,14 +782,24 @@ def api_consumer_list(request):
             # Check for duplicate meter number
             if Consumer.objects.filter(meter_number=data['meter_number']).exists():
                 return JsonResponse({'success': False, 'error': 'A consumer with this meter number already exists.'}, status=400)
-            consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
-            while Consumer.objects.filter(consumer_number=consumer_number).exists():
+
+            # Manual consumer ID or auto-generate
+            consumer_number = data.get('consumer_number', '').strip()
+            if consumer_number:
+                if Consumer.objects.filter(consumer_number=consumer_number).exists():
+                    return JsonResponse({'success': False, 'error': 'A consumer with this ID already exists.'}, status=400)
+            else:
                 consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
+                while Consumer.objects.filter(consumer_number=consumer_number).exists():
+                    consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
+
             consumer = Consumer.objects.create(
                 name=data.get('name'),
                 phone=data.get('phone', ''),
                 email=data.get('email') or None,
                 address=data.get('address', ''),
+                post=data.get('post', ''),
+                department=data.get('department', ''),
                 meter_number=data.get('meter_number'),
                 load_kw=float(data.get('load_kw', 1.0)),
                 meter_type=data.get('meter_type', '10'),
@@ -799,6 +809,25 @@ def api_consumer_list(request):
                 created_at=timezone.now(),
                 updated_at=timezone.now(),
             )
+
+            # Create initial meter reading if provided
+            initial_reading = data.get('initial_reading')
+            if initial_reading is not None:
+                try:
+                    reading_val = float(initial_reading)
+                    MeterReading.objects.create(
+                        consumer=consumer,
+                        previous_reading=0,
+                        current_reading=reading_val,
+                        reading_date=timezone.now().date(),
+                        reading_time=timezone.now().time(),
+                        remarks='Initial reading at registration',
+                        created_by=request.user if request.user.is_authenticated else None,
+                        created_at=timezone.now(),
+                    )
+                except (ValueError, TypeError):
+                    pass  # Skip if invalid number
+
             return JsonResponse({
                 'success': True,
                 'id': consumer.id,
@@ -1239,6 +1268,7 @@ def download_bill_pdf(request, bill_id):
 
 def spa_index(request):
     """Render the single-page application index from energy-hub-ui/dist."""
+    import os
     dist_dir = os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist')
     index_path = os.path.join(dist_dir, 'index.html')
     

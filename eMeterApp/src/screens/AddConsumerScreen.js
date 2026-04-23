@@ -33,11 +33,15 @@ export default function AddConsumerScreen({ navigation }) {
 
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
+        consumer_number: '',
         name: '',
         phone: '',
         email: '',
         address: '',
+        post: '',
+        department: '',
         meter_number: '',
+        initial_reading: '',
         load_kw: 1.0,
         meter_type: '10',
         connection_type: 'residential',
@@ -48,6 +52,10 @@ export default function AddConsumerScreen({ navigation }) {
     };
 
     const handleSubmit = async () => {
+        if (!form.consumer_number.trim()) {
+            Alert.alert('Required', 'Please enter the Consumer ID.');
+            return;
+        }
         if (!form.name.trim()) {
             Alert.alert('Required', 'Please enter the consumer name.');
             return;
@@ -59,7 +67,13 @@ export default function AddConsumerScreen({ navigation }) {
 
         setSaving(true);
         try {
-            const data = await addConsumerAPI(form);
+            const payload = { ...form };
+            if (payload.initial_reading) {
+                payload.initial_reading = parseFloat(payload.initial_reading);
+            } else {
+                delete payload.initial_reading;
+            }
+            const data = await addConsumerAPI(payload);
             if (data.success) {
                 Alert.alert(
                     'Consumer Added ✅',
@@ -112,13 +126,22 @@ export default function AddConsumerScreen({ navigation }) {
                 <View style={styles.infoBanner}>
                     <Ionicons name="person-add" size={20} color={colors.accent} />
                     <Text style={styles.infoText}>
-                        Register a new electricity consumer. A unique Consumer ID will be auto-generated.
+                        Register a new electricity consumer. Enter a unique Consumer ID or leave blank to auto-generate.
                     </Text>
                 </View>
 
                 {/* Personal Details */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Personal Details</Text>
+
+                    <FormInput
+                        label="Consumer ID"
+                        value={form.consumer_number}
+                        onChangeText={(val) => updateField('consumer_number', val)}
+                        placeholder="e.g. CN001234 (auto if blank)"
+                        icon="id-card-outline"
+                        colors={colors}
+                    />
 
                     <FormInput
                         label="Full Name *"
@@ -158,6 +181,24 @@ export default function AddConsumerScreen({ navigation }) {
                         multiline
                         colors={colors}
                     />
+
+                    <FormInput
+                        label="Post / Designation"
+                        value={form.post}
+                        onChangeText={(val) => updateField('post', val)}
+                        placeholder="e.g. Professor, Clerk, Technician"
+                        icon="briefcase-outline"
+                        colors={colors}
+                    />
+
+                    <FormInput
+                        label="Department"
+                        value={form.department}
+                        onChangeText={(val) => updateField('department', val)}
+                        placeholder="e.g. Computer Science, Electrical Engg."
+                        icon="business-outline"
+                        colors={colors}
+                    />
                 </View>
 
                 {/* Meter Details */}
@@ -170,6 +211,16 @@ export default function AddConsumerScreen({ navigation }) {
                         onChangeText={(val) => updateField('meter_number', val)}
                         placeholder="e.g. MTR-2024-001"
                         icon="speedometer-outline"
+                        colors={colors}
+                    />
+
+                    <FormInput
+                        label="Initial Reading"
+                        value={form.initial_reading}
+                        onChangeText={(val) => updateField('initial_reading', val)}
+                        placeholder="e.g. 1250 (current meter reading)"
+                        icon="analytics-outline"
+                        keyboardType="numeric"
                         colors={colors}
                     />
 

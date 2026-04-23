@@ -14,6 +14,8 @@ class Consumer(models.Model):
     email = models.EmailField(unique=True, null=True, blank=True)
     phone = models.CharField(max_length=20, default='')
     address = models.TextField(default='')
+    post = models.CharField(max_length=100, default='', blank=True)
+    department = models.CharField(max_length=100, default='', blank=True)
     meter_number = models.CharField(max_length=50, unique=True)
     connection_type = models.CharField(max_length=20, choices=[
         ('residential', 'Residential'),
