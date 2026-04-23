@@ -7,11 +7,13 @@ import {
     TouchableOpacity,
     RefreshControl,
     StatusBar,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
-import { getDashboardStatsAPI } from '../services/api';
-import { getPendingCount } from '../services/offlineStorage';
+import { getDashboardStatsAPI, submitReadingAndBillAPI } from '../services/api';
+import { getPendingCount, syncOfflineReadings } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,6 +27,7 @@ export default function DashboardScreen({ navigation }) {
     const [offlinePending, setOfflinePending] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
 
     const fetchDashboard = useCallback(async () => {
         try {
@@ -51,6 +54,27 @@ export default function DashboardScreen({ navigation }) {
         setRefreshing(true);
         await Promise.all([fetchDashboard(), fetchOffline()]);
         setRefreshing(false);
+    };
+
+    const handleSync = async () => {
+        if (syncing) return;
+        setSyncing(true);
+        try {
+            const { synced, failed } = await syncOfflineReadings(submitReadingAndBillAPI);
+            if (synced > 0) {
+                // Refresh dashboard stats after successful sync
+                fetchDashboard();
+            }
+            await fetchOffline();
+            Alert.alert(
+                'Sync Complete',
+                `Successfully synced ${synced} reading(s).\nFailed: ${failed}`
+            );
+        } catch (error) {
+            Alert.alert('Sync Error', 'An error occurred while syncing.');
+        } finally {
+            setSyncing(false);
+        }
     };
 
     const today = new Date().toLocaleDateString('en-IN', {
@@ -121,9 +145,13 @@ export default function DashboardScreen({ navigation }) {
                         <Text style={styles.offlineText}>
                             {offlinePending} reading{offlinePending !== 1 ? 's' : ''} pending sync
                         </Text>
-                        <TouchableOpacity style={styles.syncBtn}>
-                            <Ionicons name="sync" size={16} color={colors.white} />
-                            <Text style={styles.syncBtnText}>Sync</Text>
+                        <TouchableOpacity style={styles.syncBtn} onPress={handleSync} disabled={syncing}>
+                            {syncing ? (
+                                <ActivityIndicator size="small" color={colors.white} />
+                            ) : (
+                                <Ionicons name="sync" size={16} color={colors.white} />
+                            )}
+                            <Text style={styles.syncBtnText}>{syncing ? 'Syncing...' : 'Sync'}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
