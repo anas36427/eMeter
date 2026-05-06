@@ -47,6 +47,14 @@ def get_messages(request):
     serializer = MessageSerializer(messages, many=True)
     return Response(serializer.data)
 
+def api_root(request):
+    """Health check endpoint for /api/"""
+    return JsonResponse({'status': 'ok', 'message': 'API is running', 'version': '1.0'})
+
+def favicon_view(request):
+    """Return an empty response for favicon.ico to prevent 404 errors"""
+    return HttpResponse(status=204)
+
 def login_view(request):
     """Handle user login"""
     if request.user.is_authenticated:
@@ -164,22 +172,77 @@ def api_dashboard_stats(request):
     """JSON stats for SPA dashboard"""
     if not request.user.is_authenticated:
         return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    from django.utils import timezone
+    now = timezone.now()
+    
     total_consumers = Consumer.objects.count()
-    active_consumers = Consumer.objects.filter(status='active').count()
     total_bills = Bill.objects.count()
-    paid_bills = Bill.objects.filter(status='paid').count()
-    unpaid_bills = Bill.objects.filter(status='unpaid').count()
-    overdue_bills = Bill.objects.filter(status='overdue').count()
+    total_readings = MeterReading.objects.count()
+    
     total_revenue = Bill.objects.filter(status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
+    pending_amount = Bill.objects.filter(status='unpaid').aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    current_month_units = Bill.objects.filter(
+        billing_period__month=now.month, 
+        billing_period__year=now.year
+    ).aggregate(total=Sum('units'))['total'] or 0
+
     return JsonResponse({
         'total_consumers': total_consumers,
-        'active_consumers': active_consumers,
         'total_bills': total_bills,
-        'paid_bills': paid_bills,
-        'unpaid_bills': unpaid_bills,
-        'overdue_bills': overdue_bills,
-        'total_revenue': round(total_revenue, 2),
+        'total_readings': total_readings,
+        'total_revenue': round(float(total_revenue), 2),
+        'pending_amount': round(float(pending_amount), 2),
+        'current_month_units': round(float(current_month_units), 1),
     })
+
+
+@csrf_exempt
+def api_reports_data(request):
+    """API endpoint for reports charts data"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    try:
+        # Top 10 Consumers by Usage (Units)
+        top_consumers = Bill.objects.values('consumer__name').annotate(
+            total_units=Sum('units')
+        ).order_by('-total_units')[:10]
+        
+        top_consumers_data = [
+            {'name': item['consumer__name'] or "Unknown", 'units': round(float(item['total_units'] or 0), 1)}
+            for item in top_consumers
+        ]
+        
+        # Monthly Usage (last 6 months)
+        monthly_usage = Bill.objects.values('billing_period').annotate(
+            total_units=Sum('units')
+        ).order_by('-billing_period')[:6]
+        
+        monthly_usage_data = [
+            {'month': item['billing_period'].strftime('%b') if item['billing_period'] else "N/A", 'units': round(float(item['total_units'] or 0), 1)}
+            for item in monthly_usage
+        ]
+        monthly_usage_data.reverse()
+        
+        # Revenue Breakdown (Salary vs Non-Salary)
+        revenue_breakdown = Bill.objects.filter(status='paid').values('consumer__connection_type').annotate(
+            total_revenue=Sum('total_amount')
+        )
+        
+        revenue_data = []
+        for item in revenue_breakdown:
+            label = 'Salary' if item['consumer__connection_type'] == 'salary' else 'Non Salary'
+            revenue_data.append({'name': label, 'value': round(float(item['total_revenue'] or 0), 2)})
+            
+        return JsonResponse({
+            'top_consumers': top_consumers_data,
+            'monthly_usage': monthly_usage_data,
+            'revenue_breakdown': revenue_data,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
@@ -352,19 +415,20 @@ def generate_bill(request):
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
         elements = []
         
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, spaceAfter=20)
-        heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, textColor=colors.HexColor('#0b4f9f'))
+        # Define safe styles manually
+        normal_style = ParagraphStyle('Normal', fontSize=10, leading=12)
+        title_style = ParagraphStyle('Title', fontSize=24, leading=28, spaceAfter=20, fontName='Helvetica-Bold')
+        heading_style = ParagraphStyle('Heading', fontSize=14, leading=18, spaceAfter=10, textColor=colors.HexColor('#0b4f9f'), fontName='Helvetica-Bold')
         
         # Header
         elements.append(Paragraph("PowerGrid", title_style))
-        elements.append(Paragraph("Electricity Billing Statement", styles['Normal']))
+        elements.append(Paragraph("Electricity Billing Statement", normal_style))
         elements.append(Spacer(1, 20))
         
         # Bill Number and Period
-        elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", styles['Normal']))
+        elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", normal_style))
         if bill.billing_period:
-            elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", styles['Normal']))
+            elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", normal_style))
         elements.append(Spacer(1, 20))
         
         # Consumer Info
@@ -431,8 +495,8 @@ def generate_bill(request):
         elements.append(Spacer(1, 20))
         
         # Due Date and Status
-        elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", styles['Normal']))
-        elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", styles['Normal']))
+        elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", normal_style))
+        elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", normal_style))
         
         # Build PDF
         doc.build(elements)
@@ -768,10 +832,25 @@ def api_consumer_list(request):
         return JsonResponse({'detail': 'Authentication required'}, status=401)
 
     if request.method == 'GET':
-        consumers = Consumer.objects.all().values(
-            'id', 'name', 'meter_number', 'consumer_number', 'address', 'status', 'load_kw', 'meter_type'
-        )
-        return JsonResponse({'consumers': list(consumers)})
+        consumers = Consumer.objects.all()
+        results = []
+        for c in consumers:
+            # Get the most recent reading for this consumer
+            last_reading = MeterReading.objects.filter(consumer=c).order_by('-reading_date', '-id').first()
+            prev_val = last_reading.current_reading if last_reading else 0
+            
+            results.append({
+                'id': c.id,
+                'name': c.name,
+                'meter_number': c.meter_number,
+                'consumer_number': c.consumer_number,
+                'address': c.address,
+                'status': c.status,
+                'load_kw': c.load_kw,
+                'meter_type': c.meter_type,
+                'previous_reading': prev_val
+            })
+        return JsonResponse({'consumers': results})
 
     if request.method == 'POST':
         try:
@@ -846,10 +925,23 @@ def api_bills_list(request):
     """Get all bills for admin"""
     if not request.user.is_authenticated:
         return JsonResponse({'detail': 'Authentication required'}, status=401)
-    bills = Bill.objects.select_related('consumer').all().values(
-        'id', 'consumer__name', 'units', 'total_amount', 'status', 'billing_period', 'due_date'
-    )
-    return JsonResponse({'bills': list(bills)})
+    if request.method == 'GET':
+        bills = Bill.objects.select_related('consumer').all()
+        results = []
+        for b in bills:
+            results.append({
+                'id': b.id,
+                'consumer_name': b.consumer.name if b.consumer else 'N/A',
+                'consumer_number': b.consumer.consumer_number if b.consumer else 'N/A',
+                'meter_number': b.consumer.meter_number if b.consumer else 'N/A',
+                'units': b.units,
+                'total_amount': b.total_amount,
+                'status': b.status,
+                'billing_period': b.billing_period.strftime('%B-%y') if b.billing_period else '',
+                'connection_type': b.consumer.connection_type if b.consumer else 'salary',
+                'due_date': b.due_date.strftime('%Y-%m-%d') if b.due_date else '',
+            })
+        return JsonResponse({'bills': results})
 
 # 6. 
 @csrf_exempt
@@ -878,20 +970,68 @@ def api_consumer_detail(request, consumer_id):
             'phone': consumer.phone,
             'address': consumer.address,
             'status': consumer.status,
+            'load_kw': str(consumer.load_kw) if consumer.load_kw else '',
+            'meter_type': consumer.meter_type,
+            'connection_type': consumer.connection_type,
+            'department': consumer.department,
+            'post': consumer.post,
         }
         return JsonResponse(data)
 
     if request.method in ['PUT', 'PATCH']:
-        data = json.loads(request.body)
-        for key, value in data.items():
-            if hasattr(consumer, key):
-                setattr(consumer, key, value)
-        consumer.save()
-        return JsonResponse({'success': True, 'message': 'Consumer updated successfully'})
+        try:
+            data = json.loads(request.body)
+            for key, value in data.items():
+                if hasattr(consumer, key):
+                    # Handle empty strings for numeric fields
+                    if key == 'load_kw':
+                        try:
+                            value = float(value) if value else 1.0
+                        except ValueError:
+                            value = 1.0
+                    elif value == "":
+                        try:
+                            field = consumer._meta.get_field(key)
+                            if isinstance(field, (models.FloatField, models.IntegerField)) and not field.null:
+                                continue
+                        except Exception:
+                            pass
+                    
+                    # Prevent overwriting with empty consumer number
+                    if key == 'consumer_number' and not value:
+                        continue
+                        
+                    setattr(consumer, key, value)
+            consumer.save()
+            return JsonResponse({'success': True, 'message': 'Consumer updated successfully'})
+        except Exception as e:
+            import traceback
+            print(f"PATCH Error: {str(e)}\n{traceback.format_exc()}")
+            return JsonResponse({'success': False, 'error': f"Server error: {str(e)}"}, status=400)
 
     if request.method == 'DELETE':
         consumer.delete()
         return JsonResponse({'success': True, 'message': 'Consumer deleted successfully'})
+
+@csrf_exempt
+def api_consumer_readings(request, consumer_id):
+    """Get reading history for a specific consumer"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    readings = MeterReading.objects.filter(consumer_id=consumer_id).order_by('-reading_date')
+    results = []
+    for reading in readings:
+        results.append({
+            'id': reading.id,
+            'date': reading.reading_date.strftime('%Y-%m-%d') if reading.reading_date else '',
+            'reading': reading.current_reading,
+            'prev': reading.previous_reading,
+            'usage': reading.units_consumed,
+            'recorded_by': reading.created_by.username if reading.created_by else 'Admin',
+            'remarks': reading.remarks or '',
+        })
+    return JsonResponse(results, safe=False)
 
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
@@ -1005,17 +1145,22 @@ def api_bill_detail(request, bill_id):
 
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
-#11
 @csrf_exempt
 def api_mark_bill_paid(request, bill_id):
     """Mark a bill as paid"""
     if not request.user.is_authenticated:
         return JsonResponse({'detail': 'Authentication required'}, status=401)
-    bill = get_object_or_404(Bill, id=bill_id)
-    bill.status = 'paid'
-    bill.paid_date = datetime.now().date()
-    bill.save()
-    return JsonResponse({'success': True, 'message': 'Bill marked as paid'})
+    
+    try:
+        bill = get_object_or_404(Bill, id=bill_id)
+        bill.status = 'paid'
+        bill.paid_date = datetime.now().date()
+        bill.save()
+        return JsonResponse({'success': True, 'message': 'Bill marked as paid'})
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 #12
 @csrf_exempt
@@ -1023,11 +1168,17 @@ def api_mark_bill_unpaid(request, bill_id):
     """Mark a bill as unpaid"""
     if not request.user.is_authenticated:
         return JsonResponse({'detail': 'Authentication required'}, status=401)
-    bill = get_object_or_404(Bill, id=bill_id)
-    bill.status = 'unpaid'
-    bill.paid_date = None
-    bill.save()
-    return JsonResponse({'success': True, 'message': 'Bill marked as unpaid'})
+    
+    try:
+        bill = get_object_or_404(Bill, id=bill_id)
+        bill.status = 'unpaid'
+        bill.paid_date = None
+        bill.save()
+        return JsonResponse({'success': True, 'message': 'Bill marked as unpaid'})
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 #13
 @csrf_exempt
@@ -1062,95 +1213,165 @@ def api_submit_reading(request):
 #14
 @csrf_exempt
 def download_bill_pdf(request, bill_id):
+    """Generate a professional electricity bill PDF"""
     if not request.user.is_authenticated:
         return JsonResponse({'detail': 'Authentication required'}, status=401)
-    """Download bill as PDF"""
-    bill = get_object_or_404(Bill, id=bill_id)
     
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, spaceAfter=20)
-    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, textColor=colors.HexColor('#0b4f9f'))
-    
-    elements.append(Paragraph("PowerGrid", title_style))
-    elements.append(Paragraph("Electricity Billing Statement", styles['Normal']))
-    elements.append(Spacer(1, 20))
-    
-    elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", styles['Normal']))
-    if bill.billing_period:
-        elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", styles['Normal']))
-    elements.append(Spacer(1, 20))
-    
-    consumer_data = [
-        ['Consumer Name:', bill.consumer.name],
-        ['Meter Number:', bill.consumer.meter_number],
-        ['Consumer Number:', bill.consumer.consumer_number],
-        ['Address:', bill.consumer.address or 'N/A'],
-    ]
-    consumer_table = Table(consumer_data, colWidths=[2*inch, 4*inch])
-    consumer_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-    ]))
-    elements.append(consumer_table)
-    elements.append(Spacer(1, 20))
-    
-    reading_data = [
-        ['Previous Reading', 'Current Reading', 'Units Consumed'],
-        [str(bill.meter_reading.previous_reading) if bill.meter_reading else '0',
-         str(bill.meter_reading.current_reading) if bill.meter_reading else '0',
-         str(bill.units)]
-    ]
-    reading_table = Table(reading_data, colWidths=[2*inch, 2*inch, 2*inch])
-    reading_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0b4f9f')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-    ]))
-    elements.append(reading_table)
-    elements.append(Spacer(1, 20))
-    
-    charges_data = [
-        ['Description', 'Amount'],
-        [f'Energy Charges ({bill.units} kWh × ₹{bill.rate_per_unit})', f'₹{bill.energy_charges:.2f}'],
-        ['Fixed / Service Charges', f'₹{bill.fixed_charges:.2f}'],
-        ['Total Amount Due', f'₹{bill.total_amount:.2f}'],
-    ]
-    charges_table = Table(charges_data, colWidths=[4*inch, 2*inch])
-    charges_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -2), 1, colors.grey),
-        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#0b4f9f')),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
-    ]))
-    elements.append(charges_table)
-    elements.append(Spacer(1, 20))
-    
-    elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", styles['Normal']))
-    elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", styles['Normal']))
-    
-    doc.build(elements)
-    pdf_file = buffer.getvalue()
-    buffer.close()
-    
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="bill-{bill.bill_number}.pdf"'
-    return response
+    try:
+        bill = get_object_or_404(Bill, id=bill_id)
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+        elements = []
+        
+        # Style Initialization - Define everything manually to avoid KeyError
+        # styles = getSampleStyleSheet() # Skipping because it's missing basic keys like 'Normal'
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            fontSize=10,
+            leading=12,
+            fontName='Helvetica'
+        )
+        
+        normal_bold = ParagraphStyle(
+            'CustomNormalBold',
+            fontSize=10,
+            leading=12,
+            fontName='Helvetica-Bold'
+        )
+        
+        title_style = ParagraphStyle(
+            'BillTitle',
+            fontSize=26,
+            alignment=1, # Center
+            spaceAfter=10,
+            textColor=colors.HexColor('#1a5f7a'),
+            fontName='Helvetica-Bold'
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'BillSubtitle',
+            fontSize=12,
+            alignment=1,
+            spaceAfter=30,
+            textColor=colors.grey,
+            fontName='Helvetica'
+        )
+        
+        section_header = ParagraphStyle(
+            'SectionHeader',
+            fontSize=14,
+            spaceBefore=15,
+            spaceAfter=10,
+            textColor=colors.HexColor('#1a5f7a'),
+            fontName='Helvetica-Bold'
+        )
+        
+        # Header
+        elements.append(Paragraph("EMETER SOLUTIONS", title_style))
+        elements.append(Paragraph("Official Electricity Consumption Invoice", subtitle_style))
+        
+        # Invoice Header Info
+        header_data = [
+            [Paragraph("<b>Invoice No:</b>", normal_style), Paragraph(f"#{bill.id}", normal_bold), 
+             Paragraph("<b>Bill Date:</b>", normal_style), Paragraph(bill.created_at.strftime('%d %b %Y') if bill.created_at else "N/A", normal_bold)],
+            [Paragraph("<b>Bill Number:</b>", normal_style), Paragraph(bill.bill_number or "N/A", normal_bold), 
+             Paragraph("<b>Due Date:</b>", normal_style), Paragraph(bill.due_date.strftime('%d %b %Y') if bill.due_date else "N/A", normal_bold)]
+        ]
+        header_table = Table(header_data, colWidths=[1.2*inch, 1.5*inch, 1.2*inch, 1.5*inch])
+        header_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 20))
+        
+        # Consumer Information
+        elements.append(Paragraph("Consumer Information", section_header))
+        consumer_data = [
+            ["Name:", bill.consumer.name],
+            ["Consumer ID:", bill.consumer.consumer_number],
+            ["Meter No:", bill.consumer.meter_number],
+            ["Load:", f"{bill.consumer.load_kw} KW"],
+            ["Address:", Paragraph(bill.consumer.address or "No address provided", normal_style)]
+        ]
+        consumer_table = Table(consumer_data, colWidths=[1.5*inch, 4*inch])
+        consumer_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ]))
+        elements.append(consumer_table)
+        
+        # Readings Table
+        elements.append(Paragraph("Consumption Details", section_header))
+        reading_data = [
+            ["Previous Reading", "Current Reading", "Units Consumed"],
+            [f"{float(bill.meter_reading.previous_reading if bill.meter_reading else 0):.1f} kWh", 
+             f"{float(bill.meter_reading.current_reading if bill.meter_reading else 0):.1f} kWh", 
+             f"{float(bill.units):.1f} kWh"]
+        ]
+        reading_table = Table(reading_data, colWidths=[1.8*inch, 1.8*inch, 1.8*inch])
+        reading_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a5f7a')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        elements.append(reading_table)
+        
+        # Charge Breakdown
+        elements.append(Paragraph("Charge Breakdown", section_header))
+        charge_data = [
+            ["Description", "Details", "Amount"],
+            ["Energy Charges", f"{bill.units} units @ ₹{bill.rate_per_unit}", f"₹{float(bill.energy_charges):.2f}"],
+            ["Fixed Charges", f"Load Based", f"₹{float(bill.fixed_charges):.2f}"],
+            ["Meter Rent", f"Phase Type: {bill.consumer.meter_type}", f"₹{float(bill.meter_rent):.2f}"],
+            ["Duty & Taxes", f"Surcharge Included", f"₹{float(bill.duty_charge):.2f}"],
+            ["Arrears", f"Previous Balance", f"₹{float(bill.arrears):.2f}"],
+            ["<b>TOTAL PAYABLE</b>", "", f"<b>₹{float(bill.total_amount):.2f}</b>"],
+        ]
+        charge_table = Table(charge_data, colWidths=[2.5*inch, 1.5*inch, 1.4*inch])
+        charge_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f0f0f0')),
+            ('GRID', (0, 0), (-1, -2), 0.5, colors.lightgrey),
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, -1), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(charge_table)
+        
+        # Payment Status
+        elements.append(Spacer(1, 30))
+        status_color = colors.green if bill.status == 'paid' else colors.red
+        elements.append(Paragraph(f"<b>Payment Status: {bill.status.upper()}</b>", 
+                                 ParagraphStyle('Status', parent=normal_style, textColor=status_color, fontSize=12, alignment=1)))
+        
+        # Footer
+        elements.append(Spacer(1, 50))
+        elements.append(Paragraph("This is a computer generated invoice and does not require a physical signature.", subtitle_style))
+        
+        doc.build(elements)
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        filename = f"Bill_{bill.consumer.consumer_number}_{bill.billing_period.strftime('%b_%Y') if bill.billing_period else bill.id}.pdf"
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'error': f'PDF Generation Error: {str(e)}'}, status=500)
 
 #             return JsonResponse({
 #                 'success': True,
@@ -1169,116 +1390,113 @@ def download_bill_pdf(request, bill_id):
 #     """Download bill as PDF"""
 #     bill = get_object_or_404(Bill, id=bill_id)
     
-    # Generate PDF using reportlab
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, spaceAfter=20)
-    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, textColor=colors.HexColor('#0b4f9f'))
-    
-    # Header
-    elements.append(Paragraph("PowerGrid", title_style))
-    elements.append(Paragraph("Electricity Billing Statement", styles['Normal']))
-    elements.append(Spacer(1, 20))
-    
-    # Bill Number and Period
-    elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", styles['Normal']))
-    if bill.billing_period:
-        elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", styles['Normal']))
-    elements.append(Spacer(1, 20))
-    
-    # Consumer Info
-    elements.append(Paragraph("Consumer Information", heading_style))
-    consumer_data = [
-        ['Consumer Name:', bill.consumer.name],
-        ['Meter Number:', bill.consumer.meter_number],
-        ['Consumer Number:', bill.consumer.consumer_number],
-        ['Address:', bill.consumer.address or 'N/A'],
-    ]
-    consumer_table = Table(consumer_data, colWidths=[2*inch, 4*inch])
-    consumer_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-    ]))
-    elements.append(consumer_table)
-    elements.append(Spacer(1, 20))
-    
-    # Meter Readings
-    elements.append(Paragraph("Meter Readings", heading_style))
-    reading_data = [
-        ['Previous Reading', 'Current Reading', 'Units Consumed'],
-        [str(bill.meter_reading.previous_reading) if bill.meter_reading else '0',
-         str(bill.meter_reading.current_reading) if bill.meter_reading else '0',
-         str(bill.units)]
-    ]
-    reading_table = Table(reading_data, colWidths=[2*inch, 2*inch, 2*inch])
-    reading_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0b4f9f')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-    ]))
-    elements.append(reading_table)
-    elements.append(Spacer(1, 20))
-    
-    # Charges
-    elements.append(Paragraph("Charge Breakdown", heading_style))
-    charges_data = [
-        ['Description', 'Amount'],
-        [f'Energy Charges ({bill.units} kWh × ₹{bill.rate_per_unit})', f'₹{bill.energy_charges:.2f}'],
-        ['Fixed / Service Charges', f'₹{bill.fixed_charges:.2f}'],
-        ['Total Amount Due', f'₹{bill.total_amount:.2f}'],
-    ]
-    charges_table = Table(charges_data, colWidths=[4*inch, 2*inch])
-    charges_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -2), 1, colors.grey),
-        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#0b4f9f')),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
-    ]))
-    elements.append(charges_table)
-    elements.append(Spacer(1, 20))
-    
-    # Due Date and Status
-    elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", styles['Normal']))
-    elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", styles['Normal']))
-    
-    # Build PDF
-    doc.build(elements)
-    pdf_file = buffer.getvalue()
-    buffer.close()
-    
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="bill-{bill.bill_number}.pdf"'
-    return response
+#     # Generate PDF using reportlab
+#     buffer = io.BytesIO()
+#     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+#     elements = []
+#     
+#     # Define safe styles manually
+#     normal_style = ParagraphStyle('Normal', fontSize=10, leading=12)
+#     title_style = ParagraphStyle('Title', fontSize=24, leading=28, spaceAfter=20, fontName='Helvetica-Bold')
+#     
+#     # Header
+#     elements.append(Paragraph("PowerGrid", title_style))
+#     elements.append(Paragraph("Electricity Billing Statement", normal_style))
+#     elements.append(Spacer(1, 20))
+#     
+#     # Bill Number and Period
+#     elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", normal_style))
+#     if bill.billing_period:
+#         elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", normal_style))
+#     elements.append(Spacer(1, 20))
+#     
+#     # Consumer Info
+#     elements.append(Paragraph("Consumer Information", heading_style))
+#     consumer_data = [
+#         ['Consumer Name:', bill.consumer.name],
+#         ['Meter Number:', bill.consumer.meter_number],
+#         ['Consumer Number:', bill.consumer.consumer_number],
+#         ['Address:', bill.consumer.address or 'N/A'],
+#     ]
+#     consumer_table = Table(consumer_data, colWidths=[2*inch, 4*inch])
+#     consumer_table.setStyle(TableStyle([
+#         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+#         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+#         ('FONTSIZE', (0, 0), (-1, -1), 10),
+#         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+#     ]))
+#     elements.append(consumer_table)
+#     elements.append(Spacer(1, 20))
+#     
+#     # Meter Readings
+#     elements.append(Paragraph("Meter Readings", heading_style))
+#     reading_data = [
+#         ['Previous Reading', 'Current Reading', 'Units Consumed'],
+#         [str(bill.meter_reading.previous_reading) if bill.meter_reading else '0',
+#          str(bill.meter_reading.current_reading) if bill.meter_reading else '0',
+#          str(bill.units)]
+#     ]
+#     reading_table = Table(reading_data, colWidths=[2*inch, 2*inch, 2*inch])
+#     reading_table.setStyle(TableStyle([
+#         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0b4f9f')),
+#         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+#         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+#         ('FONTSIZE', (0, 0), (-1, -1), 10),
+#         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+#         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+#         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+#         ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+#     ]))
+#     elements.append(reading_table)
+#     elements.append(Spacer(1, 20))
+#     
+#     # Charges
+#     elements.append(Paragraph("Charge Breakdown", heading_style))
+#     charges_data = [
+#         ['Description', 'Amount'],
+#         [f'Energy Charges ({bill.units} kWh × ₹{bill.rate_per_unit})', f'₹{bill.energy_charges:.2f}'],
+#         ['Fixed / Service Charges', f'₹{bill.fixed_charges:.2f}'],
+#         ['Total Amount Due', f'₹{bill.total_amount:.2f}'],
+#     ]
+#     charges_table = Table(charges_data, colWidths=[4*inch, 2*inch])
+#     charges_table.setStyle(TableStyle([
+#         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+#         ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+#         ('FONTSIZE', (0, 0), (-1, -1), 10),
+#         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+#         ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
+#         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+#         ('GRID', (0, 0), (-1, -2), 1, colors.grey),
+#         ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#0b4f9f')),
+#         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
+#     ]))
+#     elements.append(charges_table)
+#     elements.append(Spacer(1, 20))
+#     
+#     # Due Date and Status
+#     elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", normal_style))
+#     elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", normal_style))
+#     
+#     # Build PDF
+#     doc.build(elements)
+#     pdf_file = buffer.getvalue()
+#     buffer.close()
+#     
+#     response = HttpResponse(pdf_file, content_type='application/pdf')
+#     response['Content-Disposition'] = f'attachment; filename="bill-{bill.bill_number}.pdf"'
+#     return response
+
 
 
 def spa_index(request):
-    """Render the single-page application index from energy-hub-ui/dist."""
+    """Render the single-page application index from energy-hub-ui/build."""
     import os
-    dist_dir = os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist')
-    index_path = os.path.join(dist_dir, 'index.html')
+    build_dir = os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist')
+    index_path = os.path.join(build_dir, 'index.html')
     
     try:
         with open(index_path, 'r', encoding='utf-8') as f:
             content = f.read()
-            # Patch asset paths to use Django's /static/ prefix
-            content = content.replace('src="/assets/', 'src="/static/assets/')
-            content = content.replace('href="/assets/', 'href="/static/assets/')
-            content = content.replace('src="/favicon.ico"', 'src="/static/favicon.ico"')
             return HttpResponse(content)
     except FileNotFoundError:
         return HttpResponse(
