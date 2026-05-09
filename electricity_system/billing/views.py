@@ -19,9 +19,9 @@ from django.conf import settings
 from .models import Consumer, MeterReading, Bill, Payment, UserProfile, BillingSettings
 from .forms import (ConsumerForm, MeterReadingForm, BillForm, PaymentForm, 
                     LoginForm, ConsumerRegistrationForm)   
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.template.loader import render_to_string
-from reportlab.lib import colors
+from .pdf_generator import BillPDFGenerator
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -409,103 +409,46 @@ def generate_bill(request):
         if request.headers.get('HX-Request') or request.headers.get('Hx-Request') or request.META.get('HTTP_HX_REQUEST'):
             html = render_to_string('partials/generate_bill_response.html', {'bill': bill}, request=request)
             return HttpResponse(html)
-
-        # ── Generate PDF using reportlab ──
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-        elements = []
-        
-        # Define safe styles manually
-        normal_style = ParagraphStyle('Normal', fontSize=10, leading=12)
-        title_style = ParagraphStyle('Title', fontSize=24, leading=28, spaceAfter=20, fontName='Helvetica-Bold')
-        heading_style = ParagraphStyle('Heading', fontSize=14, leading=18, spaceAfter=10, textColor=colors.HexColor('#0b4f9f'), fontName='Helvetica-Bold')
-        
-        # Header
-        elements.append(Paragraph("PowerGrid", title_style))
-        elements.append(Paragraph("Electricity Billing Statement", normal_style))
-        elements.append(Spacer(1, 20))
-        
-        # Bill Number and Period
-        elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", normal_style))
-        if bill.billing_period:
-            elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", normal_style))
-        elements.append(Spacer(1, 20))
-        
-        # Consumer Info
-        elements.append(Paragraph("Consumer Information", heading_style))
-        consumer_data = [
-            ['Consumer Name:', bill.consumer.name],
-            ['Meter Number:', bill.consumer.meter_number],
-            ['Consumer Number:', bill.consumer.consumer_number],
-            ['Address:', bill.consumer.address or 'N/A'],
-        ]
-        consumer_table = Table(consumer_data, colWidths=[2*inch, 4*inch])
-        consumer_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        elements.append(consumer_table)
-        elements.append(Spacer(1, 20))
-        
-        # Meter Readings
-        elements.append(Paragraph("Meter Readings", heading_style))
-        reading_data = [
-            ['Previous Reading', 'Current Reading', 'Units Consumed'],
-            [str(bill.meter_reading.previous_reading) if bill.meter_reading else '0',
-             str(bill.meter_reading.current_reading) if bill.meter_reading else '0',
-             str(bill.units)]
-        ]
-        reading_table = Table(reading_data, colWidths=[2*inch, 2*inch, 2*inch])
-        reading_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0b4f9f')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-        ]))
-        elements.append(reading_table)
-        elements.append(Spacer(1, 20))
-        
-        # Charges
-        elements.append(Paragraph("Charge Breakdown", heading_style))
-        charges_data = [
-            ['Description', 'Amount'],
-            [f'Energy Charges ({bill.units} kWh × ₹{bill.rate_per_unit})', f'₹{bill.energy_charges:.2f}'],
-            ['Fixed / Service Charges', f'₹{bill.fixed_charges:.2f}'],
-            ['Total Amount Due', f'₹{bill.total_amount:.2f}'],
-        ]
-        charges_table = Table(charges_data, colWidths=[4*inch, 2*inch])
-        charges_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('GRID', (0, 0), (-1, -2), 1, colors.grey),
-            ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#0b4f9f')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
-        ]))
-        elements.append(charges_table)
-        elements.append(Spacer(1, 20))
-        
-        # Due Date and Status
-        elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", normal_style))
-        elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", normal_style))
-        
-        # Build PDF
-        doc.build(elements)
-        pdf_file = buffer.getvalue()
-        buffer.close()
-
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="bill-{bill.id}.pdf"'
-        return response
+        # ── Generate PDF using new AMU eMeter Generator ──
+        try:
+            pdf_data = {
+                'bill_number': bill.bill_number,
+                'bill_date': bill.created_at.strftime('%d %b %Y') if bill.created_at else datetime.now().strftime('%d %b %Y'),
+                'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
+                'connection_type': bill.consumer.connection_type,
+                'load_kw': bill.consumer.load_kw,
+                'billing_period': bill.billing_period.strftime('%B %Y') if bill.billing_period else 'N/A',
+                'consumer_name': bill.consumer.name,
+                'consumer_number': bill.consumer.consumer_number,
+                'meter_number': bill.consumer.meter_number,
+                'address': bill.consumer.address,
+                'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
+                'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
+                'units': bill.units,
+                'rate_per_unit': bill.rate_per_unit,
+                'energy_charges': bill.energy_charges,
+                'fixed_charges': bill.fixed_charges,
+                'duty_charge': bill.duty_charge,
+                'meter_rent': bill.meter_rent,
+                'meter_type': '1' if bill.consumer.meter_type == '10' else '3',
+                'regulatory_surcharge': bill.regulatory_surcharge,
+                'arrears': bill.arrears,
+                'late_payment_surcharge': bill.late_payment_surcharge,
+                'total_amount': bill.total_amount,
+                'total_payable': int(round(bill.total_amount)),
+                'current_year': datetime.now().year,
+            }
+            
+            pdf_content = BillPDFGenerator.generate_bill_pdf(pdf_data)
+            
+            if pdf_content:
+                response = HttpResponse(pdf_content, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="AMU_Bill_{bill.bill_number}.pdf"'
+                return response
+            else:
+                return HttpResponse("Error generating PDF", status=500)
+        except Exception as e:
+            return HttpResponse(f"PDF Generation Failed: {str(e)}", status=500)
 
     consumers = Consumer.objects.filter(status='active')
     return render(request, 'generate-bill.html', {'consumers': consumers})
@@ -937,9 +880,10 @@ def api_bills_list(request):
                 'units': b.units,
                 'total_amount': b.total_amount,
                 'status': b.status,
-                'billing_period': b.billing_period.strftime('%B-%y') if b.billing_period else '',
+                'billing_period': b.billing_period.strftime('%Y-%m-%d') if b.billing_period else '',
                 'connection_type': b.consumer.connection_type if b.consumer else 'salary',
                 'due_date': b.due_date.strftime('%Y-%m-%d') if b.due_date else '',
+                'created_at': b.created_at.isoformat() if b.created_at else None,
             })
         return JsonResponse({'bills': results})
 
@@ -961,6 +905,10 @@ def api_consumer_detail(request, consumer_id):
     consumer = get_object_or_404(Consumer, id=consumer_id)
 
     if request.method == 'GET':
+        # Get last reading
+        last_reading = MeterReading.objects.filter(consumer=consumer).order_by('-reading_date', '-id').first()
+        prev_val = last_reading.current_reading if last_reading else 0
+
         data = {
             'id': consumer.id,
             'name': consumer.name,
@@ -975,6 +923,7 @@ def api_consumer_detail(request, consumer_id):
             'connection_type': consumer.connection_type,
             'department': consumer.department,
             'post': consumer.post,
+            'previous_reading': prev_val,
         }
         return JsonResponse(data)
 
@@ -1030,6 +979,7 @@ def api_consumer_readings(request, consumer_id):
             'usage': reading.units_consumed,
             'recorded_by': reading.created_by.username if reading.created_by else 'Admin',
             'remarks': reading.remarks or '',
+            'created_at': reading.created_at.isoformat() if reading.created_at else None,
         })
     return JsonResponse(results, safe=False)
 
@@ -1128,9 +1078,10 @@ def api_bill_detail(request, bill_id):
             'energy_charges': bill.energy_charges,
             'total_amount': bill.total_amount,
             'status': bill.status,
-            'billing_period': bill.billing_period.strftime('%Y-%m') if bill.billing_period else None,
+            'billing_period': bill.billing_period.strftime('%Y-%m-%d') if bill.billing_period else None,
             'due_date': bill.due_date.strftime('%Y-%m-%d') if bill.due_date else None,
             'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+            'created_at': bill.created_at.isoformat() if bill.created_at else None,
         }
         return JsonResponse(data)
 
@@ -1488,7 +1439,7 @@ def download_bill_pdf(request, bill_id):
 
 
 
-def spa_index(request):
+def spa_index(request, path=None):
     """Render the single-page application index from energy-hub-ui/build."""
     import os
     build_dir = os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist')
@@ -1526,54 +1477,64 @@ def api_submit_reading_and_generate_bill(request):
         current_reading = float(data.get('current_reading', 0))
         reading_date = data.get('reading_date')
 
-        if not consumer_id or not reading_date:
-            return JsonResponse({'error': 'consumer_id and reading_date are required'}, status=400)
+        if not consumer_id:
+            return JsonResponse({'error': 'consumer_id is required'}, status=400)
+        if not reading_date:
+            return JsonResponse({'error': 'reading_date is required'}, status=400)
 
         consumer = get_object_or_404(Consumer, id=consumer_id)
 
-        # Get previous reading
-        last_reading = MeterReading.objects.filter(
-            consumer=consumer
-        ).order_by('-reading_date').first()
-        previous_reading = last_reading.current_reading if last_reading else 0
+        # 1. ATOMICITY: Use transaction to ensure both Reading and Bill succeed together
+        from django.db import transaction
+        with transaction.atomic():
+            # 2. IDEMPOTENCY: Check if reading already exists for this date (prevent double-submit)
+            if MeterReading.objects.filter(consumer=consumer, reading_date=reading_date).exists():
+                return JsonResponse({
+                    'error': f'A reading for {reading_date} already exists for this consumer.',
+                    'already_exists': True
+                }, status=400)
 
-        if current_reading < previous_reading:
-            return JsonResponse({
-                'error': 'Current reading must be >= previous reading',
-                'previous_reading': previous_reading
-            }, status=400)
+            # Get previous reading
+            last_reading = MeterReading.objects.filter(
+                consumer=consumer
+            ).order_by('-reading_date').first()
+            previous_reading = last_reading.current_reading if last_reading else 0
 
-        # Create the meter reading
-        reading = MeterReading.objects.create(
-            consumer=consumer,
-            previous_reading=previous_reading,
-            current_reading=current_reading,
-            reading_date=reading_date,
-            reading_time=datetime.now().time(),
-            created_by=request.user,
-            created_at=timezone.now()
-        )
+            if current_reading < previous_reading:
+                return JsonResponse({
+                    'error': f'Current reading ({current_reading}) cannot be less than previous reading ({previous_reading})',
+                    'previous_reading': previous_reading
+                }, status=400)
 
-        # Calculate units consumed
-        units_consumed = current_reading - previous_reading
+            # Create the meter reading
+            reading = MeterReading.objects.create(
+                consumer=consumer,
+                previous_reading=previous_reading,
+                current_reading=current_reading,
+                reading_date=reading_date,
+                reading_time=datetime.now().time(),
+                created_by=request.user,
+            )
 
-        # Parse reading date for billing period and due date
-        try:
-            reading_date_obj = datetime.strptime(reading_date, '%Y-%m-%d').date()
-        except ValueError:
-            reading_date_obj = datetime.now().date()
+            # Calculate units consumed
+            units_consumed = current_reading - previous_reading
 
-        due_date = reading_date_obj + timedelta(days=30)
+            # Parse reading date for billing period and due date
+            try:
+                reading_date_obj = datetime.strptime(reading_date, '%Y-%m-%d').date()
+            except ValueError:
+                reading_date_obj = datetime.now().date()
 
-        # Create the bill (will trigger model.save() logic)
-        bill = Bill.objects.create(
-            consumer=consumer,
-            meter_reading=reading,
-            units=units_consumed,
-            billing_period=reading_date_obj.replace(day=1),
-            due_date=due_date,
-            created_at=timezone.now()
-        )
+            due_date = reading_date_obj + timedelta(days=30)
+
+            # Create the bill (will trigger model.save() logic)
+            bill = Bill.objects.create(
+                consumer=consumer,
+                meter_reading=reading,
+                units=units_consumed,
+                billing_period=reading_date_obj.replace(day=1),
+                due_date=due_date,
+            )
 
         return JsonResponse({
             'success': True,
@@ -1605,6 +1566,7 @@ def api_submit_reading_and_generate_bill(request):
                 'grand_total': bill.total_amount,
                 'billing_period': reading_date_obj.strftime('%B %Y'),
                 'due_date': due_date.strftime('%Y-%m-%d'),
+                'created_at': bill.created_at.isoformat(),
                 'status': bill.status,
             }
         })
@@ -1861,3 +1823,261 @@ def api_edit_today_reading(request, reading_id):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+@csrf_exempt
+@api_view(['GET'])
+def api_get_bill_pdf(request, bill_id):
+    """API endpoint to download branded PDF bill"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    bill = get_object_or_404(Bill, id=bill_id)
+    
+    try:
+        pdf_data = {
+            'bill_number': bill.bill_number,
+            'bill_date': bill.created_at.strftime('%d %b %Y') if bill.created_at else datetime.now().strftime('%d %b %Y'),
+            'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
+            'connection_type': bill.consumer.connection_type,
+            'load_kw': bill.consumer.load_kw,
+            'billing_period': bill.billing_period.strftime('%B %Y') if bill.billing_period else 'N/A',
+            'consumer_name': bill.consumer.name,
+            'consumer_number': bill.consumer.consumer_number,
+            'meter_number': bill.consumer.meter_number,
+            'address': bill.consumer.address,
+            'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
+            'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
+            'units': bill.units,
+            'rate_per_unit': bill.rate_per_unit,
+            'energy_charges': bill.energy_charges,
+            'fixed_charges': bill.fixed_charges,
+            'duty_charge': bill.duty_charge,
+            'meter_rent': bill.meter_rent,
+            'meter_type': '1' if bill.consumer.meter_type == '10' else '3',
+            'regulatory_surcharge': bill.regulatory_surcharge,
+            'arrears': bill.arrears,
+            'late_payment_surcharge': bill.late_payment_surcharge,
+            'total_amount': bill.total_amount,
+            'total_payable': int(round(bill.total_amount)),
+            'current_year': datetime.now().year,
+        }
+        
+        pdf_content = BillPDFGenerator.generate_bill_pdf(pdf_data)
+        
+        if pdf_content:
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="AMU_Bill_{bill.bill_number}.pdf"'
+            return response
+        return JsonResponse({'error': 'Failed to generate PDF'}, status=500)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_manual_generate_bill(request):
+    """Manually generate a bill for a consumer with provided data"""
+    if not request.user.is_authenticated or request.user.profile.role != 'admin':
+        return JsonResponse({'detail': 'Admin authentication required'}, status=403)
+        
+    try:
+        data = json.loads(request.body or '{}')
+        consumer_id = data.get('consumer_id')
+        current_reading = float(data.get('current_reading', 0))
+        billing_period_str = data.get('billing_period')
+        due_date_str = data.get('due_date')
+        
+        consumer = get_object_or_404(Consumer, id=consumer_id)
+        
+        # Get last reading
+        last_reading = MeterReading.objects.filter(consumer=consumer).order_by('-reading_date').first()
+        previous_reading = last_reading.current_reading if last_reading else 0
+        
+        if current_reading < previous_reading:
+            return JsonResponse({'error': 'Current reading cannot be less than previous reading'}, status=400)
+            
+        # Create reading
+        reading = MeterReading.objects.create(
+            consumer=consumer,
+            previous_reading=previous_reading,
+            current_reading=current_reading,
+            reading_date=datetime.now().date(),
+            created_by=request.user
+        )
+        
+        # Create bill
+        billing_period = datetime.strptime(billing_period_str + '-01', '%Y-%m-%d').date() if billing_period_str else datetime.now().date()
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else (datetime.now() + timedelta(days=15)).date()
+        
+        bill = Bill.objects.create(
+            consumer=consumer,
+            meter_reading=reading,
+            units=reading.units_consumed,
+            billing_period=billing_period,
+            due_date=due_date
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'bill_id': bill.id,
+            'bill_number': bill.bill_number,
+            'created_at': bill.created_at.isoformat() if bill.created_at else None,
+            'message': 'Bill generated successfully'
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@api_view(['POST'])
+def api_import_readings(request):
+    """Import meter readings from an Excel file and auto-generate bills for each valid row."""
+    if not request.user.is_authenticated or request.user.profile.role != 'admin':
+        return JsonResponse({'detail': 'Admin authentication required'}, status=403)
+
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    excel_file = request.FILES['file']
+
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(excel_file)
+        sheet = wb.active
+
+        success_count = 0
+        error_count = 0
+        errors = []
+        bills_created = []
+
+        from django.db import transaction
+
+        # Expected columns (row 1 = headers, data from row 2):
+        #   A: Consumer Number  B: Current Reading  C: Reading Date (optional)
+        for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            consumer_number = row[0]
+            current_reading = row[1]
+            reading_date_raw = row[2] if len(row) > 2 else None
+
+            # Skip empty rows
+            if consumer_number is None and current_reading is None:
+                continue
+                
+            if not consumer_number or current_reading is None:
+                errors.append(f"Row {row_idx}: Missing consumer number or reading value")
+                error_count += 1
+                continue
+
+            try:
+                # 1. ATOMICITY: Each row is a transaction. 
+                # If Bill fails, Reading is rolled back.
+                with transaction.atomic():
+                    consumer = Consumer.objects.get(consumer_number=str(consumer_number).strip())
+
+                    # Parse reading date (Reliability)
+                    if not reading_date_raw:
+                        reading_date = datetime.now().date()
+                    elif hasattr(reading_date_raw, 'date'):
+                        reading_date = reading_date_raw.date()
+                    elif isinstance(reading_date_raw, str):
+                        try:
+                            reading_date = datetime.strptime(reading_date_raw.strip(), '%Y-%m-%d').date()
+                        except ValueError:
+                            reading_date = datetime.now().date()
+                    else:
+                        reading_date = datetime.now().date()
+
+                    # 2. DUPLICATE CHECK: Prevent double-importing the same day
+                    if MeterReading.objects.filter(consumer=consumer, reading_date=reading_date).exists():
+                        errors.append(f"Row {row_idx} ({consumer_number}): Reading already exists for {reading_date}")
+                        error_count += 1
+                        continue
+
+                    # Previous reading (Reliability)
+                    last_reading = MeterReading.objects.filter(
+                        consumer=consumer,
+                        reading_date__lt=reading_date
+                    ).order_by('-reading_date', '-id').first()
+                    
+                    # If no previous reading found before this date, look for ANY latest reading
+                    if not last_reading:
+                         last_reading = MeterReading.objects.filter(
+                            consumer=consumer
+                        ).order_by('-reading_date', '-id').first()
+
+                    previous_val = float(last_reading.current_reading) if last_reading else 0.0
+
+                    # 3. DATA INTEGRITY: Validation
+                    try:
+                        curr_val = float(current_reading)
+                    except (ValueError, TypeError):
+                        errors.append(f"Row {row_idx} ({consumer_number}): Invalid reading value '{current_reading}'")
+                        error_count += 1
+                        continue
+
+                    if curr_val < previous_val:
+                        errors.append(
+                            f"Row {row_idx} ({consumer_number}): reading {curr_val} < previous {previous_val}"
+                        )
+                        error_count += 1
+                        continue
+
+                    units_consumed = curr_val - previous_val
+
+                    # Save reading
+                    reading_obj = MeterReading.objects.create(
+                        consumer=consumer,
+                        previous_reading=previous_val,
+                        current_reading=curr_val,
+                        reading_date=reading_date,
+                        reading_time=datetime.now().time(),
+                        created_by=request.user,
+                        remarks="Imported from Excel (Reliable Mode)",
+                    )
+
+                    # Auto-generate bill
+                    # Logic is encapsulated in Bill.save() for reliability
+                    due_date = reading_date + timedelta(days=30)
+                    bill = Bill.objects.create(
+                        consumer=consumer,
+                        meter_reading=reading_obj,
+                        units=units_consumed,
+                        billing_period=reading_date.replace(day=1),
+                        due_date=due_date,
+                    )
+
+                    bills_created.append({
+                        'consumer_number': consumer.consumer_number,
+                        'consumer_name': consumer.name,
+                        'bill_number': bill.bill_number,
+                        'units': units_consumed,
+                        'total_amount': bill.total_amount,
+                        'due_date': due_date.strftime('%Y-%m-%d'),
+                        'status': bill.status,
+                    })
+                    success_count += 1
+
+            except Consumer.DoesNotExist:
+                errors.append(f"Row {row_idx}: Consumer '{consumer_number}' not found")
+                error_count += 1
+            except Exception as e:
+                errors.append(f"Row {row_idx} ({consumer_number}): {str(e)}")
+                error_count += 1
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Import complete — {success_count} bill(s) generated, {error_count} failed.',
+            'success_count': success_count,
+            'error_count': error_count,
+            'bills': bills_created,
+            'errors': errors[:50], # Show more errors for better debugging
+        })
+
+    except ImportError:
+        return JsonResponse(
+            {'error': 'openpyxl not installed. Run: pip install openpyxl'},
+            status=500
+        )
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to process file: {str(e)}'}, status=500)
+

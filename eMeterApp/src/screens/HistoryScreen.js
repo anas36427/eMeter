@@ -31,6 +31,20 @@ export default function HistoryScreen({ navigation }) {
 
     const today = new Date().toISOString().split('T')[0];
 
+    const formatRecordedTime = (isoString) => {
+        if (!isoString) return '';
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            return '';
+        }
+    };
+
     const fetchReadings = useCallback(async () => {
         try {
             const data = await getReadingsAPI();
@@ -130,7 +144,9 @@ export default function HistoryScreen({ navigation }) {
                 <View style={styles.readingFooter}>
                     <View style={styles.dateChip}>
                         <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
-                        <Text style={styles.dateText}>{item.reading_date}</Text>
+                        <Text style={styles.dateText}>
+                            {item.reading_date} {item.created_at ? `at ${formatRecordedTime(item.created_at)}` : ''}
+                        </Text>
                     </View>
                     {canEdit && (
                         <View style={styles.todayChip}>

@@ -9,7 +9,9 @@ import {
     ActivityIndicator,
     StatusBar,
     Keyboard,
+    Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { searchConsumerAPI, getConsumersAPI, getConsumerDetailAPI } from '../services/api';
@@ -36,10 +38,22 @@ export default function SearchScreen({ navigation }) {
 
     const loadAllConsumers = async () => {
         try {
+            // 1. Try to load from cache first for immediate UI
+            const cached = await AsyncStorage.getItem('cached_consumers');
+            if (cached) {
+                setAllConsumers(JSON.parse(cached));
+            }
+
+            // 2. Fetch fresh data from API
             const data = await getConsumersAPI();
-            setAllConsumers(data.consumers || []);
+            const consumers = data.consumers || [];
+            setAllConsumers(consumers);
+            
+            // 3. Update cache
+            await AsyncStorage.setItem('cached_consumers', JSON.stringify(consumers));
         } catch (err) {
-            console.warn('Failed to load consumers:', err.message);
+            console.warn('Network fetch failed, using cache:', err.message);
+            // Fallback is already handled by loading the cache first
         } finally {
             setLoadingAll(false);
         }

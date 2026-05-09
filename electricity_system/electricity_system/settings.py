@@ -61,6 +61,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Disable COOP header to allow access via IP addresses over HTTP without browser warnings
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -75,7 +78,7 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             BASE_DIR / 'templates',
-            BASE_DIR.parent / 'energy-hub-ui' / 'dist',
+            BASE_DIR.parent / 'energy-hub-ui' / 'build',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -104,7 +107,7 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'emeter_user'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'emeter123'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5433'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -178,6 +181,11 @@ else:
 # CORS settings - Allow all origins for mobile development
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://10.193.121.32:8082",
+    "http://localhost:8082",
+    "http://localhost:8080",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
@@ -186,6 +194,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://localhost:8081',
     'http://127.0.0.1:8081',
+    'http://localhost:8082',
+    'http://127.0.0.1:8082',
     'http://localhost:8083',      
     'http://127.0.0.1:8083',
     'http://10.131.109.32:8083',
@@ -193,6 +203,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.91.159.32:8000',
     'http://10.86.158.33:8000',
     'http://10.86.158.33:8081',
+    'http://10.193.121.32:8082',
+    'http://10.193.121.32:8000',
 ]
 
 CSRF_COOKIE_HTTPONLY = False

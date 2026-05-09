@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { getDashboardStatsAPI, submitReadingAndBillAPI } from '../services/api';
-import { getPendingCount, syncOfflineReadings } from '../services/offlineStorage';
+import { getPendingCount, syncOfflineReadings, exportQueueToExcel, clearOfflineQueue } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -60,21 +60,63 @@ export default function DashboardScreen({ navigation }) {
         if (syncing) return;
         setSyncing(true);
         try {
-            const { synced, failed } = await syncOfflineReadings(submitReadingAndBillAPI);
+            const { synced, failed, errors } = await syncOfflineReadings(submitReadingAndBillAPI);
             if (synced > 0) {
-                // Refresh dashboard stats after successful sync
                 fetchDashboard();
             }
             await fetchOffline();
-            Alert.alert(
-                'Sync Complete',
-                `Successfully synced ${synced} reading(s).\nFailed: ${failed}`
-            );
+
+            let message = `Successfully synced ${synced} reading(s).`;
+            if (failed > 0) {
+                message += `\n\nFailed: ${failed}`;
+                errors.forEach(err => {
+                    message += `\n• ${err.consumer}: ${err.error}`;
+                });
+            }
+            Alert.alert('Sync Result', message);
         } catch (error) {
             Alert.alert('Sync Error', 'An error occurred while syncing.');
         } finally {
             setSyncing(false);
         }
+    };
+
+    const handleExport = async () => {
+        try {
+            const result = await exportQueueToExcel();
+            Alert.alert(
+                '📊 Excel Ready',
+                `${result.count} reading(s) exported.\n\nSend this file to the admin.`,
+                [
+                    { text: 'OK' },
+                    { 
+                        text: 'Clear Queue', 
+                        onPress: () => confirmClear(),
+                        style: 'destructive'
+                    }
+                ]
+            );
+        } catch (error) {
+            Alert.alert('Export Error', error.message || 'Failed to export data.');
+        }
+    };
+
+    const confirmClear = () => {
+        Alert.alert(
+            'Clear Queue?',
+            'This will permanently delete all unsynced and failed readings from your phone. Only do this if you have already exported the Excel file.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                    text: 'Yes, Clear All', 
+                    onPress: async () => {
+                        await clearOfflineQueue();
+                        fetchOffline();
+                    },
+                    style: 'destructive' 
+                }
+            ]
+        );
     };
 
     const today = new Date().toLocaleDateString('en-IN', {
@@ -139,20 +181,31 @@ export default function DashboardScreen({ navigation }) {
                 <Text style={styles.date}>{today}</Text>
 
                 {/* Offline Banner */}
+                {/* Offline Banner */}
                 {offlinePending > 0 && (
                     <View style={styles.offlineBanner}>
-                        <Ionicons name="cloud-offline" size={20} color={colors.warning} />
-                        <Text style={styles.offlineText}>
-                            {offlinePending} reading{offlinePending !== 1 ? 's' : ''} pending sync
-                        </Text>
-                        <TouchableOpacity style={styles.syncBtn} onPress={handleSync} disabled={syncing}>
-                            {syncing ? (
-                                <ActivityIndicator size="small" color={colors.white} />
-                            ) : (
-                                <Ionicons name="sync" size={16} color={colors.white} />
-                            )}
-                            <Text style={styles.syncBtnText}>{syncing ? 'Syncing...' : 'Sync'}</Text>
-                        </TouchableOpacity>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="cloud-offline" size={18} color={colors.warning} />
+                            <Text style={styles.offlineText}>
+                                {offlinePending} unsynced
+                            </Text>
+                        </View>
+                        
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity style={styles.exportBtn} onPress={handleExport}>
+                                <Ionicons name="share-outline" size={16} color={colors.warning} />
+                                <Text style={[styles.syncBtnText, { color: colors.warning }]}>Excel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.syncBtn} onPress={handleSync} disabled={syncing}>
+                                {syncing ? (
+                                    <ActivityIndicator size="small" color={colors.white} />
+                                ) : (
+                                    <Ionicons name="sync" size={16} color={colors.white} />
+                                )}
+                                <Text style={styles.syncBtnText}>{syncing ? 'Syncing...' : 'Sync'}</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 )}
 
@@ -270,6 +323,17 @@ const createStyles = (colors) => StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xs,
         borderRadius: borderRadius.full,
+        gap: 4,
+    },
+    exportBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        borderRadius: borderRadius.full,
+        borderWidth: 1,
+        borderColor: colors.warning,
         gap: 4,
     },
     syncBtnText: {

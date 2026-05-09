@@ -1,5 +1,10 @@
 {
   "devDependencies": {
     "babel-preset-expo": "^55.0.18"
-  }
+  },
+  "workspaces": [
+    "energy-hub-ui",
+    "eMeterApp",
+    "packages/*"
+  ]
 }

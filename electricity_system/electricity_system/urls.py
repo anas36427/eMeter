@@ -20,11 +20,23 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 
+from billing import views
+
+from django.views.static import serve
+import os
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
-    path('', include('billing.urls')),
+    path('api/', include('billing.urls')),
+    
+    # Serve Vite assets
+    path('assets/<path:path>', serve, {
+        'document_root': os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist', 'assets'),
+    }),
+
+    # Catch-all for React SPA
+    path('', views.spa_index, name='spa_index'),
+    path('<path:path>', views.spa_index),
 ]
 
 if settings.DEBUG:

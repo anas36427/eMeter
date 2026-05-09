@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { submitReadingAndBillAPI, getSettingsAPI } from '../services/api';
-import { saveOfflineReading } from '../services/offlineStorage';
+import { saveOfflineReading, getOfflineQueue } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 
 export default function SubmitReadingScreen({ route, navigation }) {
@@ -38,7 +38,26 @@ export default function SubmitReadingScreen({ route, navigation }) {
             }
         };
         fetchLiveSettings();
-    }, []);
+
+        const checkExistingReading = async () => {
+            try {
+                const now = new Date();
+                const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                const queue = await getOfflineQueue();
+                const existing = queue.find(r => 
+                    r.consumer_id === consumer.id && 
+                    r.reading_date === localDate &&
+                    r.status !== 'synced'
+                );
+                if (existing) {
+                    setCurrentReading(String(existing.current_reading));
+                }
+            } catch (err) {
+                console.error('Failed to check existing reading:', err);
+            }
+        };
+        checkExistingReading();
+    }, [consumer.id]);
 
     const unitsConsumed =
         currentReading && Number(currentReading) >= previousReading
@@ -46,16 +65,16 @@ export default function SubmitReadingScreen({ route, navigation }) {
             : 0;
 
     // Use live settings if available, otherwise fallback to defaults
-    const rate_per_unit = liveSettings?.rate_per_unit || 8.56;
-    const fixed_charge_per_kw = liveSettings?.fixed_charge_per_kw || 400.0;
-    const duty_val = liveSettings?.duty_percentage || 7.5;
-    const p1_rent = liveSettings?.phase_1_rent || 10.0;
-    const p3_rent = liveSettings?.phase_3_rent || 25.0;
+    const rate_per_unit = Number(liveSettings?.rate_per_unit || 8.56);
+    const fixed_charge_per_kw = Number(liveSettings?.fixed_charge_per_kw || 400.0);
+    const duty_val = Number(liveSettings?.duty_percentage || 7.5);
+    const p1_rent = Number(liveSettings?.phase_1_rent || 10.0);
+    const p3_rent = Number(liveSettings?.phase_3_rent || 25.0);
 
     const energyCharges = unitsConsumed * rate_per_unit;
-    const fixedCharges = (consumer.load_kw || 1.0) * fixed_charge_per_kw;
+    const fixedCharges = (Number(consumer.load_kw) || 1.0) * fixed_charge_per_kw;
     const dutyCharge = (energyCharges + fixedCharges) * (duty_val / 100);
-    const meterRent = consumer.meter_type === '10' ? p1_rent : p3_rent;
+    const meterRent = Number(consumer.meter_type === '10' ? p1_rent : p3_rent) || 0;
     const arrears = 0;
     const latePaymentSurcharge = arrears * 0.015;
 
@@ -63,7 +82,8 @@ export default function SubmitReadingScreen({ route, navigation }) {
         energyCharges + fixedCharges + dutyCharge + meterRent + arrears + latePaymentSurcharge
     );
 
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
     const handleSubmit = async () => {
         if (!currentReading.trim()) {
@@ -78,6 +98,25 @@ export default function SubmitReadingScreen({ route, navigation }) {
         setLoading(true);
         setError('');
 
+        // STEP 1: Always save locally first (works offline too)
+        try {
+            await saveOfflineReading({
+                consumer_id: consumer.id,
+                consumer_number: consumer.consumer_number,
+                consumer_name: consumer.name,
+                meter_number: consumer.meter_number,
+                current_reading: Number(currentReading),
+                previous_reading: previousReading,
+                reading_date: today,
+            });
+        } catch (localErr) {
+            console.error('Local save failed:', localErr);
+            setError('Failed to save reading locally.');
+            setLoading(false);
+            return;
+        }
+
+        // STEP 2: Try to submit online and generate bill
         try {
             const data = await submitReadingAndBillAPI(
                 consumer.id,
@@ -86,41 +125,34 @@ export default function SubmitReadingScreen({ route, navigation }) {
             );
 
             if (data.success) {
+                // Mark the local copy as already synced
+                const queue = await import('../services/offlineStorage').then(m => m.getOfflineQueue());
+                const match = [...queue].reverse().find(
+                    r => r.consumer_id === consumer.id && r.reading_date === today
+                );
+                if (match) {
+                    const { markAsSynced } = await import('../services/offlineStorage');
+                    await markAsSynced(match.id);
+                }
+
                 navigation.replace('BillPreview', {
                     bill: data.bill,
                     reading: data.reading,
                     consumer,
                 });
             } else {
-                setError(data.error || 'Failed to submit reading');
+                setError(data.error || 'Submission failed.');
             }
         } catch (err) {
-            // If offline, save locally
-            if (!err.response || err.message.includes('Network')) {
-                try {
-                    await saveOfflineReading({
-                        consumer_id: consumer.id,
-                        consumer_name: consumer.name,
-                        meter_number: consumer.meter_number,
-                        current_reading: Number(currentReading),
-                        previous_reading: previousReading,
-                        reading_date: today,
-                    });
-                    Alert.alert(
-                        'Saved Offline',
-                        'Reading saved locally. It will sync when internet is available.',
-                        [{ text: 'OK', onPress: () => navigation.goBack() }]
-                    );
-                } catch (offlineErr) {
-                    setError('Failed to save offline. Please try again.');
-                }
-            } else {
-                setError(
-                    err.response?.data?.error ||
-                    err.response?.data?.detail ||
-                    'Submission failed. Please try again.'
-                );
-            }
+            // Network is down — reading is already saved locally, just inform the reader
+            const isOffline = !err.response || err.message?.toLowerCase().includes('network');
+            Alert.alert(
+                isOffline ? '📶 Saved Offline' : '⚠️ Server Error',
+                isOffline
+                    ? 'No internet detected. Reading saved locally and will sync when you are back online.'
+                    : (err.response?.data?.error || err.response?.data?.detail || 'Reading saved locally but online submission failed.'),
+                [{ text: 'OK', onPress: () => navigation.navigate('Search') }]
+            );
         } finally {
             setLoading(false);
         }
@@ -239,20 +271,20 @@ export default function SubmitReadingScreen({ route, navigation }) {
                     {/* Auto-calculated Breakdown */}
                     <View style={styles.breakdownContainer}>
                         <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Energy ({unitsConsumed.toFixed(1)} @ {rate_per_unit})</Text>
-                            <Text style={styles.breakdownValue}>₹{energyCharges.toFixed(2)}</Text>
+                            <Text style={styles.breakdownLabel}>Energy ({(unitsConsumed || 0).toFixed(1)} @ {rate_per_unit})</Text>
+                            <Text style={styles.breakdownValue}>₹{(energyCharges || 0).toFixed(2)}</Text>
                         </View>
                         <View style={styles.breakdownRow}>
                             <Text style={styles.breakdownLabel}>Fixed (@ Rs. {fixed_charge_per_kw}/KW)</Text>
-                            <Text style={styles.breakdownValue}>₹{fixedCharges.toFixed(2)}</Text>
+                            <Text style={styles.breakdownValue}>₹{(fixedCharges || 0).toFixed(2)}</Text>
                         </View>
                         <View style={styles.breakdownRow}>
                             <Text style={styles.breakdownLabel}>Duty ({duty_val}%)</Text>
-                            <Text style={styles.breakdownValue}>₹{dutyCharge.toFixed(2)}</Text>
+                            <Text style={styles.breakdownValue}>₹{(dutyCharge || 0).toFixed(2)}</Text>
                         </View>
                         <View style={styles.breakdownRow}>
                             <Text style={styles.breakdownLabel}>Meter Rent</Text>
-                            <Text style={styles.breakdownValue}>₹{meterRent.toFixed(2)}</Text>
+                            <Text style={styles.breakdownValue}>₹{(meterRent || 0).toFixed(2)}</Text>
                         </View>
                     </View>
 
@@ -265,7 +297,7 @@ export default function SubmitReadingScreen({ route, navigation }) {
                     )}
                 </View>
 
-                {/* Submit Button */}
+                {/* Single smart button */}
                 <TouchableOpacity
                     style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
                     onPress={handleSubmit}
@@ -276,14 +308,14 @@ export default function SubmitReadingScreen({ route, navigation }) {
                         <ActivityIndicator color={colors.white} size="small" />
                     ) : (
                         <>
-                            <Ionicons name="checkmark-circle" size={24} color={colors.white} />
+                            <Ionicons name="flash" size={24} color={colors.white} />
                             <Text style={styles.submitBtnText}>Submit & Generate Bill</Text>
                         </>
                     )}
                 </TouchableOpacity>
 
                 <Text style={styles.disclaimer}>
-                    Bill will be generated instantly. You can edit this reading later today if needed.
+                    Reading is always saved locally first.{`\n`}Bill is generated instantly if you are online.
                 </Text>
             </ScrollView>
         </View>
@@ -512,10 +544,28 @@ const createStyles = (colors) => StyleSheet.create({
         fontSize: fontSize.lg,
         fontWeight: '800',
     },
+    saveBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'transparent',
+        paddingVertical: 14,
+        borderRadius: borderRadius.md,
+        borderWidth: 2,
+        borderColor: colors.primary,
+        marginTop: spacing.md,
+        gap: spacing.sm,
+    },
+    saveBtnText: {
+        color: colors.primary,
+        fontSize: fontSize.md,
+        fontWeight: '700',
+    },
     disclaimer: {
         fontSize: fontSize.xs,
         color: colors.textMuted,
         textAlign: 'center',
         marginTop: spacing.md,
+        lineHeight: 18,
     },
 });

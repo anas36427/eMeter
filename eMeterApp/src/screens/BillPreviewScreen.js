@@ -24,6 +24,23 @@ export default function BillPreviewScreen({ route, navigation }) {
     const [whatsappSending, setWhatsappSending] = React.useState(false);
     const [whatsappSent, setWhatsappSent] = React.useState(false);
     const [pdfDownloading, setPdfDownloading] = React.useState(false);
+    
+    const formatTimestamp = (isoString) => {
+        if (!isoString) return new Date().toLocaleString();
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            return isoString;
+        }
+    };
 
     const handleSendWhatsApp = async () => {
         setWhatsappSending(true);
@@ -74,6 +91,7 @@ export default function BillPreviewScreen({ route, navigation }) {
                     </View>
                     <Text style={styles.successTitle}>Bill Generated Successfully!</Text>
                     <Text style={styles.billNumber}>{bill.bill_number}</Text>
+                    <Text style={styles.billTimestamp}>Generated on: {formatTimestamp(bill.created_at)}</Text>
                 </View>
 
                 {/* Consumer Info */}
@@ -125,31 +143,31 @@ export default function BillPreviewScreen({ route, navigation }) {
                     <Text style={styles.sectionTitle}>Charge Breakdown</Text>
                     <View style={styles.chargeTable}>
                         <ChargeRow
-                            label={`Energy (${bill.units} kWh × ₹${bill.rate_per_unit || '8.56'})`}
-                            amount={`₹${bill.energy_charges.toFixed(2)}`}
+                            label={`Energy (${bill.units || 0} kWh × ₹${bill.rate_per_unit || '8.56'})`}
+                            amount={`₹${Number(bill.energy_charges || 0).toFixed(2)}`}
                             colors={colors}
                         />
-                        <ChargeRow label="Fixed Charges (Load Based)" amount={`₹${bill.fixed_charges.toFixed(2)}`} colors={colors} />
-                        <ChargeRow label="Electricity Duty" amount={`₹${bill.duty_charge.toFixed(2)}`} colors={colors} />
-                        <ChargeRow label="Meter Rent" amount={`₹${bill.meter_rent.toFixed(2)}`} colors={colors} />
+                        <ChargeRow label="Fixed Charges (Load Based)" amount={`₹${Number(bill.fixed_charges || 0).toFixed(2)}`} colors={colors} />
+                        <ChargeRow label="Electricity Duty" amount={`₹${Number(bill.duty_charge || 0).toFixed(2)}`} colors={colors} />
+                        <ChargeRow label="Meter Rent" amount={`₹${Number(bill.meter_rent || 0).toFixed(2)}`} colors={colors} />
 
-                        {bill.regulatory_surcharge > 0 && (
-                            <ChargeRow label="Regulatory Surcharge" amount={`₹${bill.regulatory_surcharge.toFixed(2)}`} colors={colors} />
+                        {(bill.regulatory_surcharge || 0) > 0 && (
+                            <ChargeRow label="Regulatory Surcharge" amount={`₹${(bill.regulatory_surcharge || 0).toFixed(2)}`} colors={colors} />
                         )}
 
                         <View style={styles.chargeDivider} />
 
-                        {(bill.arrears > 0 || bill.late_payment_surcharge > 0) && (
+                        {((bill.arrears || 0) > 0 || (bill.late_payment_surcharge || 0) > 0) && (
                             <>
                                 <ChargeRow
                                     label="Previous Arrears"
-                                    amount={`₹${bill.arrears.toFixed(2)}`}
+                                    amount={`₹${Number(bill.arrears || 0).toFixed(2)}`}
                                     color={colors.danger}
                                     colors={colors}
                                 />
                                 <ChargeRow
                                     label="Late Payment Surcharge"
-                                    amount={`₹${bill.late_payment_surcharge.toFixed(2)}`}
+                                    amount={`₹${Number(bill.late_payment_surcharge || 0).toFixed(2)}`}
                                     color={colors.danger}
                                     colors={colors}
                                 />
@@ -159,7 +177,7 @@ export default function BillPreviewScreen({ route, navigation }) {
 
                         <View style={styles.grandTotalBar}>
                             <Text style={styles.grandTotalLabel}>TOTAL AMOUNT DUE</Text>
-                            <Text style={styles.grandTotalValue}>₹{Math.round(bill.grand_total)}</Text>
+                            <Text style={styles.grandTotalValue}>₹{Math.round(bill.grand_total || bill.total_amount || 0)}</Text>
                         </View>
                     </View>
                 </View>
@@ -172,7 +190,13 @@ export default function BillPreviewScreen({ route, navigation }) {
                         <Text style={styles.metaValue}>{bill.billing_period}</Text>
                     </View>
                     <View style={styles.metaItem}>
-                        <Ionicons name="time" size={16} color={colors.warning} />
+                        <Ionicons name="time" size={16} color={colors.textMuted} />
+                        <Text style={styles.metaLabel}>Generated On</Text>
+                        <Text style={styles.metaValue}>{formatTimestamp(bill.created_at).split(',')[1].trim()}</Text>
+                        <Text style={styles.metaDate}>{formatTimestamp(bill.created_at).split(',')[0].trim()}</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                        <Ionicons name="alert-circle" size={16} color={colors.warning} />
                         <Text style={styles.metaLabel}>Due Date</Text>
                         <Text style={[styles.metaValue, { color: colors.warning }]}>{bill.due_date}</Text>
                     </View>
@@ -220,51 +244,53 @@ export default function BillPreviewScreen({ route, navigation }) {
                                         <meta charset="utf-8"/>
                                         <style>
                                             body { font-family: 'Helvetica', Arial, sans-serif; color: #333; margin: 0; padding: 20px; line-height: 1.4; }
-                                            .header { text-align: center; border-bottom: 2px solid #0b4f9f; padding-bottom: 10px; margin-bottom: 20px; }
-                                            .header h1 { color: #0b4f9f; margin: 0; font-size: 20px; text-transform: uppercase; }
+                                            .header { text-align: center; border-bottom: 2px solid #064e3b; padding-bottom: 10px; margin-bottom: 20px; }
+                                            .header h1 { color: #064e3b; margin: 0; font-size: 20px; text-transform: uppercase; }
                                             .header p { margin: 5px 0; font-size: 12px; font-weight: bold; }
                                             
-                                            .bill-meta { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
-                                            .bill-meta .col { flex: 1; }
+                                            .bill-meta-table { width: 100%; margin-bottom: 20px; font-size: 12px; border: none; }
+                                            .bill-meta-table td { border: none; padding: 2px 0; vertical-align: top; }
                                             
-                                            .section-title { background: #f0f4f8; padding: 5px 10px; font-weight: bold; font-size: 13px; border-left: 4px solid #0b4f9f; margin-bottom: 10px; }
+                                            .section-title { background: #f0f4f8; padding: 5px 10px; font-weight: bold; font-size: 13px; border-left: 4px solid #064e3b; margin-bottom: 10px; }
                                             
-                                            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-                                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                            th { background-color: #0b4f9f; color: white; }
+                                            table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+                                            table.data-table th, table.data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                            table.data-table th { background-color: #064e3b; color: white; font-weight: bold; }
                                             .text-right { text-align: right; }
                                             .bold { font-weight: bold; }
                                             
-                                            .total-box { background: #0b4f9f; color: white; padding: 15px; text-align: right; border-radius: 4px; margin-top: 20px; }
+                                            .total-box { background: #064e3b; color: white; padding: 15px; text-align: right; border-radius: 4px; margin-top: 20px; }
                                             .total-box h2 { margin: 0; font-size: 18px; }
                                             
                                             .footer { margin-top: 50px; font-size: 10px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
-                                            .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; color: rgba(0,0,0,0.03); z-index: -1; white-space: nowrap; }
+                                            .watermark { position: absolute; top: 50%; left: 50%; margin-left: -250px; margin-top: -50px; transform: rotate(-45deg); font-size: 100px; color: rgba(0,0,0,0.03); z-index: -1; white-space: nowrap; }
                                         </style>
                                     </head>
                                     <body>
-                                        <div class="watermark">POWERGRID</div>
+                                        <div class="watermark">AMU EMETER</div>
                                         
                                         <div class="header">
-                                            <h1>Madyanchal Vidyut Vitran Nigam Ltd.</h1>
-                                            <p>Electricity Billing Statement - UPPCL Format</p>
+                                            <h1 style="color: #064e3b;">eMeter AMU</h1>
+                                            <p>Aligarh Muslim University Electricity Billing System.</p>
                                         </div>
                                         
-                                        <div class="bill-meta">
-                                            <div class="col">
-                                                <strong>Bill No:</strong> ${bill.bill_number || 'N/A'}<br/>
-                                                <strong>Bill Date:</strong> ${new Date().toLocaleDateString()}<br/>
-                                                <strong>Due Date:</strong> ${bill.due_date}
-                                            </div>
-                                            <div class="col" style="text-align: right;">
-                                                <strong>Connection Type:</strong> ${bill.connection_type || 'Residential'}<br/>
-                                                <strong>Load:</strong> ${bill.load_kw || 1.0} KW<br/>
-                                                <strong>Billing Period:</strong> ${bill.billing_period}
-                                            </div>
-                                        </div>
+                                        <table class="bill-meta-table">
+                                            <tr>
+                                                <td width="50%">
+                                                    <strong>Bill No:</strong> ${bill.bill_number || 'N/A'}<br/>
+                                                    <strong>Bill Date:</strong> ${formatTimestamp(bill.created_at)}<br/>
+                                                    <strong>Due Date:</strong> <span style="color: #dc2626; font-weight: bold;">${bill.due_date}</span>
+                                                </td>
+                                                <td width="50%" style="text-align: right;">
+                                                    <strong>Connection Type:</strong> ${bill.connection_type || 'Residential'}<br/>
+                                                    <strong>Load:</strong> ${bill.load_kw || 1.0} KW<br/>
+                                                    <strong>Billing Period:</strong> ${bill.billing_period}
+                                                </td>
+                                            </tr>
+                                        </table>
                                         
                                         <div class="section-title">CONSUMER DETAILS</div>
-                                        <table>
+                                        <table class="data-table">
                                             <tr>
                                                 <td width="30%"><strong>Consumer Name</strong></td>
                                                 <td>${bill.consumer_name}</td>
@@ -284,7 +310,7 @@ export default function BillPreviewScreen({ route, navigation }) {
                                         </table>
                                         
                                         <div class="section-title">READING DETAILS</div>
-                                        <table>
+                                        <table class="data-table">
                                             <tr>
                                                 <th>Description</th>
                                                 <th>Previous Reading</th>
@@ -300,56 +326,56 @@ export default function BillPreviewScreen({ route, navigation }) {
                                         </table>
                                         
                                         <div class="section-title">BILLING DETAILS (Charges in ₹)</div>
-                                        <table>
+                                        <table class="data-table">
                                             <tr>
                                                 <th>Description</th>
                                                 <th class="text-right">Amount</th>
                                             </tr>
                                             <tr>
-                                                <td>Energy Charges (${bill.units} units × ₹${bill.rate_per_unit || '8.56'})</td>
-                                                <td class="text-right">${bill.energy_charges.toFixed(2)}</td>
+                                                <td>Energy Charges (${bill.units || 0} units × ₹${bill.rate_per_unit || '8.56'})</td>
+                                                <td class="text-right">${(bill.energy_charges || 0).toFixed(2)}</td>
                                             </tr>
                                             <tr>
                                                 <td>Fixed / Service Charges</td>
-                                                <td class="text-right">${bill.fixed_charges.toFixed(2)}</td>
+                                                <td class="text-right">${(bill.fixed_charges || 0).toFixed(2)}</td>
                                             </tr>
                                             <tr>
                                                 <td>Electricity Duty</td>
-                                                <td class="text-right">${bill.duty_charge.toFixed(2)}</td>
+                                                <td class="text-right">${(bill.duty_charge || 0).toFixed(2)}</td>
                                             </tr>
                                             <tr>
                                                 <td>Meter Rent</td>
-                                                <td class="text-right">${bill.meter_rent.toFixed(2)}</td>
+                                                <td class="text-right">${Number(bill.meter_rent || 0).toFixed(2)}</td>
                                             </tr>
-                                            ${bill.regulatory_surcharge > 0 ? `
+                                            ${(bill.regulatory_surcharge || 0) > 0 ? `
                                             <tr>
                                                 <td>Regulatory Surcharge</td>
-                                                <td class="text-right">${bill.regulatory_surcharge.toFixed(2)}</td>
+                                                <td class="text-right">${Number(bill.regulatory_surcharge || 0).toFixed(2)}</td>
                                             </tr>` : ''}
-                                            ${bill.arrears > 0 ? `
+                                            ${(bill.arrears || 0) > 0 ? `
                                             <tr>
                                                 <td>Previous Arrears</td>
-                                                <td class="text-right" style="color: red;">${bill.arrears.toFixed(2)}</td>
+                                                <td class="text-right" style="color: red;">${Number(bill.arrears || 0).toFixed(2)}</td>
                                             </tr>` : ''}
-                                            ${bill.late_payment_surcharge > 0 ? `
+                                            ${(bill.late_payment_surcharge || 0) > 0 ? `
                                             <tr>
                                                 <td>Late Payment Surcharge</td>
-                                                <td class="text-right" style="color: red;">${bill.late_payment_surcharge.toFixed(2)}</td>
+                                                <td class="text-right" style="color: red;">${Number(bill.late_payment_surcharge || 0).toFixed(2)}</td>
                                             </tr>` : ''}
                                             <tr class="bold">
                                                 <td>TOTAL NET AMOUNT</td>
-                                                <td class="text-right">₹${bill.grand_total.toFixed(2)}</td>
+                                                <td class="text-right">₹${Number(bill.grand_total || bill.total_amount || 0).toFixed(2)}</td>
                                             </tr>
                                         </table>
                                         
                                         <div class="total-box">
                                             <div>TOTAL PAYABLE AMOUNT</div>
-                                            <h2>₹${Math.round(bill.grand_total)}</h2>
+                                            <h2>₹${Number(bill.grand_total || bill.total_amount || 0).toFixed(2)}</h2>
                                         </div>
                                         
                                         <div class="footer">
                                             <p>This is a computer generated bill and does not require a physical signature.</p>
-                                            <p>Prompt payment helps us serve you better. Digital India - Saubhagya Yojana</p>
+                                            <p>For support or queries, please contact AMU Electricity Department.</p>
                                         </div>
                                     </body>
                                     </html>
@@ -488,6 +514,11 @@ const createStyles = (colors) => StyleSheet.create({
         color: colors.textSecondary,
         fontWeight: '600',
     },
+    billTimestamp: {
+        fontSize: fontSize.xs,
+        color: colors.textMuted,
+        marginTop: 4,
+    },
     section: {
         backgroundColor: colors.bgCard,
         borderRadius: borderRadius.lg,
@@ -576,6 +607,10 @@ const createStyles = (colors) => StyleSheet.create({
         fontSize: fontSize.sm,
         fontWeight: '700',
         color: colors.textPrimary,
+    },
+    metaDate: {
+        fontSize: 10,
+        color: colors.textMuted,
     },
     actionButtons: { gap: spacing.sm },
     actionBtn: {

@@ -18,10 +18,9 @@ class Consumer(models.Model):
     department = models.CharField(max_length=100, default='', blank=True)
     meter_number = models.CharField(max_length=50, unique=True)
     connection_type = models.CharField(max_length=20, choices=[
-        ('residential', 'Residential'),
-        ('commercial', 'Commercial'),
-        ('industrial', 'Industrial')
-    ], default='residential')
+        ('salary', 'Salary'),
+        ('non-salary', 'Non-Salary'),
+    ], default='salary')
     LOAD_CHOICES = [
         (1.0, '1 KW'),
         (2.0, '2 KW'),
@@ -39,8 +38,8 @@ class Consumer(models.Model):
         ('inactive', 'Inactive'),
         ('disconnected', 'Disconnected')
     ], default='active')
-    created_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} ({self.consumer_number})"
@@ -57,7 +56,7 @@ class MeterReading(models.Model):
     meter_image = models.ImageField(upload_to='meter_images/', null=True, blank=True)
     remarks = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    created_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         self.units_consumed = self.current_reading - self.previous_reading
@@ -92,7 +91,7 @@ class Bill(models.Model):
     due_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     transaction_id = models.CharField(max_length=50, blank=True)
-    created_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         # Fetch current system settings with Safe Mode fallback
@@ -108,36 +107,36 @@ class Bill(models.Model):
                 duty_percentage = 7.5
             settings = MockSettings()
         
-        self.rate_per_unit = getattr(settings, 'rate_per_unit', 8.56)
-        self.energy_charges = round(self.units * self.rate_per_unit, 2)
+        self.rate_per_unit = float(getattr(settings, 'rate_per_unit', 8.56))
+        self.energy_charges = round(float(self.units) * self.rate_per_unit, 2)
         
         # Calculate fixed charges based on load
-        load = getattr(self.consumer, 'load_kw', 1.0)
-        fixed_rate = getattr(settings, 'fixed_charge_per_kw', 400.0)
+        load = float(getattr(self.consumer, 'load_kw', 1.0))
+        fixed_rate = float(getattr(settings, 'fixed_charge_per_kw', 400.0))
         self.fixed_charges = load * fixed_rate
             
         # Calculate duty charge (X% of Energy + Fixed)
-        duty_pct = getattr(settings, 'duty_percentage', 7.5)
+        duty_pct = float(getattr(settings, 'duty_percentage', 7.5))
         self.duty_charge = round((self.energy_charges + self.fixed_charges) * (duty_pct / 100), 2)
         
         # Determine meter rent based on meter_type (phase)
         m_type = getattr(self.consumer, 'meter_type', '10')
-        p1_rent = getattr(settings, 'phase_1_rent', 10.0)
-        p3_rent = getattr(settings, 'phase_3_rent', 25.0)
+        p1_rent = float(getattr(settings, 'phase_1_rent', 10.0))
+        p3_rent = float(getattr(settings, 'phase_3_rent', 25.0))
         self.meter_rent = p1_rent if m_type == '10' else p3_rent
             
         # Late Payment Surcharge (1.5% of arrears)
         if hasattr(self, 'arrears') and self.arrears > 0:
-            self.late_payment_surcharge = round(self.arrears * 0.015, 2)
+            self.late_payment_surcharge = round(float(self.arrears) * 0.015, 2)
             
         self.total_amount = round(
-            self.energy_charges + 
-            self.fixed_charges + 
-            self.duty_charge + 
-            getattr(self, 'regulatory_surcharge', 0) + 
-            self.meter_rent + 
-            getattr(self, 'arrears', 0) + 
-            getattr(self, 'late_payment_surcharge', 0),
+            float(self.energy_charges) + 
+            float(self.fixed_charges) + 
+            float(self.duty_charge) + 
+            float(getattr(self, 'regulatory_surcharge', 0)) + 
+            float(self.meter_rent) + 
+            float(getattr(self, 'arrears', 0)) + 
+            float(getattr(self, 'late_payment_surcharge', 0)),
             0
         )
         

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body { font-family: 'Helvetica', Arial, sans-serif; color: #333; margin: 0; padding: 20px; line-height: 1.4; font-size: 11px; }
+        .header { text-align: center; border-bottom: 2px solid #064e3b; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { color: #064e3b; margin: 0; font-size: 20px; text-transform: uppercase; }
+        .header p { margin: 5px 0; font-size: 12px; font-weight: bold; }
+        
+        .bill-meta-table { width: 100%; margin-bottom: 20px; font-size: 12px; border: none; }
+        .bill-meta-table td { border: none; padding: 2px 0; vertical-align: top; }
+        
+        .section-title { background: #f0f4f8; padding: 5px 10px; font-weight: bold; font-size: 13px; border-left: 4px solid #064e3b; margin-bottom: 10px; }
+        
+        table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        table.data-table th, table.data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        table.data-table th { background-color: #064e3b; color: white; font-weight: bold; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        
+        .total-box { background: #064e3b; color: white; padding: 15px; text-align: right; border-radius: 4px; margin-top: 20px; }
+        .total-box h2 { margin: 0; font-size: 18px; }
+        
+        .footer { margin-top: 50px; font-size: 10px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
+        .watermark { position: absolute; top: 50%; left: 50%; margin-left: -250px; margin-top: -50px; transform: rotate(-45deg); font-size: 100px; color: rgba(0,0,0,0.03); z-index: -1; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="watermark">{{ watermark_text }}</div>
+    
+    <div class="header">
+        <h1 style="color: #064e3b;">{{ company_name }}</h1>
+        <p>{{ utility_name }}</p>
+    </div>
+    
+    <table class="bill-meta-table">
+        <tr>
+            <td width="50%">
+                <strong>Bill No:</strong> {{ bill_number|default:'N/A' }}<br/>
+                <strong>Bill Date:</strong> {{ bill_date }}<br/>
+                <strong>Due Date:</strong> <span style="color: #dc2626; font-weight: bold;">{{ due_date }}</span>
+            </td>
+            <td width="50%" style="text-align: right;">
+                <strong>Connection Type:</strong> {{ connection_type|title|default:'Residential' }}<br/>
+                <strong>Load:</strong> {{ load_kw|default:1.0 }} KW<br/>
+                <strong>Billing Period:</strong> {{ billing_period }}
+            </td>
+        </tr>
+    </table>
+    
+    <div class="section-title">CONSUMER DETAILS</div>
+    <table class="data-table">
+        <tr>
+            <td width="30%"><strong>Consumer Name</strong></td>
+            <td>{{ consumer_name }}</td>
+        </tr>
+        <tr>
+            <td><strong>Account ID / Consumer No</strong></td>
+            <td>{{ consumer_number }}</td>
+        </tr>
+        <tr>
+            <td><strong>Meter Number</strong></td>
+            <td>{{ meter_number }}</td>
+        </tr>
+        <tr>
+            <td><strong>Address</strong></td>
+            <td>{{ address|default:'N/A' }}</td>
+        </tr>
+    </table>
+    
+    <div class="section-title">READING DETAILS</div>
+    <table class="data-table">
+        <tr>
+            <th>Description</th>
+            <th>Previous Reading</th>
+            <th>Current Reading</th>
+            <th>Consumption (Units)</th>
+        </tr>
+        <tr>
+            <td>Meter Reading (kWh)</td>
+            <td>{{ previous_reading }}</td>
+            <td>{{ current_reading }}</td>
+            <td>{{ units }}</td>
+        </tr>
+    </table>
+    
+    <div class="section-title">BILLING DETAILS (Charges in ₹)</div>
+    <table class="data-table">
+        <tr>
+            <th>Description</th>
+            <th class="text-right">Amount</th>
+        </tr>
+        <tr>
+            <td>Energy Charges ({{ units|default:0 }} units × ₹{{ rate_per_unit|default:'8.56' }})</td>
+            <td class="text-right">{{ energy_charges|default:0|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td>Fixed / Service Charges</td>
+            <td class="text-right">{{ fixed_charges|default:0|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td>Electricity Duty</td>
+            <td class="text-right">{{ duty_charge|default:0|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td>Meter Rent</td>
+            <td class="text-right">{{ meter_rent|default:0|floatformat:2 }}</td>
+        </tr>
+        {% if regulatory_surcharge|default:0 > 0 %}
+        <tr>
+            <td>Regulatory Surcharge</td>
+            <td class="text-right">{{ regulatory_surcharge|default:0|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if arrears|default:0 > 0 %}
+        <tr>
+            <td>Previous Arrears</td>
+            <td class="text-right" style="color: red;">{{ arrears|default:0|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if late_payment_surcharge|default:0 > 0 %}
+        <tr>
+            <td>Late Payment Surcharge</td>
+            <td class="text-right" style="color: red;">{{ late_payment_surcharge|default:0|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        <tr class="bold">
+            <td>TOTAL NET AMOUNT</td>
+            <td class="text-right">₹{{ total_amount|default:0|floatformat:2 }}</td>
+        </tr>
+    </table>
+    
+    <div class="total-box">
+        <div>TOTAL PAYABLE AMOUNT</div>
+        <h2>₹{{ total_amount|default:0|floatformat:2 }}</h2>
+    </div>
+    
+    <div class="footer">
+        <p>This is a computer generated bill and does not require a physical signature.</p>
+        <p>For support or queries, please contact AMU Electricity Department.</p>
+    </div>
+</body>
+</html>
