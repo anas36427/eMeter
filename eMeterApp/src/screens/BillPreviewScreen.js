@@ -237,149 +237,218 @@ export default function BillPreviewScreen({ route, navigation }) {
                         onPress={async () => {
                             setPdfDownloading(true);
                             try {
-                                const htmlContent = `
-                                    <!DOCTYPE html>
-                                    <html>
-                                    <head>
-                                        <meta charset="utf-8"/>
-                                        <style>
-                                            body { font-family: 'Helvetica', Arial, sans-serif; color: #333; margin: 0; padding: 20px; line-height: 1.4; }
-                                            .header { text-align: center; border-bottom: 2px solid #064e3b; padding-bottom: 10px; margin-bottom: 20px; }
-                                            .header h1 { color: #064e3b; margin: 0; font-size: 20px; text-transform: uppercase; }
-                                            .header p { margin: 5px 0; font-size: 12px; font-weight: bold; }
-                                            
-                                            .bill-meta-table { width: 100%; margin-bottom: 20px; font-size: 12px; border: none; }
-                                            .bill-meta-table td { border: none; padding: 2px 0; vertical-align: top; }
-                                            
-                                            .section-title { background: #f0f4f8; padding: 5px 10px; font-weight: bold; font-size: 13px; border-left: 4px solid #064e3b; margin-bottom: 10px; }
-                                            
-                                            table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-                                            table.data-table th, table.data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                            table.data-table th { background-color: #064e3b; color: white; font-weight: bold; }
-                                            .text-right { text-align: right; }
-                                            .bold { font-weight: bold; }
-                                            
-                                            .total-box { background: #064e3b; color: white; padding: 15px; text-align: right; border-radius: 4px; margin-top: 20px; }
-                                            .total-box h2 { margin: 0; font-size: 18px; }
-                                            
-                                            .footer { margin-top: 50px; font-size: 10px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
-                                            .watermark { position: absolute; top: 50%; left: 50%; margin-left: -250px; margin-top: -50px; transform: rotate(-45deg); font-size: 100px; color: rgba(0,0,0,0.03); z-index: -1; white-space: nowrap; }
-                                        </style>
-                                    </head>
-                                    <body>
-                                        <div class="watermark">AMU EMETER</div>
-                                        
-                                        <div class="header">
-                                            <h1 style="color: #064e3b;">eMeter AMU</h1>
-                                            <p>Aligarh Muslim University Electricity Billing System.</p>
-                                        </div>
-                                        
-                                        <table class="bill-meta-table">
-                                            <tr>
-                                                <td width="50%">
-                                                    <strong>Bill No:</strong> ${bill.bill_number || 'N/A'}<br/>
-                                                    <strong>Bill Date:</strong> ${formatTimestamp(bill.created_at)}<br/>
-                                                    <strong>Due Date:</strong> <span style="color: #dc2626; font-weight: bold;">${bill.due_date}</span>
-                                                </td>
-                                                <td width="50%" style="text-align: right;">
-                                                    <strong>Connection Type:</strong> ${bill.connection_type || 'Residential'}<br/>
-                                                    <strong>Load:</strong> ${bill.load_kw || 1.0} KW<br/>
-                                                    <strong>Billing Period:</strong> ${bill.billing_period}
-                                                </td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <div class="section-title">CONSUMER DETAILS</div>
-                                        <table class="data-table">
-                                            <tr>
-                                                <td width="30%"><strong>Consumer Name</strong></td>
-                                                <td>${bill.consumer_name}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Account ID / Consumer No</strong></td>
-                                                <td>${bill.consumer_number}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Meter Number</strong></td>
-                                                <td>${bill.meter_number}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Address</strong></td>
-                                                <td>${bill.address || 'N/A'}</td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <div class="section-title">READING DETAILS</div>
-                                        <table class="data-table">
-                                            <tr>
-                                                <th>Description</th>
-                                                <th>Previous Reading</th>
-                                                <th>Current Reading</th>
-                                                <th>Consumption (Units)</th>
-                                            </tr>
-                                            <tr>
-                                                <td>Meter Reading (kWh)</td>
-                                                <td>${reading.previous_reading}</td>
-                                                <td>${reading.current_reading}</td>
-                                                <td>${bill.units}</td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <div class="section-title">BILLING DETAILS (Charges in ₹)</div>
-                                        <table class="data-table">
-                                            <tr>
-                                                <th>Description</th>
-                                                <th class="text-right">Amount</th>
-                                            </tr>
-                                            <tr>
-                                                <td>Energy Charges (${bill.units || 0} units × ₹${bill.rate_per_unit || '8.56'})</td>
-                                                <td class="text-right">${(bill.energy_charges || 0).toFixed(2)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Fixed / Service Charges</td>
-                                                <td class="text-right">${(bill.fixed_charges || 0).toFixed(2)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Electricity Duty</td>
-                                                <td class="text-right">${(bill.duty_charge || 0).toFixed(2)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Meter Rent</td>
-                                                <td class="text-right">${Number(bill.meter_rent || 0).toFixed(2)}</td>
-                                            </tr>
-                                            ${(bill.regulatory_surcharge || 0) > 0 ? `
-                                            <tr>
-                                                <td>Regulatory Surcharge</td>
-                                                <td class="text-right">${Number(bill.regulatory_surcharge || 0).toFixed(2)}</td>
-                                            </tr>` : ''}
-                                            ${(bill.arrears || 0) > 0 ? `
-                                            <tr>
-                                                <td>Previous Arrears</td>
-                                                <td class="text-right" style="color: red;">${Number(bill.arrears || 0).toFixed(2)}</td>
-                                            </tr>` : ''}
-                                            ${(bill.late_payment_surcharge || 0) > 0 ? `
-                                            <tr>
-                                                <td>Late Payment Surcharge</td>
-                                                <td class="text-right" style="color: red;">${Number(bill.late_payment_surcharge || 0).toFixed(2)}</td>
-                                            </tr>` : ''}
-                                            <tr class="bold">
-                                                <td>TOTAL NET AMOUNT</td>
-                                                <td class="text-right">₹${Number(bill.grand_total || bill.total_amount || 0).toFixed(2)}</td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <div class="total-box">
-                                            <div>TOTAL PAYABLE AMOUNT</div>
-                                            <h2>₹${Number(bill.grand_total || bill.total_amount || 0).toFixed(2)}</h2>
-                                        </div>
-                                        
-                                        <div class="footer">
-                                            <p>This is a computer generated bill and does not require a physical signature.</p>
-                                            <p>For support or queries, please contact AMU Electricity Department.</p>
-                                        </div>
-                                    </body>
-                                    </html>
-                                `;
+                                const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Electricity Bill Preview - AMU eMeter</title>
+    <style>
+        body { 
+            font-family: 'Helvetica', Arial, sans-serif; 
+            color: #333; 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.4;
+            background: #f5f5f5;
+        }
+        .page-container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .header { 
+            text-align: center; 
+            border-bottom: 2px solid #064e3b; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+        }
+        .header h1 { 
+            color: #064e3b; 
+            margin: 0; 
+            font-size: 24px; 
+            text-transform: uppercase; 
+        }
+        .header p { 
+            margin: 5px 0; 
+            font-size: 13px; 
+            font-weight: bold; 
+        }
+        .bill-meta { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 20px; 
+            font-size: 13px; 
+        }
+        .bill-meta .col { flex: 1; }
+        .section-title { 
+            background: #f0f4f8; 
+            padding: 5px 10px; 
+            font-weight: bold; 
+            font-size: 13px; 
+            border-left: 4px solid #064e3b; 
+            margin-bottom: 10px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 20px; 
+            font-size: 12px; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            text-align: left; 
+        }
+        th { background-color: #064e3b; color: white; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .total-box { 
+            background: #064e3b; 
+            color: white; 
+            padding: 20px; 
+            text-align: right; 
+            border-radius: 4px; 
+            margin-top: 20px; 
+        }
+        .total-box h2 { margin: 0; font-size: 28px; }
+        .footer { 
+            margin-top: 50px; 
+            font-size: 11px; 
+            color: #777; 
+            text-align: center; 
+            border-top: 1px solid #eee; 
+            padding-top: 10px; 
+        }
+        .watermark { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%) rotate(-45deg); 
+            font-size: 120px; 
+            color: rgba(0,0,0,0.02); 
+            z-index: -1; 
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        .arrear-row { background: #fff5f5; }
+        .arrear-text { color: #c53030; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="watermark">AMU EMETER</div>
+
+        <div class="header">
+            <h1>eMeter AMU</h1>
+            <p>Aligarh Muslim University Electricity Billing System</p>
+        </div>
+
+        <div class="bill-meta">
+            <div class="col">
+                <strong>Bill No:</strong> \${bill.bill_number || 'N/A'}<br/>
+                <strong>Bill Date:</strong> \${formatTimestamp(bill.created_at)}<br/>
+                <strong>Due Date:</strong> <span style="color:#c53030; font-weight:bold;">\${bill.due_date || 'N/A'}</span>
+            </div>
+            <div class="col" style="text-align: right;">
+                <strong>Connection Type:</strong> \${bill.connection_type || 'N/A'}<br/>
+                <strong>Load:</strong> \${bill.load_kw || 1.0} KW<br/>
+                <strong>Billing Period:</strong> \${bill.billing_period || 'N/A'}
+            </div>
+        </div>
+
+        <div class="section-title">CONSUMER DETAILS</div>
+        <table>
+            <tr>
+                <td width="30%"><strong>Consumer Name</strong></td>
+                <td>\${bill.consumer_name || 'N/A'}</td>
+            </tr>
+            <tr>
+                <td><strong>Account ID / Consumer No</strong></td>
+                <td>\${bill.consumer_number || 'N/A'}</td>
+            </tr>
+            <tr>
+                <td><strong>Meter Number</strong></td>
+                <td>\${bill.meter_number || 'N/A'}</td>
+            </tr>
+            <tr>
+                <td><strong>Address</strong></td>
+                <td>\${bill.address || 'N/A'}</td>
+            </tr>
+        </table>
+
+        <div class="section-title">READING DETAILS</div>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Previous Reading</th>
+                <th>Current Reading</th>
+                <th>Consumption (Units)</th>
+            </tr>
+            <tr>
+                <td>Meter Reading (kWh)</td>
+                <td>\${reading.previous_reading}</td>
+                <td>\${reading.current_reading}</td>
+                <td><strong>\${bill.units}</strong></td>
+            </tr>
+        </table>
+
+        <div class="section-title">BILLING DETAILS (Charges in ₹)</div>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th class="text-right">Amount</th>
+            </tr>
+            <tr>
+                <td>Energy Charges (\${bill.units || 0} units × ₹\${bill.rate_per_unit || '8.56'})</td>
+                <td class="text-right">\${(bill.energy_charges || 0).toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Fixed / Service Charges</td>
+                <td class="text-right">\${(bill.fixed_charges || 0).toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Electricity Duty</td>
+                <td class="text-right">\${(bill.duty_charge || 0).toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Meter Rent</td>
+                <td class="text-right">\${Number(bill.meter_rent || 0).toFixed(2)}</td>
+            </tr>
+            \${(bill.regulatory_surcharge || 0) > 0 ? \`
+            <tr>
+                <td>Regulatory Surcharge</td>
+                <td class="text-right">\${Number(bill.regulatory_surcharge || 0).toFixed(2)}</td>
+            </tr>\` : ''}
+            \${(bill.arrears || 0) > 0 ? \`
+            <tr class="arrear-row">
+                <td class="arrear-text">Previous Arrears</td>
+                <td class="text-right arrear-text"><strong>\${Number(bill.arrears || 0).toFixed(2)}</strong></td>
+            </tr>\` : ''}
+            \${(bill.late_payment_surcharge || 0) > 0 ? \`
+            <tr class="arrear-row">
+                <td class="arrear-text">Late Payment Surcharge</td>
+                <td class="text-right arrear-text"><strong>\${Number(bill.late_payment_surcharge || 0).toFixed(2)}</strong></td>
+            </tr>\` : ''}
+            <tr class="bold">
+                <td>TOTAL NET AMOUNT</td>
+                <td class="text-right">₹\${Number(bill.grand_total || bill.total_amount || 0).toFixed(2)}</td>
+            </tr>
+        </table>
+
+        <div class="total-box">
+            <div style="font-size: 14px; margin-bottom: 8px;">TOTAL PAYABLE AMOUNT</div>
+            <h2>₹\${Math.round(bill.grand_total || bill.total_amount || 0)}</h2>
+        </div>
+
+        <div class="footer">
+            <p>This is a computer generated bill and does not require a physical signature.</p>
+            <p>For support or queries, please contact AMU Electricity Department.</p>
+        </div>
+    </div>
+</body>
+</html>\`;
 
                                 const { uri } = await Print.printToFileAsync({
                                     html: htmlContent,
@@ -388,7 +457,7 @@ export default function BillPreviewScreen({ route, navigation }) {
 
                                 await Sharing.shareAsync(uri, {
                                     mimeType: 'application/pdf',
-                                    dialogTitle: `Electricity Bill ${bill.bill_number}`,
+                                    dialogTitle: \`Electricity Bill \${bill.bill_number}\`,
                                     UTI: 'com.adobe.pdf',
                                 });
                             } catch (err) {

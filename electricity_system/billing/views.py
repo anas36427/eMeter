@@ -1069,16 +1069,29 @@ def api_bill_detail(request, bill_id):
     if request.method == 'GET':
         data = {
             'id': bill.id,
+            'bill_number': bill.bill_number,
             'consumer_id': bill.consumer.id,
             'consumer_name': bill.consumer.name,
+            'consumer_number': bill.consumer.consumer_number,
             'meter_number': bill.consumer.meter_number,
+            'address': bill.consumer.address,
+            'connection_type': bill.consumer.connection_type,
+            'load_kw': bill.consumer.load_kw,
+            'meter_type': bill.consumer.meter_type,
+            'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
+            'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
             'units': bill.units,
             'rate_per_unit': bill.rate_per_unit,
             'fixed_charges': bill.fixed_charges,
             'energy_charges': bill.energy_charges,
+            'duty_charge': bill.duty_charge,
+            'meter_rent': bill.meter_rent,
+            'regulatory_surcharge': bill.regulatory_surcharge,
+            'arrears': bill.arrears,
+            'late_payment_surcharge': bill.late_payment_surcharge,
             'total_amount': bill.total_amount,
             'status': bill.status,
-            'billing_period': bill.billing_period.strftime('%Y-%m-%d') if bill.billing_period else None,
+            'billing_period': bill.billing_period.strftime('%B %Y') if bill.billing_period else None,
             'due_date': bill.due_date.strftime('%Y-%m-%d') if bill.due_date else None,
             'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
             'created_at': bill.created_at.isoformat() if bill.created_at else None,
@@ -1931,9 +1944,32 @@ def api_manual_generate_bill(request):
 @csrf_exempt
 @api_view(['POST'])
 def api_import_readings(request):
-    """Import meter readings from an Excel file and auto-generate bills for each valid row."""
-    if not request.user.is_authenticated or request.user.profile.role != 'admin':
-        return JsonResponse({'detail': 'Admin authentication required'}, status=403)
+    """Import meter readings from an Excel file.
+
+    Supports two column layouts (auto-detected):
+
+    4-column layout (recommended):
+        A: Consumer Number  B: Meter Number  C: Current Reading  D: Reading Date (optional)
+
+    3-column layout (legacy / mobile export):
+        A: Consumer Number  B: Current Reading  C: Reading Date (optional)
+
+    Validation steps:
+        1. Auto-detect layout from whether column B is numeric or text
+        2. Verify Consumer Number exists; if meter number is provided, cross-check it
+        3. Check no duplicate reading exists for the same billing month
+        4. Validate reading value (must be >= previous), then save + generate bill
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    # Safe role check — handle users without a profile object gracefully
+    try:
+        if request.user.profile.role != 'admin':
+            return JsonResponse({'detail': 'Admin authentication required'}, status=403)
+    except Exception:
+        if not (request.user.is_staff or request.user.is_superuser):
+            return JsonResponse({'detail': 'Admin authentication required'}, status=403)
 
     if 'file' not in request.FILES:
         return JsonResponse({'error': 'No file provided'}, status=400)
@@ -1952,79 +1988,139 @@ def api_import_readings(request):
 
         from django.db import transaction
 
-        # Expected columns (row 1 = headers, data from row 2):
-        #   A: Consumer Number  B: Current Reading  C: Reading Date (optional)
-        for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            consumer_number = row[0]
-            current_reading = row[1]
-            reading_date_raw = row[2] if len(row) > 2 else None
+        # ── Auto-detect column layout ────────────────────────────────────────
+        # Peek at row 2 (first data row).  If col B parses as a number → 3-col;
+        # if it looks like text → 4-col.
+        layout = 4  # default
+        for peek_row in sheet.iter_rows(min_row=2, max_row=3, values_only=True):
+            if not peek_row or len(peek_row) < 2:
+                break
+            col_b = peek_row[1]
+            if col_b is not None:
+                try:
+                    float(col_b)
+                    layout = 3  # col B is numeric → reading value
+                except (ValueError, TypeError):
+                    layout = 4  # col B is text → meter number
+            break
 
-            # Skip empty rows
+        for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            if not row:
+                continue
+
+            # ── Parse columns based on detected layout ───────────────────────
+            if layout == 3:
+                # A: Consumer Number, B: Current Reading, C: Reading Date
+                if len(row) < 2:
+                    continue
+                consumer_number  = str(row[0]).strip() if row[0] is not None else None
+                meter_number     = None   # not provided — skip cross-check
+                current_reading  = row[1]
+                reading_date_raw = row[2] if len(row) > 2 else None
+            else:
+                # A: Consumer Number, B: Meter Number, C: Current Reading, D: Reading Date
+                if len(row) < 3:
+                    continue
+                consumer_number  = str(row[0]).strip() if row[0] is not None else None
+                meter_number     = str(row[1]).strip() if row[1] is not None else None
+                current_reading  = row[2]
+                reading_date_raw = row[3] if len(row) > 3 else None
+
+            # Skip fully empty rows
             if consumer_number is None and current_reading is None:
                 continue
-                
-            if not consumer_number or current_reading is None:
-                errors.append(f"Row {row_idx}: Missing consumer number or reading value")
+            # Skip header-like rows that somehow sneak into data rows
+            if consumer_number and str(consumer_number).lower() in ('consumer number', 'consumer_number', 'consumer#'):
+                continue
+
+            # ── STEP 1: Verify Consumer Number ──────────────────────────────
+            if not consumer_number:
+                errors.append(f"Row {row_idx}: Consumer Number is required.")
                 error_count += 1
                 continue
 
             try:
-                # 1. ATOMICITY: Each row is a transaction. 
-                # If Bill fails, Reading is rolled back.
-                with transaction.atomic():
-                    consumer = Consumer.objects.get(consumer_number=str(consumer_number).strip())
+                consumer = Consumer.objects.get(consumer_number=consumer_number)
+            except Consumer.DoesNotExist:
+                errors.append(f"Row {row_idx}: Consumer '{consumer_number}' not found in system.")
+                error_count += 1
+                continue
 
-                    # Parse reading date (Reliability)
-                    if not reading_date_raw:
-                        reading_date = datetime.now().date()
-                    elif hasattr(reading_date_raw, 'date'):
-                        reading_date = reading_date_raw.date()
-                    elif isinstance(reading_date_raw, str):
-                        try:
-                            reading_date = datetime.strptime(reading_date_raw.strip(), '%Y-%m-%d').date()
-                        except ValueError:
-                            reading_date = datetime.now().date()
-                    else:
-                        reading_date = datetime.now().date()
+            # Cross-verify meter number only if provided (4-col layout)
+            if meter_number and str(consumer.meter_number).strip() != meter_number:
+                errors.append(
+                    f"Row {row_idx}: Meter '{meter_number}' does not match "
+                    f"consumer '{consumer_number}' (registered meter: '{consumer.meter_number}')."
+                )
+                error_count += 1
+                continue
 
-                    # 2. DUPLICATE CHECK: Prevent double-importing the same day
-                    if MeterReading.objects.filter(consumer=consumer, reading_date=reading_date).exists():
-                        errors.append(f"Row {row_idx} ({consumer_number}): Reading already exists for {reading_date}")
-                        error_count += 1
-                        continue
-
-                    # Previous reading (Reliability)
-                    last_reading = MeterReading.objects.filter(
-                        consumer=consumer,
-                        reading_date__lt=reading_date
-                    ).order_by('-reading_date', '-id').first()
-                    
-                    # If no previous reading found before this date, look for ANY latest reading
-                    if not last_reading:
-                         last_reading = MeterReading.objects.filter(
-                            consumer=consumer
-                        ).order_by('-reading_date', '-id').first()
-
-                    previous_val = float(last_reading.current_reading) if last_reading else 0.0
-
-                    # 3. DATA INTEGRITY: Validation
+            # ── Parse reading date ───────────────────────────────────────────
+            if not reading_date_raw:
+                reading_date = datetime.now().date()
+            elif hasattr(reading_date_raw, 'date'):
+                reading_date = reading_date_raw.date()
+            elif isinstance(reading_date_raw, str):
+                reading_date_str = reading_date_raw.strip()
+                parsed = None
+                for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d'):
                     try:
-                        curr_val = float(current_reading)
-                    except (ValueError, TypeError):
-                        errors.append(f"Row {row_idx} ({consumer_number}): Invalid reading value '{current_reading}'")
-                        error_count += 1
+                        parsed = datetime.strptime(reading_date_str, fmt).date()
+                        break
+                    except ValueError:
                         continue
+                reading_date = parsed if parsed else datetime.now().date()
+            else:
+                reading_date = datetime.now().date()
 
-                    if curr_val < previous_val:
-                        errors.append(
-                            f"Row {row_idx} ({consumer_number}): reading {curr_val} < previous {previous_val}"
-                        )
-                        error_count += 1
-                        continue
+            billing_month = reading_date.replace(day=1)
 
-                    units_consumed = curr_val - previous_val
+            # ── STEP 2: Duplicate check ──────────────────────────────────────
+            dup = MeterReading.objects.filter(
+                consumer=consumer,
+                reading_date__year=billing_month.year,
+                reading_date__month=billing_month.month,
+            ).first()
+            if dup:
+                errors.append(
+                    f"Row {row_idx} ({consumer_number}): Reading already exists for "
+                    f"{billing_month.strftime('%B %Y')} (on {dup.reading_date}). Skipped."
+                )
+                error_count += 1
+                continue
 
-                    # Save reading
+            # ── STEP 3: Validate reading value ───────────────────────────────
+            try:
+                curr_val = float(current_reading)
+            except (ValueError, TypeError):
+                errors.append(f"Row {row_idx} ({consumer_number}): Invalid reading value '{current_reading}'. Must be a number.")
+                error_count += 1
+                continue
+
+            last_reading = MeterReading.objects.filter(
+                consumer=consumer,
+                reading_date__lt=reading_date,
+            ).order_by('-reading_date', '-id').first()
+
+            if not last_reading:
+                last_reading = MeterReading.objects.filter(
+                    consumer=consumer
+                ).order_by('-reading_date', '-id').first()
+
+            previous_val = float(last_reading.current_reading) if last_reading else float(consumer.initial_reading or 0)
+
+            if curr_val < previous_val:
+                errors.append(
+                    f"Row {row_idx} ({consumer_number}): Reading {curr_val} < previous {previous_val}. Rejected."
+                )
+                error_count += 1
+                continue
+
+            units_consumed = curr_val - previous_val
+
+            # ── Save reading + generate bill ─────────────────────────────────
+            try:
+                with transaction.atomic():
                     reading_obj = MeterReading.objects.create(
                         consumer=consumer,
                         previous_reading=previous_val,
@@ -2032,45 +2128,44 @@ def api_import_readings(request):
                         reading_date=reading_date,
                         reading_time=datetime.now().time(),
                         created_by=request.user,
-                        remarks="Imported from Excel (Reliable Mode)",
+                        remarks="Imported from Excel",
                     )
 
-                    # Auto-generate bill
-                    # Logic is encapsulated in Bill.save() for reliability
                     due_date = reading_date + timedelta(days=30)
                     bill = Bill.objects.create(
                         consumer=consumer,
                         meter_reading=reading_obj,
                         units=units_consumed,
-                        billing_period=reading_date.replace(day=1),
+                        billing_period=billing_month,
                         due_date=due_date,
                     )
 
                     bills_created.append({
                         'consumer_number': consumer.consumer_number,
                         'consumer_name': consumer.name,
+                        'meter_number': consumer.meter_number,
                         'bill_number': bill.bill_number,
-                        'units': units_consumed,
-                        'total_amount': bill.total_amount,
+                        'previous_reading': previous_val,
+                        'current_reading': curr_val,
+                        'units': round(units_consumed, 2),
+                        'total_amount': float(bill.total_amount or 0),
                         'due_date': due_date.strftime('%Y-%m-%d'),
                         'status': bill.status,
                     })
                     success_count += 1
 
-            except Consumer.DoesNotExist:
-                errors.append(f"Row {row_idx}: Consumer '{consumer_number}' not found")
-                error_count += 1
             except Exception as e:
-                errors.append(f"Row {row_idx} ({consumer_number}): {str(e)}")
+                errors.append(f"Row {row_idx} ({consumer_number}): Failed to save — {str(e)}")
                 error_count += 1
 
         return JsonResponse({
             'success': True,
+            'layout_detected': f'{layout}-column',
             'message': f'Import complete — {success_count} bill(s) generated, {error_count} failed.',
             'success_count': success_count,
             'error_count': error_count,
             'bills': bills_created,
-            'errors': errors[:50], # Show more errors for better debugging
+            'errors': errors[:50],
         })
 
     except ImportError:
@@ -2079,5 +2174,6 @@ def api_import_readings(request):
             status=500
         )
     except Exception as e:
-        return JsonResponse({'error': f'Failed to process file: {str(e)}'}, status=500)
+        import traceback
+        return JsonResponse({'error': f'Failed to process file: {str(e)}', 'trace': traceback.format_exc()}, status=500)
 

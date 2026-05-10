@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { getReadingsAPI, editReadingAPI } from '../services/api';
+import { exportReadingsToExcel } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 
 export default function HistoryScreen({ navigation }) {
@@ -45,20 +46,32 @@ export default function HistoryScreen({ navigation }) {
         }
     };
 
+    const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for most recent, 'asc' for oldest
+
     const fetchReadings = useCallback(async () => {
         try {
             const data = await getReadingsAPI();
-            setReadings(data.readings || []);
+            let fetchedReadings = data.readings || [];
+            
+            // Sort readings based on sortOrder
+            fetchedReadings.sort((a, b) => {
+                if (sortOrder === 'desc') {
+                    return new Date(b.reading_date) - new Date(a.reading_date);
+                } else {
+                    return new Date(a.reading_date) - new Date(b.reading_date);
+                }
+            });
+            setReadings(fetchedReadings);
         } catch (err) {
             console.warn('Failed to fetch readings:', err.message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [sortOrder]);
 
     useEffect(() => {
         fetchReadings();
-    }, []);
+    }, [fetchReadings]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -158,6 +171,14 @@ export default function HistoryScreen({ navigation }) {
         );
     };
 
+    const handleExport = async () => {
+        try {
+            await exportReadingsToExcel(readings, 'Reading_History');
+        } catch (err) {
+            Alert.alert('Export Error', err.message);
+        }
+    };
+
     return (
         <View style={styles.container}>
             {/* Header */}
@@ -166,7 +187,23 @@ export default function HistoryScreen({ navigation }) {
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Reading History</Text>
-                <View style={{ width: 40 }} />
+                
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity 
+                        onPress={handleExport} 
+                        style={styles.backBtnHeader}
+                        disabled={readings.length === 0}
+                    >
+                        <Ionicons name="download-outline" size={24} color={readings.length === 0 ? colors.textMuted : colors.textPrimary} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')} 
+                        style={styles.backBtnHeader}
+                    >
+                        <Ionicons name={sortOrder === 'desc' ? "arrow-down" : "arrow-up"} size={24} color={colors.textPrimary} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {loading ? (

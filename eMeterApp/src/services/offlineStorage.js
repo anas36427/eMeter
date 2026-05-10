@@ -171,81 +171,86 @@ export const syncOfflineReadings = async (submitFn) => {
 };
 
 /**
- * Export pending readings to an Excel file and trigger sharing.
- *
- * Column layout (matches the backend import endpoint):
- *   A  – Consumer Number  (required by backend)
- *   B  – Current Reading  (required by backend)
- *   C  – Reading Date     (YYYY-MM-DD, optional by backend)
- *   D  – Consumer Name    (reference only, ignored by backend)
- *   E  – Previous Reading (reference only, ignored by backend)
+ * Export specific readings to an Excel file and trigger sharing.
  */
-export const exportQueueToExcel = async () => {
+export const exportReadingsToExcel = async (readings, title = 'Readings') => {
     try {
-        const queue = await getOfflineQueue();
-        // Export everything that hasn't been successfully synced yet
-        const toExport = queue.filter((r) => r.status === 'pending' || r.status === 'failed');
-
-        if (toExport.length === 0) {
-            throw new Error('No pending or failed readings to export.');
+        if (!readings || readings.length === 0) {
+            throw new Error('No readings to export.');
         }
 
         const now = new Date();
         const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
-        // ── Row 0: header (row 1 in Excel) ─────────────────────────
         const headerRow = [
-            'Consumer Number',   // A  ← backend reads this
-            'Current Reading',   // B  ← backend reads this
-            'Reading Date',      // C  ← backend reads this (optional)
-            'Consumer Name',     // D  ← reference only
-            'Previous Reading',  // E  ← reference only
+            'Consumer Number',   // A
+            'Consumer Name',     // B
+            'Meter Number',      // C
+            'Current Reading',   // D
+            'Previous Reading',  // E
+            'Units Consumed',    // F
+            'Reading Date',      // G
         ];
 
-        // ── Data rows (row 2+ in Excel) ─────────────────────────────
-        const dataRows = toExport.map((r) => [
-            String(r.consumer_number || ''),          // A
-            Number(r.current_reading),                // B
-            r.reading_date || today,                  // C  (YYYY-MM-DD)
-            String(r.consumer_name || ''),            // D
-            Number(r.previous_reading || 0),          // E
+        const dataRows = readings.map((r) => [
+            String(r.consumer_number || r.consumer_id || ''), 
+            String(r.consumer_name || ''),
+            String(r.meter_number || ''),
+            Number(r.current_reading || r.reading || 0),
+            Number(r.previous_reading || r.prev || 0),
+            Number(r.units_consumed || r.usage || 0),
+            r.reading_date || r.date || today,
         ]);
 
-        // Build worksheet from array-of-arrays to guarantee column order
         const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
-
-        // Column widths for readability
         ws['!cols'] = [
-            { wch: 18 },   // A  Consumer Number
-            { wch: 16 },   // B  Current Reading
-            { wch: 14 },   // C  Reading Date
-            { wch: 22 },   // D  Consumer Name
-            { wch: 16 },   // E  Previous Reading
+            { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }
         ];
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Readings');
 
-        // Generate base64 string and write to device
         const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-        const fileName = `Readings_${today}_${toExport.length}rows.xlsx`;
+        const fileName = `${title.replace(/\s+/g, '_')}_${today}.xlsx`;
         const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
-        await FileSystem.writeAsStringAsync(fileUri, wbout, {
-            encoding: 'base64',
-        });
+        await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' });
 
-        // Share / save
         if (await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(fileUri, {
                 mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                dialogTitle: `Share ${toExport.length} Reading(s) — ${today}`,
+                dialogTitle: `Share ${readings.length} Reading(s)`,
                 UTI: 'com.microsoft.excel.xlsx',
             });
-            return { shared: true, count: toExport.length, fileName };
+            return { shared: true, count: readings.length };
         } else {
-            throw new Error('Sharing is not available on this device.');
+            throw new Error('Sharing is not available');
         }
+    } catch (error) {
+        console.error('Error exporting:', error);
+        throw error;
+    }
+};
+
+export const exportQueueToExcel = async () => {
+    try {
+        const queue = await getOfflineQueue();
+        // Export everything from the last 24 hours (pending, failed, OR synced)
+        const toExport = queue.filter((r) => {
+            if (r.status === 'pending' || r.status === 'failed') return true;
+            if (r.status === 'synced') {
+                const savedTime = new Date(r.savedAt).getTime();
+                const now = Date.now();
+                return (now - savedTime) < 24 * 60 * 60 * 1000;
+            }
+            return false;
+        });
+
+        if (toExport.length === 0) {
+            throw new Error('No recent readings to export.');
+        }
+
+        return await exportReadingsToExcel(toExport, 'Recent_Readings');
     } catch (error) {
         console.error('Error exporting to Excel:', error);
         throw error;
