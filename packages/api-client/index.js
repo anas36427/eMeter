@@ -18,6 +18,9 @@ export const createApiClient = (config) => {
     res => {
       // Flatten common Django JSONResponse dictionary wrappers into arrays for the UI
       if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+        // Preserve full response if pagination metadata is present
+        if (res.data.total_pages !== undefined) return res;
+
         if (res.data.consumers && Array.isArray(res.data.consumers)) res.data = res.data.consumers;
         else if (res.data.readings && Array.isArray(res.data.readings)) res.data = res.data.readings;
         else if (res.data.bills && Array.isArray(res.data.bills)) res.data = res.data.bills;
@@ -65,7 +68,7 @@ export const importReadingsExcel = (api, f) => {
   return api.post('/api/readings/import-excel/', formData);
 };
 
-export const getBills = (api) => api.get('/api/bills/');
+export const getBills = (api, params) => api.get('/api/bills/', { params });
 export const getBill = (api, id) => api.get(`/api/bill/${id}/`).then(res => res.data);
 export const markPaid = (api, id) => api.post(`/api/bills/${id}/mark-paid/`);
 export const markUnpaid = (api, id) => api.post(`/api/bills/${id}/mark-unpaid/`);

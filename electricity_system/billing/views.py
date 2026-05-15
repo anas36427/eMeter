@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
+from django.core.paginator import Paginator
 from datetime import datetime, timedelta
 import json
 import random
@@ -152,6 +153,7 @@ def api_login(request):
 #         'username': request.user.username,
 #         'role': profile.role,
 #     })
+@api_view(['GET'])
 @csrf_exempt
 def api_me(request):
     if not request.user.is_authenticated:
@@ -198,6 +200,7 @@ def api_dashboard_stats(request):
     })
 
 
+@api_view(['GET'])
 @csrf_exempt
 def api_reports_data(request):
     """API endpoint for reports charts data"""
@@ -791,6 +794,7 @@ def api_consumer_list(request):
                 'status': c.status,
                 'load_kw': c.load_kw,
                 'meter_type': c.meter_type,
+                'connection_type': c.connection_type,
                 'previous_reading': prev_val
             })
         return JsonResponse({'consumers': results})
@@ -863,29 +867,115 @@ def api_consumer_list(request):
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 # 5. 
+@api_view(['GET'])
 @csrf_exempt
 def api_bills_list(request):
-    """Get all bills for admin"""
+    """Get all bills for admin with Server-Side Pagination and Search"""
     if not request.user.is_authenticated:
         return JsonResponse({'detail': 'Authentication required'}, status=401)
     if request.method == 'GET':
+        page_num = request.GET.get('page', 1)
+        limit = request.GET.get('limit', 50)
+        search_query = request.GET.get('search', '').strip()
+        status_filter = request.GET.get('status', 'all')
+        account_type = request.GET.get('accountType', 'all')
+
+        sort_order = request.GET.get('sortOrder', 'desc')
+        start_date = request.GET.get('startDate', '')
+        end_date = request.GET.get('endDate', '')
+
         bills = Bill.objects.select_related('consumer').all()
+
+        # Apply Server-Side Search
+        if search_query:
+            bills = bills.filter(
+                Q(bill_number__icontains=search_query) |
+                Q(consumer__name__icontains=search_query) |
+                Q(consumer__consumer_number__icontains=search_query) |
+                Q(consumer__meter_number__icontains=search_query)
+            )
+
+        # Apply Filters
+        if status_filter != 'all':
+            bills = bills.filter(status=status_filter.lower())
+        
+        if account_type == 'salary':
+            bills = bills.filter(consumer__connection_type='salary')
+        elif account_type == 'non-salary':
+            bills = bills.exclude(consumer__connection_type='salary')
+            
+        if start_date:
+            try:
+                # Format: YYYY-MM
+                year, month = start_date.split('-')
+                bills = bills.filter(billing_period__gte=datetime(int(year), int(month), 1))
+            except Exception:
+                pass
+                
+        if end_date:
+            try:
+                # Format: YYYY-MM
+                year, month = end_date.split('-')
+                if int(month) == 12:
+                    next_month = datetime(int(year) + 1, 1, 1)
+                else:
+                    next_month = datetime(int(year), int(month) + 1, 1)
+                bills = bills.filter(billing_period__lt=next_month)
+            except Exception:
+                pass
+
+        # Apply Sort
+        if sort_order == 'asc':
+            bills = bills.order_by('created_at')
+        else:
+            bills = bills.order_by('-created_at')
+
+        # Calculate totals for the entire filtered queryset
+        totals = bills.aggregate(
+            total_billed=Sum('total_amount'),
+            total_paid=Sum('total_amount', filter=Q(status='paid'))
+        )
+        total_billed = float(totals['total_billed'] or 0)
+        total_paid = float(totals['total_paid'] or 0)
+        total_pending = total_billed - total_paid
+
+        # Pagination
+        paginator = Paginator(bills, int(limit))
+        try:
+            page_obj = paginator.page(page_num)
+        except Exception:
+            page_obj = paginator.page(1)
+
         results = []
-        for b in bills:
+        for b in page_obj.object_list:
             results.append({
                 'id': b.id,
+                'bill_number': b.bill_number,
                 'consumer_name': b.consumer.name if b.consumer else 'N/A',
                 'consumer_number': b.consumer.consumer_number if b.consumer else 'N/A',
                 'meter_number': b.consumer.meter_number if b.consumer else 'N/A',
                 'units': b.units,
                 'total_amount': b.total_amount,
                 'status': b.status,
-                'billing_period': b.billing_period.strftime('%Y-%m-%d') if b.billing_period else '',
-                'connection_type': b.consumer.connection_type if b.consumer else 'salary',
+                'billing_period': b.billing_period.strftime('%B %Y') if b.billing_period else '',
+                'connection_type': b.consumer.connection_type if b.consumer else 'residential',
                 'due_date': b.due_date.strftime('%Y-%m-%d') if b.due_date else '',
                 'created_at': b.created_at.isoformat() if b.created_at else None,
             })
-        return JsonResponse({'bills': results})
+            
+        return JsonResponse({
+            'bills': results,
+            'total_items': paginator.count,
+            'total_pages': paginator.num_pages,
+            'current_page': page_obj.number,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous(),
+            'summary': {
+                'total_billed': total_billed,
+                'total_paid': total_paid,
+                'total_pending': total_pending
+            }
+        })
 
 # 6. 
 @csrf_exempt
@@ -1648,6 +1738,101 @@ def api_update_settings(request):
         return JsonResponse({'success': False, 'error': f'Invalid numeric value: {str(e)}'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Server Error: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_calculate_estimate(request):
+    """
+    Calculate a real-time bill estimate using the live BillingSettings from the DB.
+    This is the SINGLE SOURCE OF TRUTH for billing math — mirrors Bill.save() exactly.
+
+    POST body:
+        {
+            "consumer_id": 5,
+            "current_reading": 3450,
+            "previous_reading": 3200   # optional — fetched from DB if omitted
+        }
+
+    Returns a full line-item breakdown so the mobile app never computes billing math locally.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+
+    consumer_id = data.get('consumer_id')
+    current_reading = data.get('current_reading')
+
+    if consumer_id is None or current_reading is None:
+        return JsonResponse({'error': 'consumer_id and current_reading are required'}, status=400)
+
+    try:
+        consumer = Consumer.objects.get(id=consumer_id)
+    except Consumer.DoesNotExist:
+        return JsonResponse({'error': 'Consumer not found'}, status=404)
+
+    # Resolve previous reading from DB if not provided by the client
+    if 'previous_reading' in data:
+        previous_reading = float(data['previous_reading'])
+    else:
+        last_reading = MeterReading.objects.filter(consumer=consumer).order_by('-reading_date', '-id').first()
+        previous_reading = last_reading.current_reading if last_reading else 0
+
+    current_reading = float(current_reading)
+    units_consumed = max(0, current_reading - previous_reading)
+
+    # Fetch live settings from the database — no hardcoded fallbacks in the calculation
+    billing_settings = BillingSettings.get_settings()
+    rate_per_unit      = float(billing_settings.rate_per_unit)
+    fixed_charge_per_kw = float(billing_settings.fixed_charge_per_kw)
+    duty_percentage    = float(billing_settings.duty_percentage)
+    phase_1_rent       = float(billing_settings.phase_1_rent)
+    phase_3_rent       = float(billing_settings.phase_3_rent)
+
+    # ── Billing math — identical to Bill.save() ──────────────────────────────
+    load_kw        = float(getattr(consumer, 'load_kw', 1.0))
+    energy_charges = round(units_consumed * rate_per_unit, 2)
+    fixed_charges  = round(load_kw * fixed_charge_per_kw, 2)
+    duty_charge    = round((energy_charges + fixed_charges) * (duty_percentage / 100), 2)
+    meter_rent     = phase_1_rent if consumer.meter_type == '10' else phase_3_rent
+    arrears        = 0.0
+    late_payment_surcharge = 0.0
+    regulatory_surcharge   = 0.0
+
+    total_amount = round(
+        energy_charges + fixed_charges + duty_charge
+        + regulatory_surcharge + meter_rent + arrears + late_payment_surcharge,
+        0
+    )
+    # ─────────────────────────────────────────────────────────────────────────
+
+    return JsonResponse({
+        'success': True,
+        'consumer_id': consumer.id,
+        'consumer_name': consumer.name,
+        'meter_type': consumer.meter_type,
+        'load_kw': load_kw,
+        'previous_reading': previous_reading,
+        'current_reading': current_reading,
+        'units_consumed': units_consumed,
+        'breakdown': {
+            'rate_per_unit': rate_per_unit,
+            'energy_charges': energy_charges,
+            'fixed_charge_per_kw': fixed_charge_per_kw,
+            'fixed_charges': fixed_charges,
+            'duty_percentage': duty_percentage,
+            'duty_charge': duty_charge,
+            'meter_rent': meter_rent,
+            'regulatory_surcharge': regulatory_surcharge,
+            'arrears': arrears,
+            'late_payment_surcharge': late_payment_surcharge,
+        },
+        'total_amount': int(total_amount),
+    })
 
 @csrf_exempt
 def api_send_bill_sms(request):

@@ -182,7 +182,7 @@ else:
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://10.193.121.32:8082",
+    "http://10.215.227.32:8082",
     "http://localhost:8082",
     "http://localhost:8080",
 ]
@@ -203,8 +203,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.91.159.32:8000',
     'http://10.86.158.33:8000',
     'http://10.86.158.33:8081',
-    'http://10.193.121.32:8082',
-    'http://10.193.121.32:8000',
+    'http://10.215.227.32:8082',
+    'http://10.215.227.32:8000',
 ]
 
 CSRF_COOKIE_HTTPONLY = False

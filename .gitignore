@@ -19,3 +19,10 @@ eMeterApp/.expo/
 eMeterApp/dist/
 eMeterApp/web-build/
 eMeterApp/.env
+.venv/
+electricity_system/.venv/
+.expo/
+scratch/
+dissertation.tex
+fix_bill_preview.py
+tsconfig.json

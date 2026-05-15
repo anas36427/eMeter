@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,11 +8,10 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
-import { submitReadingAndBillAPI, getSettingsAPI } from '../services/api';
+import { submitReadingAndBillAPI, calculateEstimateAPI } from '../services/api';
 import { saveOfflineReading, getOfflineQueue } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 
@@ -26,26 +25,21 @@ export default function SubmitReadingScreen({ route, navigation }) {
     const [currentReading, setCurrentReading] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [liveSettings, setLiveSettings] = useState(null);
 
+    // Server-side estimate — single source of truth from /api/calculate-estimate/
+    const [estimate, setEstimate] = useState(null);
+    const [estimateLoading, setEstimateLoading] = useState(false);
+    const debounceTimer = useRef(null);
+
+    // Restore any pending offline reading for this consumer/date
     useEffect(() => {
-        const fetchLiveSettings = async () => {
-            try {
-                const settings = await getSettingsAPI();
-                setLiveSettings(settings);
-            } catch (err) {
-                console.error('Failed to fetch settings:', err);
-            }
-        };
-        fetchLiveSettings();
-
         const checkExistingReading = async () => {
             try {
                 const now = new Date();
                 const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
                 const queue = await getOfflineQueue();
-                const existing = queue.find(r => 
-                    r.consumer_id === consumer.id && 
+                const existing = queue.find(r =>
+                    r.consumer_id === consumer.id &&
                     r.reading_date === localDate &&
                     r.status !== 'synced'
                 );
@@ -59,28 +53,36 @@ export default function SubmitReadingScreen({ route, navigation }) {
         checkExistingReading();
     }, [consumer.id]);
 
-    const unitsConsumed =
-        currentReading && Number(currentReading) >= previousReading
-            ? Number(currentReading) - previousReading
-            : 0;
+    // Debounced server-side estimate — fires 600ms after the user stops typing
+    useEffect(() => {
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
-    // Use live settings if available, otherwise fallback to defaults
-    const rate_per_unit = Number(liveSettings?.rate_per_unit || 8.56);
-    const fixed_charge_per_kw = Number(liveSettings?.fixed_charge_per_kw || 400.0);
-    const duty_val = Number(liveSettings?.duty_percentage || 7.5);
-    const p1_rent = Number(liveSettings?.phase_1_rent || 10.0);
-    const p3_rent = Number(liveSettings?.phase_3_rent || 25.0);
+        const parsed = Number(currentReading);
+        if (!currentReading || isNaN(parsed) || parsed < previousReading) {
+            setEstimate(null);
+            return;
+        }
 
-    const energyCharges = unitsConsumed * rate_per_unit;
-    const fixedCharges = (Number(consumer.load_kw) || 1.0) * fixed_charge_per_kw;
-    const dutyCharge = (energyCharges + fixedCharges) * (duty_val / 100);
-    const meterRent = Number(consumer.meter_type === '10' ? p1_rent : p3_rent) || 0;
-    const arrears = 0;
-    const latePaymentSurcharge = arrears * 0.015;
+        debounceTimer.current = setTimeout(async () => {
+            try {
+                setEstimateLoading(true);
+                const result = await calculateEstimateAPI(
+                    consumer.id,
+                    parsed,
+                    previousReading
+                );
+                setEstimate(result);
+            } catch (err) {
+                // Network is down — silently clear estimate; offline path handles it
+                console.warn('Estimate fetch failed (offline?):', err.message);
+                setEstimate(null);
+            } finally {
+                setEstimateLoading(false);
+            }
+        }, 600);
 
-    const estimatedCharge = Math.round(
-        energyCharges + fixedCharges + dutyCharge + meterRent + arrears + latePaymentSurcharge
-    );
+        return () => clearTimeout(debounceTimer.current);
+    }, [currentReading, consumer.id, previousReading]);
 
     const now = new Date();
     const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
@@ -268,32 +270,45 @@ export default function SubmitReadingScreen({ route, navigation }) {
                         </View>
                     </View>
 
-                    {/* Auto-calculated Breakdown */}
-                    <View style={styles.breakdownContainer}>
-                        <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Energy ({(unitsConsumed || 0).toFixed(1)} @ {rate_per_unit})</Text>
-                            <Text style={styles.breakdownValue}>₹{(energyCharges || 0).toFixed(2)}</Text>
+                    {/* Server-Side Live Estimate Breakdown */}
+                    {estimateLoading && (
+                        <View style={styles.estimateLoadingRow}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={styles.estimateLoadingText}>Calculating live estimate…</Text>
                         </View>
-                        <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Fixed (@ Rs. {fixed_charge_per_kw}/KW)</Text>
-                            <Text style={styles.breakdownValue}>₹{(fixedCharges || 0).toFixed(2)}</Text>
-                        </View>
-                        <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Duty ({duty_val}%)</Text>
-                            <Text style={styles.breakdownValue}>₹{(dutyCharge || 0).toFixed(2)}</Text>
-                        </View>
-                        <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Meter Rent</Text>
-                            <Text style={styles.breakdownValue}>₹{(meterRent || 0).toFixed(2)}</Text>
-                        </View>
-                    </View>
+                    )}
 
-                    {/* Grand Total */}
-                    {currentReading && Number(currentReading) >= previousReading && (
-                        <View style={styles.totalBar}>
-                            <Text style={styles.totalLabel}>Grand Total (Est.)</Text>
-                            <Text style={styles.totalValue}>₹{estimatedCharge}</Text>
-                        </View>
+                    {!estimateLoading && estimate && (
+                        <>
+                            <View style={styles.breakdownContainer}>
+                                <View style={styles.breakdownRow}>
+                                    <Text style={styles.breakdownLabel}>
+                                        Energy ({(estimate.units_consumed || 0).toFixed(1)} × ₹{estimate.breakdown.rate_per_unit})
+                                    </Text>
+                                    <Text style={styles.breakdownValue}>₹{(estimate.breakdown.energy_charges || 0).toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.breakdownRow}>
+                                    <Text style={styles.breakdownLabel}>
+                                        Fixed ({estimate.load_kw} KW × ₹{estimate.breakdown.fixed_charge_per_kw})
+                                    </Text>
+                                    <Text style={styles.breakdownValue}>₹{(estimate.breakdown.fixed_charges || 0).toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.breakdownRow}>
+                                    <Text style={styles.breakdownLabel}>Duty ({estimate.breakdown.duty_percentage}%)</Text>
+                                    <Text style={styles.breakdownValue}>₹{(estimate.breakdown.duty_charge || 0).toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.breakdownRow}>
+                                    <Text style={styles.breakdownLabel}>Meter Rent</Text>
+                                    <Text style={styles.breakdownValue}>₹{(estimate.breakdown.meter_rent || 0).toFixed(2)}</Text>
+                                </View>
+                            </View>
+
+                            {/* Grand Total */}
+                            <View style={styles.totalBar}>
+                                <Text style={styles.totalLabel}>Grand Total (Est.)</Text>
+                                <Text style={styles.totalValue}>₹{estimate.total_amount}</Text>
+                            </View>
+                        </>
                     )}
                 </View>
 
@@ -539,6 +554,18 @@ const createStyles = (colors) => StyleSheet.create({
         elevation: 6,
     },
     submitBtnDisabled: { opacity: 0.7 },
+    estimateLoadingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        paddingVertical: spacing.md,
+        paddingHorizontal: 4,
+    },
+    estimateLoadingText: {
+        fontSize: fontSize.sm,
+        color: colors.textMuted,
+        fontStyle: 'italic',
+    },
     submitBtnText: {
         color: colors.white,
         fontSize: fontSize.lg,

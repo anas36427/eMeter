@@ -33,7 +33,7 @@ export const saveOfflineReading = async (readingData) => {
         } else {
             offlineReading = {
                 ...readingData,
-                id: `offline_${Date.now()}`,
+                id: `offline_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
                 status: readingData.status || 'pending',
                 savedAt: new Date().toISOString(),
             };

@@ -39,4 +39,7 @@ urlpatterns = [
     
     path('send-bill-sms/', views.api_send_bill_sms, name='api_send_bill_sms'),
     path('calculate-bill/', views.api_calculate_bill, name='api_calculate_bill'),
+
+    # Single Source of Truth: live estimate using DB BillingSettings (for mobile)
+    path('calculate-estimate/', views.api_calculate_estimate, name='api_calculate_estimate'),
 ]

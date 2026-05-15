@@ -9,6 +9,7 @@ import {
     Platform,
     ActivityIndicator,
     StatusBar,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
@@ -69,7 +70,10 @@ export default function LoginScreen({ onLogin }) {
                 {/* Logo Area */}
                 <View style={styles.logoArea}>
                     <View style={styles.iconCircle}>
-                        <Ionicons name="flash" size={48} color={colors.accent} />
+                        <Image 
+                            source={require('../../assets/amu-logo.png')} 
+                            style={{ width: 80, height: 80, resizeMode: 'contain' }} 
+                        />
                     </View>
                     <Text style={styles.appName}>eMeter</Text>
                     <Text style={styles.subtitle}>Meter Reader Portal</Text>

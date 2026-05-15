@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For local dev: use your computer's local IP (not localhost)
 // e.g., 'http://192.168.1.100:8000'
 // ================================================
-const BASE_URL = 'http://10.193.121.32:8000';
+const BASE_URL = 'http://10.215.227.32:8000';
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -217,6 +217,27 @@ export const addConsumerAPI = async (consumerData) => {
 
 export const getBillPdfUrl = (billId) => {
     return `${BASE_URL}/bill/${billId}/pdf/`;
+};
+
+// ========================
+// Estimate API
+// ========================
+
+/**
+ * Fetch a real-time bill estimate from the server.
+ * Uses the live BillingSettings from the DB — single source of truth.
+ * @param {number} consumerId
+ * @param {number} currentReading
+ * @param {number} previousReading
+ * @returns {Promise<Object>} Full cost breakdown + total_amount
+ */
+export const calculateEstimateAPI = async (consumerId, currentReading, previousReading) => {
+    const response = await api.post('/api/calculate-estimate/', {
+        consumer_id: consumerId,
+        current_reading: currentReading,
+        previous_reading: previousReading,
+    });
+    return response.data;
 };
 
 
