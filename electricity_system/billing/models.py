@@ -1,26 +1,84 @@
-from django.db import models
-from django.contrib.auth.models import User
+"""
+billing/models.py
+
+Custom User model using AbstractUser — inherits all default Django fields
+(username, password, email, first_name, last_name, is_staff, etc.)
+and adds a `role` field to distinguish system actors.
+
+Two roles are supported:
+  - ADMIN        → can finalize bills, manage consumers, view reports
+  - METER_READER → can submit readings only (mobile app)
+"""
+
 from django.db import models, OperationalError
+from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 
-class Message(models.Model):
-    text = models.CharField(max_length=200)
 
+# ─────────────────────────────────────────────────────────────
+# 1. Custom User (replaces django.contrib.auth.models.User)
+# ─────────────────────────────────────────────────────────────
+
+class User(AbstractUser):
+    """
+    Custom user model extending Django's AbstractUser.
+    Do NOT import django.contrib.auth.models.User anywhere —
+    always use: from django.conf import settings; settings.AUTH_USER_MODEL
+    or: from django.contrib.auth import get_user_model
+    """
+
+    class Role(models.TextChoices):
+        ADMIN        = 'admin',        'Administrator'
+        METER_READER = 'meter_reader', 'Meter Reader'
+
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.METER_READER,
+        db_index=True,
+    )
+
+    # Keep AbstractUser fields intact — no overrides needed.
+    # username, password, email, first_name, last_name, is_active,
+    # is_staff, is_superuser, date_joined, last_login all inherited.
+
+    class Meta:
+        verbose_name        = 'User'
+        verbose_name_plural = 'Users'
+        ordering            = ['username']
+
+    def __str__(self):
+        return f"{self.username} ({self.get_role_display()})"
+
+    @property
+    def is_admin(self):
+        return self.role == self.Role.ADMIN
+
+    @property
+    def is_meter_reader(self):
+        return self.role == self.Role.METER_READER
+
+
+# ─────────────────────────────────────────────────────────────
+# 2. Consumer
+# ─────────────────────────────────────────────────────────────
 
 class Consumer(models.Model):
-    """Consumer model representing electricity customers"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
-    consumer_number = models.CharField(max_length=20, unique=True)
-    name = models.CharField(max_length=100, default='')
-    email = models.EmailField(unique=True, null=True, blank=True)
-    phone = models.CharField(max_length=20, default='')
-    address = models.TextField(default='')
-    post = models.CharField(max_length=100, default='', blank=True)
-    department = models.CharField(max_length=100, default='', blank=True)
-    meter_number = models.CharField(max_length=50, unique=True)
-    connection_type = models.CharField(max_length=20, choices=[
-        ('salary', 'Salary'),
-        ('non-salary', 'Non-Salary'),
-    ], default='salary')
+    """Electricity customer registered in the system."""
+
+    class ConnectionType(models.TextChoices):
+        SALARY     = 'salary',     'Salary'
+        NON_SALARY = 'non-salary', 'Non-Salary'
+
+    class MeterType(models.TextChoices):
+        STANDARD = '10', 'Standard (10A)'
+        ENHANCED = '25', 'Enhanced (25A)'
+
+    class Status(models.TextChoices):
+        ACTIVE       = 'active',       'Active'
+        INACTIVE     = 'inactive',     'Inactive'
+        DISCONNECTED = 'disconnected', 'Disconnected'
+
     LOAD_CHOICES = [
         (1.0, '1 KW'),
         (2.0, '2 KW'),
@@ -28,200 +86,284 @@ class Consumer(models.Model):
         (4.0, '4 KW'),
         (5.0, '5 KW'),
     ]
-    load_kw = models.FloatField(choices=LOAD_CHOICES, default=1.0)
-    meter_type = models.CharField(max_length=20, choices=[
-        ('10', 'Standard (10)'),
-        ('25', 'Enhanced (25)')
-    ], default='10')
-    status = models.CharField(max_length=20, choices=[
-        ('active', 'Active'),
-        ('inactive', 'Inactive'),
-        ('disconnected', 'Disconnected')
-    ], default='active')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
+    # Optional link to a system User account
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='consumer_profile',
+    )
+
+    consumer_number = models.CharField(max_length=20, unique=True)
+    name            = models.CharField(max_length=100)
+    email           = models.EmailField(unique=True, null=True, blank=True)
+    phone           = models.CharField(max_length=20, blank=True, default='')
+    address         = models.TextField(blank=True, default='')
+    post            = models.CharField(max_length=100, blank=True, default='')
+    department      = models.CharField(max_length=100, blank=True, default='')
+    meter_number    = models.CharField(max_length=50, unique=True)
+    connection_type = models.CharField(
+        max_length=20,
+        choices=ConnectionType.choices,
+        default=ConnectionType.SALARY,
+    )
+    load_kw         = models.FloatField(choices=LOAD_CHOICES, default=1.0)
+    meter_type      = models.CharField(
+        max_length=20,
+        choices=MeterType.choices,
+        default=MeterType.STANDARD,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        db_index=True,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,     null=True, blank=True)
+
+    class Meta:
+        verbose_name        = 'Consumer'
+        verbose_name_plural = 'Consumers'
+        ordering            = ['consumer_number']
 
     def __str__(self):
         return f"{self.name} ({self.consumer_number})"
 
 
+# ─────────────────────────────────────────────────────────────
+# 3. MeterReading
+# ─────────────────────────────────────────────────────────────
+
 class MeterReading(models.Model):
-    """Meter reading records for consumers"""
-    consumer = models.ForeignKey(Consumer, on_delete=models.CASCADE, related_name='readings')
+    """A single meter reading event submitted by a meter reader."""
+
+    consumer         = models.ForeignKey(Consumer, on_delete=models.CASCADE, related_name='readings')
     previous_reading = models.FloatField(default=0)
-    current_reading = models.FloatField(default=0)
-    units_consumed = models.FloatField(blank=True, default=0)
-    reading_date = models.DateField(null=True, blank=True)
-    reading_time = models.TimeField(null=True, blank=True)
-    meter_image = models.ImageField(upload_to='meter_images/', null=True, blank=True)
-    remarks = models.TextField(blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    current_reading  = models.FloatField(default=0)
+    units_consumed   = models.FloatField(default=0, blank=True)
+    reading_date     = models.DateField(null=True, blank=True)
+    reading_time     = models.TimeField(null=True, blank=True)
+    meter_image      = models.ImageField(upload_to='meter_images/', null=True, blank=True)
+    remarks          = models.TextField(blank=True)
 
-    def save(self, *args, **kwargs):
-        self.units_consumed = self.current_reading - self.previous_reading
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.consumer.consumer_number} - {self.reading_date}"
-
-
-class Bill(models.Model):
-    """Bill model for consumer invoices"""
-    consumer = models.ForeignKey(Consumer, on_delete=models.CASCADE, related_name='bills')
-    meter_reading = models.ForeignKey(MeterReading, on_delete=models.CASCADE, null=True, blank=True)
-    bill_number = models.CharField(max_length=20, unique=True, blank=True)
-    units = models.FloatField(default=0)
-    rate_per_unit = models.FloatField(default=8.56)
-    fixed_charges = models.FloatField(default=0)
-    energy_charges = models.FloatField(blank=True, default=0)
-    duty_charge = models.FloatField(default=0)
-    regulatory_surcharge = models.FloatField(default=0)
-    meter_rent = models.FloatField(default=0)
-    arrears = models.FloatField(default=0)
-    late_payment_surcharge = models.FloatField(default=0)
-    total_amount = models.FloatField(blank=True, default=0)
-    status = models.CharField(max_length=20, choices=[
-        ('unpaid', 'Unpaid'),
-        ('paid', 'Paid'),
-        ('pending', 'Pending'),
-        ('overdue', 'Overdue')
-    ], default='unpaid')
-    billing_period = models.DateField(null=True, blank=True)
-    due_date = models.DateField(null=True, blank=True)
-    paid_date = models.DateField(null=True, blank=True)
-    transaction_id = models.CharField(max_length=50, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        # Fetch current system settings with Safe Mode fallback
-        try:
-            settings = BillingSettings.get_settings()
-        except:
-            # Fallback mock settings
-            class MockSettings:
-                rate_per_unit = 8.56
-                fixed_charge_per_kw = 400.0
-                phase_1_rent = 10.0
-                phase_3_rent = 25.0
-                duty_percentage = 7.5
-            settings = MockSettings()
-        
-        self.rate_per_unit = float(getattr(settings, 'rate_per_unit', 8.56))
-        self.energy_charges = round(float(self.units) * self.rate_per_unit, 2)
-        
-        # Calculate fixed charges based on load
-        load = float(getattr(self.consumer, 'load_kw', 1.0))
-        fixed_rate = float(getattr(settings, 'fixed_charge_per_kw', 400.0))
-        self.fixed_charges = load * fixed_rate
-            
-        # Calculate duty charge (X% of Energy + Fixed)
-        duty_pct = float(getattr(settings, 'duty_percentage', 7.5))
-        self.duty_charge = round((self.energy_charges + self.fixed_charges) * (duty_pct / 100), 2)
-        
-        # Determine meter rent based on meter_type (phase)
-        m_type = getattr(self.consumer, 'meter_type', '10')
-        p1_rent = float(getattr(settings, 'phase_1_rent', 10.0))
-        p3_rent = float(getattr(settings, 'phase_3_rent', 25.0))
-        self.meter_rent = p1_rent if m_type == '10' else p3_rent
-            
-        # Late Payment Surcharge (1.5% of arrears)
-        if hasattr(self, 'arrears') and self.arrears > 0:
-            self.late_payment_surcharge = round(float(self.arrears) * 0.015, 2)
-            
-        self.total_amount = round(
-            float(self.energy_charges) + 
-            float(self.fixed_charges) + 
-            float(self.duty_charge) + 
-            float(getattr(self, 'regulatory_surcharge', 0)) + 
-            float(self.meter_rent) + 
-            float(getattr(self, 'arrears', 0)) + 
-            float(getattr(self, 'late_payment_surcharge', 0)),
-            0
-        )
-        
-        if not self.bill_number:
-            import random
-            import string
-            self.bill_number = 'BILL' + ''.join(random.choices(string.digits, k=8))
-            
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"Bill #{self.id} - {self.consumer.consumer_number}"
-
-
-class Payment(models.Model):
-    """Payment records for bills"""
-    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='payments')
-    transaction_id = models.CharField(max_length=50, unique=True)
-    amount = models.FloatField()
-    payment_method = models.CharField(max_length=50, choices=[
-        ('credit_card', 'Credit Card'),
-        ('debit_card', 'Debit Card'),
-        ('bank_transfer', 'Bank Transfer'),
-        ('cash', 'Cash'),
-        ('online', 'Online Payment')
-    ])
-    payment_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=[
-        ('success', 'Success'),
-        ('failed', 'Failed'),
-        ('pending', 'Pending')
-    ], default='success')
-
-    def __str__(self):
-        return f"Payment {self.transaction_id} - {self.bill.consumer.name}"
-
-
-class UserProfile(models.Model):
-    """Extended user profile for different roles"""
-    USER_ROLES = [
-        ('admin', 'Administrator'),
-        ('meter_reader', 'Meter Reader'),
-        ('consumer', 'Consumer')
-    ]
-    
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=USER_ROLES, default='consumer')
-    assigned_area = models.CharField(max_length=100, blank=True)
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.role}"
-
-
-class BillingSettings(models.Model):
-    """Global settings for billing rates"""
-    rate_per_unit = models.FloatField(default=8.56)
-    fixed_charge_per_kw = models.FloatField(default=400.0)
-    phase_1_rent = models.FloatField(default=10.0)
-    phase_3_rent = models.FloatField(default=25.0)
-    duty_percentage = models.FloatField(default=7.5)
-    updated_at = models.DateTimeField(auto_now=True)
+    # Who submitted this reading
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='submitted_readings',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     class Meta:
-        verbose_name_plural = "Billing Settings"
+        verbose_name        = 'Meter Reading'
+        verbose_name_plural = 'Meter Readings'
+        ordering            = ['-reading_date']
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate units consumed before saving
+        self.units_consumed = max(0.0, self.current_reading - self.previous_reading)
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Settings updated at {self.updated_at}"
+        return f"{self.consumer.consumer_number} — {self.reading_date} ({self.units_consumed} units)"
+
+
+# ─────────────────────────────────────────────────────────────
+# 4. Bill  (Immutable Financial Record)
+# ─────────────────────────────────────────────────────────────
+
+class Bill(models.Model):
+    """
+    Financial bill for a consumer.
+
+    Lifecycle:  DRAFT → FINALIZED → PAID
+                      └──────────→ CANCELLED
+
+    Once status = 'finalized', the bill is LOCKED.
+    All snapshot_* fields are frozen at finalization time and must
+    never be recalculated from live data afterwards.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT      = 'draft',      'Draft'
+        FINALIZED  = 'finalized',  'Finalized'
+        PAID       = 'paid',       'Paid'
+        CANCELLED  = 'cancelled',  'Cancelled'
+
+    # ── Core relations ─────────────────────────────────────
+    consumer      = models.ForeignKey(Consumer,     on_delete=models.CASCADE,    related_name='bills')
+    meter_reading = models.ForeignKey(MeterReading, on_delete=models.SET_NULL,   null=True, blank=True)
+    bill_number   = models.CharField(max_length=20, unique=True, blank=True)
+
+    # ── Live financial fields (editable in DRAFT only) ─────
+    units                  = models.FloatField(default=0)
+    rate_per_unit          = models.FloatField(default=0)
+    fixed_charges          = models.FloatField(default=0)
+    energy_charges         = models.FloatField(default=0)
+    duty_charge            = models.FloatField(default=0)
+    regulatory_surcharge   = models.FloatField(default=0)
+    meter_rent             = models.FloatField(default=0)
+    arrears                = models.FloatField(default=0)
+    late_payment_surcharge = models.FloatField(default=0)
+    total_amount           = models.FloatField(default=0)
+
+    # ── Workflow state ─────────────────────────────────────
+    status    = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    is_locked = models.BooleanField(default=False)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='locked_bills',
+    )
+
+    # ── Immutable snapshots (written ONCE at finalization) ─
+    previous_reading_snapshot  = models.FloatField(null=True, blank=True)
+    current_reading_snapshot   = models.FloatField(null=True, blank=True)
+    units_consumed_snapshot    = models.FloatField(null=True, blank=True)
+    rate_per_unit_snapshot     = models.FloatField(null=True, blank=True)
+    subtotal_snapshot          = models.FloatField(null=True, blank=True)   # energy + fixed
+    tax_snapshot               = models.FloatField(null=True, blank=True)   # duty + regulatory
+    total_amount_snapshot      = models.FloatField(null=True, blank=True)
+    consumer_name_snapshot     = models.CharField(max_length=255, null=True, blank=True)
+    meter_number_snapshot      = models.CharField(max_length=100, null=True, blank=True)
+    billing_date_snapshot      = models.DateField(null=True, blank=True)
+
+    # ── Dates ──────────────────────────────────────────────
+    billing_period = models.DateField(null=True, blank=True)
+    due_date       = models.DateField(null=True, blank=True)
+    paid_date      = models.DateField(null=True, blank=True)
+    transaction_id = models.CharField(max_length=50, blank=True)
+    created_at     = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at     = models.DateTimeField(auto_now=True,     null=True, blank=True)
+
+    class Meta:
+        verbose_name        = 'Bill'
+        verbose_name_plural = 'Bills'
+        ordering            = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if not self.bill_number:
+            import random, string
+            self.bill_number = 'BILL' + ''.join(random.choices(string.digits, k=8))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.bill_number} — {self.consumer.name} [{self.status.upper()}]"
+
+
+# ─────────────────────────────────────────────────────────────
+# 5. AuditLog
+# ─────────────────────────────────────────────────────────────
+
+class AuditLog(models.Model):
+    """Immutable audit trail for every significant financial action."""
+
+    class Action(models.TextChoices):
+        READING_SUBMIT  = 'reading_submit', 'Reading Submitted'
+        BILL_CALCULATE  = 'bill_calculate', 'Bill Calculated'
+        BILL_FINALIZE   = 'bill_finalize',  'Bill Finalized'
+        PAYMENT_UPDATE  = 'payment_update', 'Payment Updated'
+        FAILED_MOD      = 'failed_mod',     'Failed Modification Attempt'
+        PDF_GENERATED   = 'pdf_gen',        'PDF Generated'
+
+    user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
+    action     = models.CharField(max_length=50, choices=Action.choices, db_index=True)
+    bill       = models.ForeignKey(Bill, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    timestamp  = models.DateTimeField(auto_now_add=True, db_index=True)
+    details    = models.JSONField(default=dict)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = 'Audit Log'
+        verbose_name_plural = 'Audit Logs'
+        ordering            = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.user} → {self.action}"
+
+
+# ─────────────────────────────────────────────────────────────
+# 6. Payment
+# ─────────────────────────────────────────────────────────────
+
+class Payment(models.Model):
+    """Payment record linked to a finalized bill."""
+
+    class Method(models.TextChoices):
+        CREDIT_CARD    = 'credit_card',    'Credit Card'
+        DEBIT_CARD     = 'debit_card',     'Debit Card'
+        BANK_TRANSFER  = 'bank_transfer',  'Bank Transfer'
+        CASH           = 'cash',           'Cash'
+        ONLINE         = 'online',         'Online Payment'
+
+    class PaymentStatus(models.TextChoices):
+        SUCCESS = 'success', 'Success'
+        FAILED  = 'failed',  'Failed'
+        PENDING = 'pending', 'Pending'
+
+    bill           = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='payments')
+    transaction_id = models.CharField(max_length=50, unique=True)
+    amount         = models.FloatField()
+    payment_method = models.CharField(max_length=50, choices=Method.choices)
+    payment_date   = models.DateTimeField(auto_now_add=True)
+    status         = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.SUCCESS)
+
+    class Meta:
+        verbose_name        = 'Payment'
+        verbose_name_plural = 'Payments'
+        ordering            = ['-payment_date']
+
+    def __str__(self):
+        return f"Payment {self.transaction_id} — {self.bill.consumer.name}"
+
+
+# ─────────────────────────────────────────────────────────────
+# 7. BillingSettings
+# ─────────────────────────────────────────────────────────────
+
+class BillingSettings(models.Model):
+    """
+    Singleton table holding global tariff rates.
+    Always access via BillingSettings.get_settings() — never .objects.all().
+    """
+
+    rate_per_unit      = models.FloatField(default=8.56)
+    fixed_charge_per_kw = models.FloatField(default=400.0)
+    phase_1_rent       = models.FloatField(default=10.0)
+    phase_3_rent       = models.FloatField(default=25.0)
+    duty_percentage    = models.FloatField(default=7.5)
+    updated_at         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Billing Settings'
+        verbose_name_plural = 'Billing Settings'
+
+    def __str__(self):
+        return f"Billing Settings (updated {self.updated_at:%Y-%m-%d})"
 
     @classmethod
     def get_settings(cls):
+        """Always returns a valid settings object, even if DB is unavailable."""
         try:
-            settings, created = cls.objects.get_or_create(id=1)
-            return settings
-        except Exception as e:
-            # Fallback Mock if table doesn't exist or DB error
-            print(f"ERROR: Failed to fetch BillingSettings: {str(e)}")
-            class MockSettings:
-                rate_per_unit = 8.56
-                fixed_charge_per_kw = 400.0
-                phase_1_rent = 10.0
-                phase_3_rent = 25.0
-                duty_percentage = 7.5
-                updated_at = None
-                def save(self, *args, **kwargs):
-                    print("WARNING: Attempted to save MockSettings. This change will NOT be persisted.")
-                    pass
-            return MockSettings()
+            instance, _ = cls.objects.get_or_create(id=1)
+            return instance
+        except Exception as exc:
+            print(f"ERROR: BillingSettings unavailable — using defaults. ({exc})")
 
+            class _Defaults:
+                rate_per_unit       = 8.56
+                fixed_charge_per_kw = 400.0
+                phase_1_rent        = 10.0
+                phase_3_rent        = 25.0
+                duty_percentage     = 7.5
+                updated_at          = None
+                def save(self, *args, **kwargs):
+                    pass  # no-op fallback
+
+            return _Defaults()

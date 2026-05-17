@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For local dev: use your computer's local IP (not localhost)
 // e.g., 'http://192.168.1.100:8000'
 // ================================================
-const BASE_URL = 'http://10.215.227.32:8000';
+const BASE_URL = 'http://10.11.53.13:8000';
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -116,9 +116,10 @@ export const logoutAPI = async () => {
     try {
         await api.post('/api/logout/');
     } finally {
+        authToken = null;
         sessionId = null;
         csrfToken = null;
-        await AsyncStorage.multiRemove(['sessionId', 'csrfToken', 'user']);
+        await AsyncStorage.multiRemove(['authToken', 'sessionId', 'csrfToken', 'user']);
     }
 };
 

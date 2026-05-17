@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('', views.api_root, name='api_root'),
     # Auth Endpoints
     path('login/', views.api_login, name='api_login'),
     path('me/', views.api_me, name='api_me'),
@@ -34,6 +35,7 @@ urlpatterns = [
     path('bill/<int:bill_id>/pdf/', views.api_get_bill_pdf, name='api_get_bill_pdf'),
     path('bills/<int:bill_id>/mark-paid/', views.api_mark_bill_paid, name='api_mark_bill_paid'),
     path('bills/<int:bill_id>/mark-unpaid/', views.api_mark_bill_unpaid, name='api_mark_bill_unpaid'),
+    path('bills/<int:bill_id>/finalize/', views.api_finalize_bill, name='api_finalize_bill'),
 
     path('bills/manual-generate/', views.api_manual_generate_bill, name='api_manual_generate_bill'),
     

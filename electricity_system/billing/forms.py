@@ -1,8 +1,9 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
-from .models import Consumer, MeterReading, Bill, Payment, UserProfile
+from .models import Consumer, MeterReading, Bill, Payment
 
+User = get_user_model()
 
 class ConsumerRegistrationForm(forms.ModelForm):
     """Form for creating new consumers"""
@@ -101,36 +102,29 @@ class LoginForm(forms.Form):
                                }))
 
 
-class UserProfileForm(forms.ModelForm):
-    """Form for updating user profile"""
+class UserRoleForm(forms.ModelForm):
+    """Form for updating a user's role (replaces the old UserProfileForm)."""
     class Meta:
-        model = UserProfile
-        fields = ['role', 'assigned_area']
+        model = User
+        fields = ['role']
         widgets = {
             'role': forms.Select(attrs={'class': 'form-select'}),
-            'assigned_area': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
 
 class UserCreationFormExtended(UserCreationForm):
     """Extended user creation form with role selection"""
     email = forms.EmailField(required=True)
-    role = forms.ChoiceField(choices=UserProfile.USER_ROLES, required=True)
-    
+    role = forms.ChoiceField(choices=User.Role.choices, required=True)
+
     class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2', 'role']
-    
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
-        
+        user.role  = self.cleaned_data['role']
         if commit:
             user.save()
-            UserProfile.objects.create(
-                user=user,
-                role=self.cleaned_data['role']
-            )
-        
         return user
-

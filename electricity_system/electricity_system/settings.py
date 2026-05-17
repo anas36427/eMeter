@@ -31,7 +31,15 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-s(++$8^mg#8qqq
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # ALLOWED_HOSTS - Add your domain here for production
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
+    # '127.0.0.1',
+    # 'localhost',
+    # '10.215.227.32',
+    # '10.86.158.33',
+    # '10.86.112.32',
+    # '10.91.159.32',
+    # '10.131.109.32',
+
 
 
 # Application definition
@@ -48,6 +56,11 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
 ]
+
+# ── Custom User Model ────────────────────────────────────────
+# Must be set before any migration is run.
+# All imports elsewhere must use get_user_model() or settings.AUTH_USER_MODEL
+AUTH_USER_MODEL = 'billing.User'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -105,7 +118,7 @@ DATABASES = {
         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
         'NAME': os.environ.get('DB_NAME', 'emeter_db'),
         'USER': os.environ.get('DB_USER', 'emeter_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'emeter123'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'anas167'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
@@ -165,26 +178,41 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
-# Security settings for production
+# Security settings
 if not DEBUG:
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False    
+    # --- Production: Full HTTPS enforcement ---
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 else:
+    # --- Development: No HTTPS, but still enable HttpOnly protections ---
     SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False  # Can't be True without HTTPS locally
+    CSRF_COOKIE_SECURE = False     # Same reason
 
-# CORS settings - Allow all origins for mobile development
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS settings - Explicit whitelist only; never allow all origins
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://10.215.227.32:8082",
+    "http://localhost:5173",
     "http://localhost:8082",
     "http://localhost:8080",
+    "http://localhost:3000",
+    # Current machine IP
+    "http://10.11.53.13:3000",
+    "http://10.11.53.13:8000",
+    "http://10.11.53.13:8081",
+    "http://10.11.53.13:8082",
+    # Previous IPs (kept for reference)
+    "http://10.215.227.32:8082",
+    "http://10.215.227.32:8000",
+    "http://10.86.158.33:8000",
+    "http://10.86.158.33:8081",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -196,8 +224,14 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8081',
     'http://localhost:8082',
     'http://127.0.0.1:8082',
-    'http://localhost:8083',      
+    'http://localhost:8083',
     'http://127.0.0.1:8083',
+    # Current machine IP
+    'http://10.11.53.13:3000',
+    'http://10.11.53.13:8000',
+    'http://10.11.53.13:8081',
+    'http://10.11.53.13:8082',
+    # Previous IPs (kept for reference)
     'http://10.131.109.32:8083',
     'http://10.86.112.32:8000',
     'http://10.91.159.32:8000',
@@ -207,15 +241,17 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.215.227.32:8000',
 ]
 
+# CSRF cookie: NOT HttpOnly so SPA JS can read and attach it to X-CSRFToken header.
+# This is the standard Django SPA pattern — do NOT set True.
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = False
+# CSRF_COOKIE_SECURE is already set in the DEBUG block above.
 
 SESSION_COOKIE_DOMAIN = None
 SESSION_COOKIE_AGE = 28800
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_HTTPONLY = False
-SESSION_COOKIE_SECURE = False
+# HttpOnly MUST be True — JS has no legitimate need to read the session cookie.
+SESSION_COOKIE_HTTPONLY = True
 
 # Twilio Settings (SMS or WhatsApp)
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
