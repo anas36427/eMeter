@@ -1,4 +1,6 @@
 venv/
+**/venv/
+electricity_system/venv/
 __pycache__/
 *.pyc
 .DS_Store
