@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,7 +13,6 @@ import SearchScreen from '../screens/SearchScreen';
 import SubmitReadingScreen from '../screens/SubmitReadingScreen';
 import BillPreviewScreen from '../screens/BillPreviewScreen';
 import HistoryScreen from '../screens/HistoryScreen';
-import SettingsScreen from '../screens/SettingsScreen';
 import AddConsumerScreen from '../screens/AddConsumerScreen';
 
 const Stack = createNativeStackNavigator();
@@ -96,7 +95,6 @@ export default function AppNavigator() {
         <NavigationContainer>
             <RootStack.Navigator screenOptions={{ headerShown: false }}>
                 <RootStack.Screen name="Main" component={MainTabs} />
-                <RootStack.Screen name="Settings" component={SettingsScreen} />
             </RootStack.Navigator>
         </NavigationContainer>
     );
@@ -104,7 +102,7 @@ export default function AppNavigator() {
 
 // Simple Profile/Settings tab
 function ProfileTab({ navigation }) {
-    const { colors, isDark } = useTheme();
+    const { colors, isDark, toggleTheme } = useTheme();
     const { user, logout } = useAuth();
     const styles = createProfileStyles(colors);
 
@@ -129,7 +127,9 @@ function ProfileTab({ navigation }) {
                 <View style={styles.infoRow}>
                     <Ionicons name="shield-checkmark" size={20} color={colors.success} />
                     <Text style={styles.infoLabel}>Role</Text>
-                    <Text style={styles.infoValue}>Meter Reader</Text>
+                    <Text style={styles.infoValue}>
+                        {user?.role === 'admin' ? 'Administrator' : 'Meter Reader'}
+                    </Text>
                 </View>
                 <View style={styles.infoRow}>
                     <Ionicons name="business" size={20} color={colors.info} />
@@ -143,14 +143,23 @@ function ProfileTab({ navigation }) {
                 </View>
             </View>
 
-            <TouchableOpacity
-                style={styles.settingsBtn}
-                onPress={() => navigation.navigate('Settings')}
-            >
-                <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
-                <Text style={styles.settingsText}>Maintenance & Rates</Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
+            {/* Dark Appearance Card */}
+            <View style={styles.themeToggleCard}>
+                <View style={styles.themeToggleInfo}>
+                    <Ionicons
+                        name={isDark ? "moon-outline" : "sunny-outline"}
+                        size={22}
+                        color={colors.textPrimary}
+                    />
+                    <Text style={styles.themeToggleText}>Dark Appearance</Text>
+                </View>
+                <Switch
+                    value={isDark}
+                    onValueChange={toggleTheme}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.white}
+                />
+            </View>
 
             <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
                 <Ionicons name="log-out-outline" size={22} color={colors.danger} />
@@ -234,20 +243,24 @@ const createProfileStyles = (colors) => StyleSheet.create({
         fontWeight: '700',
         color: colors.danger,
     },
-    settingsBtn: {
+    themeToggleCard: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         backgroundColor: colors.bgCard,
-        paddingVertical: 18,
+        paddingVertical: 16,
         paddingHorizontal: 20,
         borderRadius: 12,
         marginBottom: 24,
         borderWidth: 1,
         borderColor: colors.border,
+    },
+    themeToggleInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 12,
     },
-    settingsText: {
-        flex: 1,
+    themeToggleText: {
         fontSize: 16,
         fontWeight: '600',
         color: colors.textPrimary,

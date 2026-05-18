@@ -34,7 +34,7 @@ def require_authenticated(view_func):
 
 def require_role(*allowed_roles):
     """
-    Decorator: restricts a view to users whose UserProfile.role is in
+    Decorator: restricts a view to users whose custom User role is in
     `allowed_roles`. Automatically enforces authentication too.
 
     Usage:
@@ -47,26 +47,29 @@ def require_role(*allowed_roles):
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
-            # 1. Must be logged in.
             if not request.user.is_authenticated:
-                return JsonResponse({'detail': 'Authentication required.'}, status=401)
-
-            # 2. Must have a profile with an allowed role.
-            try:
-                from billing.models import UserProfile
-                profile = request.user.profile
-                if profile.role not in allowed_roles:
-                    return JsonResponse(
-                        {'detail': f'Permission denied. Required role(s): {", ".join(allowed_roles)}.'},
-                        status=403,
-                    )
-            except Exception:
-                # No profile = treat as unprivileged consumer
                 return JsonResponse(
-                    {'detail': 'Permission denied. No role assigned to this account.'},
-                    status=403,
+                    {'detail': 'Authentication required.'},
+                    status=401
+                )
+
+            role = getattr(request.user, 'role', None)
+
+            if not role:
+                return JsonResponse(
+                    {'detail': 'No role assigned to this account.'},
+                    status=403
+                )
+
+            if role not in allowed_roles:
+                return JsonResponse(
+                    {
+                        'detail': f'Permission denied. Required role(s): {", ".join(allowed_roles)}.'
+                    },
+                    status=403
                 )
 
             return view_func(request, *args, **kwargs)
+
         return wrapper
     return decorator

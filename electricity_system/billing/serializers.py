@@ -36,28 +36,6 @@ class BillSerializer(serializers.ModelSerializer):
             'consumer_name_snapshot', 'meter_number_snapshot', 'billing_date_snapshot'
         ]
 
-    def validate(self, data):
-        if self.instance and self.instance.is_locked:
-            # Check if any sensitive fields are being modified
-            restricted_fields = [
-                'units', 'rate_per_unit', 'fixed_charges', 'energy_charges',
-                'duty_charge', 'regulatory_surcharge', 'meter_rent', 
-                'arrears', 'late_payment_surcharge', 'total_amount', 'billing_period'
-            ]
-            for field in restricted_fields:
-                if field in data and data[field] != getattr(self.instance, field):
-                    raise serializers.ValidationError(f"Field '{field}' cannot be modified once the bill is finalized/locked.")
-            
-            # Status can only be changed to 'paid' or 'cancelled' if finalized, 
-            # and only if logic allows (e.g., from finalized to paid).
-            if 'status' in data:
-                new_status = data['status']
-                if self.instance.status == 'paid' and new_status != 'paid':
-                     raise serializers.ValidationError("Cannot change status of a paid bill.")
-                if self.instance.status == 'cancelled':
-                     raise serializers.ValidationError("Cannot change status of a cancelled bill.")
-
-        return data
 
 class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.username')

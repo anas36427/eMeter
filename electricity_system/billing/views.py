@@ -1,3 +1,4 @@
+
 # Django core imports
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
@@ -12,6 +13,7 @@ from django.core.paginator import Paginator
 from django.template.loader import render_to_string
 from django.db import transaction, OperationalError
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 # Standard library
 from datetime import datetime, timedelta
@@ -29,6 +31,7 @@ from .models import Consumer, MeterReading, Bill, Payment, BillingSettings, Audi
 from .forms import ConsumerRegistrationForm
 
 # PDF generation
+from reportlab.lib import colors  # ← FIXED: Added missing import
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -63,29 +66,20 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        role = request.POST.get('role', 'admin')
         
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
-            try:
-                profile = user.profile
-                if role == 'admin' and profile.role != 'admin':
-                    messages.error(request, 'Invalid role selected for this user')
-                    return render(request, 'login.html')
-                login(request, user)
-                
-                if role == 'admin':
-                    return redirect('admin_dashboard')
-                elif role == 'meter_reader':
-                    return redirect('meter_reader_dashboard')
-                else:
-                    return redirect('consumer_dashboard')
-            except UserProfile.DoesNotExist:
-                # Create profile if doesn't exist
-                UserProfile.objects.create(user=user, role=role)
-                login(request, user)
-                return redirect('dashboard')
+            login(request, user)
+            
+            # Determine role from database only
+            role = getattr(user, 'role', 'meter_reader')
+            if role == 'admin':
+                return redirect('admin_dashboard')
+            elif role == 'meter_reader':
+                return redirect('meter_reader_dashboard')
+            else:
+                return redirect('consumer_dashboard')
         else:
             messages.error(request, 'Invalid username or password')
     
@@ -100,7 +94,8 @@ def logout_view(request):
 @csrf_exempt
 def api_login(request):
     """JSON login endpoint for SPA clients"""
-    print(f"DEBUG: api_login hit with method {request.method}")
+    if settings.DEBUG:
+        print(f"DEBUG: api_login hit with method {request.method}")
     if request.method != 'POST':
         return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
@@ -111,8 +106,8 @@ def api_login(request):
 
     username = data.get('username')
     password = data.get('password')
-    role = data.get('role', 'admin')
-    print(f"DEBUG: Attempting login for {username} with requested role: {role}")
+    if settings.DEBUG:
+        print(f"DEBUG: Attempting login for {username}")
 
     if not username or not password:
         return JsonResponse({'detail': 'Username and password are required'}, status=400)
@@ -120,20 +115,16 @@ def api_login(request):
     user = authenticate(request, username=username, password=password)
 
     if user is None:
-        print(f"DEBUG: Authentication failed for {username}")
-        return JsonResponse({'detail': 'Invalid credentials. User not found'}, status=401)
-
-    # Role is now stored directly on the User model (no separate UserProfile needed)
-    print(f"DEBUG: User {username} found with role: {user.role}")
-    if user.role != role:
-        print(f"DEBUG: Role mismatch! App sent '{role}', DB has '{user.role}'")
-        return JsonResponse({'detail': f'Role mismatch. Expected {user.role}.'}, status=403)
+        if settings.DEBUG:
+            print(f"DEBUG: Authentication failed for {username}")
+        return JsonResponse({'detail': 'Invalid username or password.'}, status=401)
 
     login(request, user)
     request.session.save()
     csrf_token = get_token(request)
     token, _ = Token.objects.get_or_create(user=user)
-    print(f"DEBUG: Login successful for {user.username}. Role: {user.role}")
+    if settings.DEBUG:
+        print(f"DEBUG: Login successful for {user.username}. Role: {user.role}")
     return JsonResponse({
         'success': True,
         'username': user.username,
@@ -142,15 +133,6 @@ def api_login(request):
         'csrftoken': csrf_token,
     })
 
-# @login_required
-# def api_me(request):
-#     """Return current user and role for SPA auth guard"""
-#     profile, _ = UserProfile.objects.get_or_create(user=request.user, defaults={'role': 'consumer'})
-#     return JsonResponse({
-#         'authenticated': True,
-#         'username': request.user.username,
-#         'role': profile.role,
-#     })
 @api_view(['GET'])
 def api_me(request):
     if not request.user.is_authenticated:
@@ -159,16 +141,44 @@ def api_me(request):
         'authenticated': True,
         'username': request.user.username,
         'role': request.user.role,
+        'first_name': request.user.first_name,
+        'last_name': request.user.last_name,
+        'email': request.user.email,
     })
+
+@api_view(['POST'])
+def api_update_profile(request):
+    """Update current user profile info"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        
+        # Split first and last names if full name is provided
+        if 'name' in data:
+            parts = data['name'].strip().split(' ', 1)
+            user.first_name = parts[0]
+            user.last_name = parts[1] if len(parts) > 1 else ''
+        elif 'first_name' in data or 'last_name' in data:
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+                
+        if 'email' in data:
+            user.email = data['email']
+            
+        user.save()
+        return JsonResponse({'success': True, 'message': 'Profile updated successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 # 1.
 @api_view(['GET'])
 @require_role('admin')
 def api_dashboard_stats(request):
     """JSON stats for SPA dashboard"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
-    
     from django.utils import timezone
     now = timezone.now()
     
@@ -177,7 +187,8 @@ def api_dashboard_stats(request):
     total_readings = MeterReading.objects.count()
     
     total_revenue = Bill.objects.filter(status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
-    pending_amount = Bill.objects.filter(status='unpaid').aggregate(total=Sum('total_amount'))['total'] or 0
+    # BUG-12 FIX: 'unpaid' is not a valid Bill status — the correct status for billed-but-unpaid is 'finalized'.
+    pending_amount = Bill.objects.filter(status='finalized').aggregate(total=Sum('total_amount'))['total'] or 0
     
     current_month_units = Bill.objects.filter(
         billing_period__month=now.month, 
@@ -243,15 +254,12 @@ def api_reports_data(request):
 @login_required
 def dashboard(request):
     """Main dashboard view - redirects based on role"""
-    try:
-        profile = request.user.profile
-        if profile.role == 'admin':
-            return redirect('admin_dashboard')
-        elif profile.role == 'meter_reader':
-            return redirect('meter_reader_dashboard')
-        else:
-            return redirect('consumer_dashboard')
-    except UserProfile.DoesNotExist:
+    # ← FIXED: Using user.role directly instead of user.profile.role
+    if request.user.role == 'admin':
+        return redirect('admin_dashboard')
+    elif request.user.role == 'meter_reader':
+        return redirect('meter_reader_dashboard')
+    else:
         return redirect('consumer_dashboard')
 
 
@@ -263,8 +271,14 @@ def admin_dashboard(request):
     active_consumers = Consumer.objects.filter(status='active').count()
     total_bills = Bill.objects.count()
     paid_bills = Bill.objects.filter(status='paid').count()
-    unpaid_bills = Bill.objects.filter(status='unpaid').count()
-    overdue_bills = Bill.objects.filter(status='overdue').count()
+    # BUG-13 FIX: 'unpaid' and 'overdue' are not valid Bill statuses.
+    # Finalized = bills that have been locked/issued but not yet paid.
+    # Overdue = finalized bills whose due date has already passed.
+    unpaid_bills = Bill.objects.filter(status='finalized').count()
+    overdue_bills = Bill.objects.filter(
+        status='finalized',
+        due_date__lt=timezone.now().date()
+    ).count()
     
     # Revenue calculation
     total_revenue = Bill.objects.filter(status='paid').aggregate(
@@ -275,10 +289,10 @@ def admin_dashboard(request):
     recent_readings = MeterReading.objects.select_related('consumer').order_by('-created_at')[:5]
     
     # Recent consumers
-    recent_consumers = Consumer.objects.order_by('-created_at')[:5]  # ← UNCOMMENTED
+    recent_consumers = Consumer.objects.order_by('-created_at')[:5]
     
     # All active consumers for the Generate Bill dropdown
-    consumers = Consumer.objects.filter(status='active')             # ← ADDED
+    consumers = Consumer.objects.filter(status='active')
     
     context = {
         'total_consumers': total_consumers,
@@ -290,7 +304,7 @@ def admin_dashboard(request):
         'total_revenue': total_revenue,
         'recent_readings': recent_readings,
         'recent_consumers': recent_consumers,
-        'consumers': consumers,                                       # ← ADDED
+        'consumers': consumers,
     }
     
     return render(request, 'admin-dashboard.html', context)
@@ -331,17 +345,15 @@ def manage_consumers(request):
 def add_consumer(request):
     """Add new consumer"""
     if request.method == 'POST':
-        form = ConsumerForm(request.POST)
+        form = ConsumerRegistrationForm(request.POST)  # BUG-44 FIX: was undefined ConsumerForm
         if form.is_valid():
             form.save()
             messages.success(request, 'Consumer added successfully!')
             return redirect('manage_consumers')
     else:
-        form = ConsumerForm()
+        form = ConsumerRegistrationForm()  # BUG-44 FIX
     
     return render(request, 'add-consumer.html', {'form': form})
-
-
 
 
 @login_required
@@ -400,7 +412,11 @@ def generate_bill(request):
             due_date=due_date
         )
 
-        # If this is an HTMX request, return a small HTML fragment (no PDF)
+        # BUG-15 FIX: Calculate all charges using the service so total_amount is never 0.
+        BillingService.calculate_bill(bill.id)
+        bill.refresh_from_db()
+
+
         if request.headers.get('HX-Request') or request.headers.get('Hx-Request') or request.META.get('HTTP_HX_REQUEST'):
             html = render_to_string('partials/generate_bill_response.html', {'bill': bill}, request=request)
             return HttpResponse(html)
@@ -535,7 +551,13 @@ def consumer_bills(request):
     try:
         consumer = request.user.consumer
     except Consumer.DoesNotExist:
-        consumer = Consumer.objects.get(email=request.user.email)
+        consumer = Consumer.objects.filter(email=request.user.email).first()
+        if consumer:
+            consumer.user = request.user
+            consumer.save()
+        else:
+            messages.error(request, 'No consumer account found for this user')
+            return redirect('login')
     
     bills = Bill.objects.filter(consumer=consumer).order_by('-billing_period')
     return render(request, 'consumer-bills.html', {'bills': bills})
@@ -584,12 +606,9 @@ def make_payment(request, bill_id):
 @login_required
 def meter_reader_dashboard(request):
     """Meter reader dashboard"""
-    try:
-        profile = request.user.profile
-        if profile.role not in ['meter_reader', 'admin']:
-            return redirect('dashboard')
-    except UserProfile.DoesNotExist:
-        pass
+    # ← FIXED: Using user.role directly instead of user.profile.role
+    if request.user.role not in ['meter_reader', 'admin']:
+        return redirect('dashboard')
     
     # Get assigned consumers (for now, all active consumers)
     assigned_consumers = Consumer.objects.filter(status='active')
@@ -688,7 +707,6 @@ def submit_reading(request):
 
 
 # API Views for AJAX calls
-# API Views for AJAX calls
 
 # .1
 @require_authenticated
@@ -708,26 +726,6 @@ def api_get_consumer(request, consumer_id):
         # Safe fallbacks from model properties/methods
         'load_kw': getattr(consumer, 'load_kw', 1.0),
         'meter_type': getattr(consumer, 'meter_type', '10'),
-    }
-    
-    return JsonResponse(data)
-
-# .2
-@require_authenticated
-def api_get_bill(request, bill_id):
-    """Get bill details for API"""
-    bill = get_object_or_404(Bill, id=bill_id)
-    
-    data = {
-        'id': bill.id,
-        'consumer': bill.consumer.name,
-        'units': bill.units,
-        'rate': bill.rate_per_unit,
-        'fixed_charges': bill.fixed_charges,
-        'energy_charges': bill.energy_charges,
-        'total_amount': bill.total_amount,
-        'status': bill.status,
-        'due_date': bill.due_date.strftime('%Y-%m-%d'),
     }
     
     return JsonResponse(data)
@@ -796,9 +794,14 @@ def api_consumer_list(request):
                 if Consumer.objects.filter(consumer_number=consumer_number).exists():
                     return JsonResponse({'success': False, 'error': 'A consumer with this ID already exists.'}, status=400)
             else:
-                consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
-                while Consumer.objects.filter(consumer_number=consumer_number).exists():
-                    consumer_number = 'CN' + ''.join(random.choices(string.digits, k=6))
+                consumer_number = None
+                for _ in range(10):
+                    candidate = 'CN' + ''.join(random.choices(string.digits, k=6))
+                    if not Consumer.objects.filter(consumer_number=candidate).exists():
+                        consumer_number = candidate
+                        break
+                if not consumer_number:
+                    consumer_number = 'CN' + ''.join(random.choices(string.digits, k=10))
 
             consumer = Consumer.objects.create(
                 name=data.get('name'),
@@ -876,7 +879,10 @@ def api_bills_list(request):
 
         # Apply Filters
         if status_filter != 'all':
-            bills = bills.filter(status=status_filter.lower())
+            if status_filter.lower() == 'unpaid':
+                bills = bills.filter(status='finalized')
+            else:
+                bills = bills.filter(status=status_filter.lower())
         
         if account_type == 'salary':
             bills = bills.filter(consumer__connection_type='salary')
@@ -956,7 +962,7 @@ def api_bills_list(request):
             }
         })
 
-# 6.
+@require_authenticated
 def api_logout(request):
     """JSON logout endpoint for SPA clients"""
     if request.method != 'POST':
@@ -965,6 +971,7 @@ def api_logout(request):
     return JsonResponse({'success': True, 'message': 'Logged out successfully'})
 
 # 7.
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @require_role('admin', 'meter_reader')
 def api_consumer_detail(request, consumer_id):
     """Get, update, or delete a consumer"""
@@ -1028,6 +1035,7 @@ def api_consumer_detail(request, consumer_id):
         consumer.delete()
         return JsonResponse({'success': True, 'message': 'Consumer deleted successfully'})
 
+@api_view(['GET'])
 @require_authenticated
 def api_consumer_readings(request, consumer_id):
     """Get reading history for a specific consumer"""
@@ -1047,8 +1055,6 @@ def api_consumer_readings(request, consumer_id):
         })
     return JsonResponse(results, safe=False)
 
-    return JsonResponse({'detail': 'Method not allowed'}, status=405)
-
 
 # 8.
 @api_view(['GET'])
@@ -1059,17 +1065,23 @@ def api_consumer_search(request):
     if not query:
         return JsonResponse({'detail': 'search parameter required'}, status=400)
     
+    # BUG-22 FIX: id is an integer field. Using icontains on it causes a crash on PostgreSQL.
+    # We dynamically construct the filter, using exact match `id=int(query)` only if the query is numeric.
+    search_filter = (
+        Q(meter_number__icontains=query) |
+        Q(name__icontains=query) |
+        Q(consumer_number__icontains=query)
+    )
+    if query.isdigit():
+        search_filter |= Q(id=int(query))
+
     try:
-        consumers = Consumer.objects.filter(
-            Q(meter_number__icontains=query) |
-            Q(name__icontains=query) |
-            Q(consumer_number__icontains=query) |
-            Q(id__icontains=query if query.isdigit() else '0')
-        )
+        consumers = Consumer.objects.filter(search_filter)
         # Trigger query to check for missing columns
         list(consumers[:1]) 
     except Exception as e:
-        if 'no such column' in str(e):
+        err_msg = str(e).lower()
+        if 'no such column' in err_msg or 'does not exist' in err_msg:
             consumers = consumers.defer('load_kw', 'meter_type')
         else:
             raise e
@@ -1116,9 +1128,10 @@ def api_readings_list(request):
         return JsonResponse({'readings': results})
     
     if request.method == 'POST':
-        return api_submit_reading(request)
+        return _do_submit_reading(request)
 
 #10
+@api_view(['GET', 'PATCH'])
 @require_role('admin', 'meter_reader')
 def api_bill_detail(request, bill_id):
     """Get or update a bill"""
@@ -1159,14 +1172,23 @@ def api_bill_detail(request, bill_id):
     if request.method == 'PATCH':
         data = json.loads(request.body)
         if 'status' in data:
-            bill.status = data['status']
-            if data['status'] == 'paid':
+            new_status = data['status']
+            # BUG-25 FIX: Locked (finalized) bills may only transition to 'paid' or 'cancelled'.
+            # Allowing any other status would reopen a frozen bill, breaking audit integrity.
+            if bill.is_locked and new_status not in ('paid', 'cancelled'):
+                return JsonResponse(
+                    {'error': f"Locked bills can only be marked as 'paid' or 'cancelled', not '{new_status}'."},
+                    status=400
+                )
+            bill.status = new_status
+            if new_status == 'paid':
                 bill.paid_date = datetime.now().date()
             bill.save()
         return JsonResponse({'success': True, 'message': 'Bill updated successfully'})
 
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
+@api_view(['POST'])
 @require_role('admin', 'meter_reader')
 @transaction.atomic
 def api_mark_bill_paid(request, bill_id):
@@ -1190,11 +1212,13 @@ def api_mark_bill_paid(request, bill_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+@api_view(['POST'])
 @require_role('admin', 'meter_reader')
 @transaction.atomic
 def api_mark_bill_unpaid(request, bill_id):
     """Revert a paid status (only for admins)"""
-    if request.user.profile.role != 'admin':
+    # ← FIXED: Using user.role directly instead of user.profile.role
+    if request.user.role != 'admin':
         return JsonResponse({'detail': 'Only admins can revert payment status'}, status=403)
         
     try:
@@ -1206,327 +1230,61 @@ def api_mark_bill_unpaid(request, bill_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+def _do_submit_reading(request):
+    """Decorator-free helper function to submit a meter reading safely without wrapper conflicts."""
+    try:
+        data = json.loads(request.body)
+        consumer_id = data.get('consumer_id')
+        current_reading = float(data.get('current_reading', 0))
+        reading_date = data.get('reading_date')
+        
+        consumer = get_object_or_404(Consumer, id=consumer_id)
+        
+        # Use BillingService for validation
+        try:
+            previous_reading = BillingService.validate_reading(consumer, reading_date, current_reading)
+        except ValidationError as e:
+            error_msg = e.message if hasattr(e, 'message') else str(e)
+            return JsonResponse({'success': False, 'error': error_msg}, status=400)
+
+        reading = MeterReading.objects.create(
+            consumer=consumer,
+            previous_reading=previous_reading,
+            current_reading=current_reading,
+            reading_date=reading_date,
+            created_by=request.user
+        )
+        
+        AuditLog.objects.create(
+            user=request.user,
+            action='reading_submit',
+            details={'reading_id': reading.id, 'consumer_id': consumer.id}
+        )
+
+        return JsonResponse({
+            'success': True,
+            'reading_id': reading.id,
+            'units_consumed': reading.units_consumed
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+@api_view(['POST'])
 @require_role('admin', 'meter_reader')
 def api_submit_reading(request):
     """Simple reading submission (Admin/Reader)"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            consumer_id = data.get('consumer_id')
-            current_reading = float(data.get('current_reading', 0))
-            reading_date = data.get('reading_date')
-            
-            consumer = get_object_or_404(Consumer, id=consumer_id)
-            
-            # Use BillingService for validation
-            from django.core.exceptions import ValidationError
-            try:
-                previous_reading = BillingService.validate_reading(consumer, reading_date, current_reading)
-            except ValidationError as e:
-                return JsonResponse({'success': False, 'error': str(e.message)}, status=400)
-
-            reading = MeterReading.objects.create(
-                consumer=consumer,
-                previous_reading=previous_reading,
-                current_reading=current_reading,
-                reading_date=reading_date,
-                created_by=request.user
-            )
-            
-            AuditLog.objects.create(
-                user=request.user,
-                action='reading_submit',
-                details={'reading_id': reading.id, 'consumer_id': consumer.id}
-            )
-
-            return JsonResponse({
-                'success': True,
-                'reading_id': reading.id,
-                'units_consumed': reading.units_consumed
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
-#14
-@require_authenticated
-def download_bill_pdf(request, bill_id):
-    """Generate a professional electricity bill PDF"""
-    
-    try:
-        bill = get_object_or_404(Bill, id=bill_id)
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
-        elements = []
-        
-        # Style Initialization - Define everything manually to avoid KeyError
-        # styles = getSampleStyleSheet() # Skipping because it's missing basic keys like 'Normal'
-        
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            fontSize=10,
-            leading=12,
-            fontName='Helvetica'
-        )
-        
-        normal_bold = ParagraphStyle(
-            'CustomNormalBold',
-            fontSize=10,
-            leading=12,
-            fontName='Helvetica-Bold'
-        )
-        
-        title_style = ParagraphStyle(
-            'BillTitle',
-            fontSize=26,
-            alignment=1, # Center
-            spaceAfter=10,
-            textColor=colors.HexColor('#1a5f7a'),
-            fontName='Helvetica-Bold'
-        )
-        
-        subtitle_style = ParagraphStyle(
-            'BillSubtitle',
-            fontSize=12,
-            alignment=1,
-            spaceAfter=30,
-            textColor=colors.grey,
-            fontName='Helvetica'
-        )
-        
-        section_header = ParagraphStyle(
-            'SectionHeader',
-            fontSize=14,
-            spaceBefore=15,
-            spaceAfter=10,
-            textColor=colors.HexColor('#1a5f7a'),
-            fontName='Helvetica-Bold'
-        )
-        
-        # Header
-        elements.append(Paragraph("EMETER SOLUTIONS", title_style))
-        elements.append(Paragraph("Official Electricity Consumption Invoice", subtitle_style))
-        
-        # Invoice Header Info
-        header_data = [
-            [Paragraph("<b>Invoice No:</b>", normal_style), Paragraph(f"#{bill.id}", normal_bold), 
-             Paragraph("<b>Bill Date:</b>", normal_style), Paragraph(bill.created_at.strftime('%d %b %Y') if bill.created_at else "N/A", normal_bold)],
-            [Paragraph("<b>Bill Number:</b>", normal_style), Paragraph(bill.bill_number or "N/A", normal_bold), 
-             Paragraph("<b>Due Date:</b>", normal_style), Paragraph(bill.due_date.strftime('%d %b %Y') if bill.due_date else "N/A", normal_bold)]
-        ]
-        header_table = Table(header_data, colWidths=[1.2*inch, 1.5*inch, 1.2*inch, 1.5*inch])
-        header_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elements.append(header_table)
-        elements.append(Spacer(1, 20))
-        
-        # Consumer Information
-        elements.append(Paragraph("Consumer Information", section_header))
-        consumer_data = [
-            ["Name:", bill.consumer.name],
-            ["Consumer ID:", bill.consumer.consumer_number],
-            ["Meter No:", bill.consumer.meter_number],
-            ["Load:", f"{bill.consumer.load_kw} KW"],
-            ["Address:", Paragraph(bill.consumer.address or "No address provided", normal_style)]
-        ]
-        consumer_table = Table(consumer_data, colWidths=[1.5*inch, 4*inch])
-        consumer_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ]))
-        elements.append(consumer_table)
-        
-        # Readings Table
-        elements.append(Paragraph("Consumption Details", section_header))
-        reading_data = [
-            ["Previous Reading", "Current Reading", "Units Consumed"],
-            [f"{float(bill.meter_reading.previous_reading if bill.meter_reading else 0):.1f} kWh", 
-             f"{float(bill.meter_reading.current_reading if bill.meter_reading else 0):.1f} kWh", 
-             f"{float(bill.units):.1f} kWh"]
-        ]
-        reading_table = Table(reading_data, colWidths=[1.8*inch, 1.8*inch, 1.8*inch])
-        reading_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a5f7a')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ]))
-        elements.append(reading_table)
-        
-        # Charge Breakdown
-        elements.append(Paragraph("Charge Breakdown", section_header))
-        charge_data = [
-            ["Description", "Details", "Amount"],
-            ["Energy Charges", f"{bill.units} units @ ₹{bill.rate_per_unit}", f"₹{float(bill.energy_charges):.2f}"],
-            ["Fixed Charges", f"Load Based", f"₹{float(bill.fixed_charges):.2f}"],
-            ["Meter Rent", f"Phase Type: {bill.consumer.meter_type}", f"₹{float(bill.meter_rent):.2f}"],
-            ["Duty & Taxes", f"Surcharge Included", f"₹{float(bill.duty_charge):.2f}"],
-            ["Arrears", f"Previous Balance", f"₹{float(bill.arrears):.2f}"],
-            ["<b>TOTAL PAYABLE</b>", "", f"<b>₹{float(bill.total_amount):.2f}</b>"],
-        ]
-        charge_table = Table(charge_data, colWidths=[2.5*inch, 1.5*inch, 1.4*inch])
-        charge_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f0f0f0')),
-            ('GRID', (0, 0), (-1, -2), 0.5, colors.lightgrey),
-            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, -1), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        elements.append(charge_table)
-        
-        # Payment Status
-        elements.append(Spacer(1, 30))
-        status_color = colors.green if bill.status == 'paid' else colors.red
-        elements.append(Paragraph(f"<b>Payment Status: {bill.status.upper()}</b>", 
-                                 ParagraphStyle('Status', parent=normal_style, textColor=status_color, fontSize=12, alignment=1)))
-        
-        # Footer
-        elements.append(Spacer(1, 50))
-        elements.append(Paragraph("This is a computer generated invoice and does not require a physical signature.", subtitle_style))
-        
-        doc.build(elements)
-        pdf = buffer.getvalue()
-        buffer.close()
-        
-        filename = f"Bill_{bill.consumer.consumer_number}_{bill.billing_period.strftime('%b_%Y') if bill.billing_period else bill.id}.pdf"
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-        
-    except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return JsonResponse({'error': f'PDF Generation Error: {str(e)}'}, status=500)
-
-#             return JsonResponse({
-#                 'success': True,
-#                 'reading_id': reading.id,
-#                 'units_consumed': reading.units_consumed
-#             })
-            
-#         except Exception as e:
-#             return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    
-#     return JsonResponse({'error': 'Invalid request'}, status=400)
+    return _do_submit_reading(request)
 
 
-# @login_required
-# def download_bill_pdf(request, bill_id):
-#     """Download bill as PDF"""
-#     bill = get_object_or_404(Bill, id=bill_id)
-    
-#     # Generate PDF using reportlab
-#     buffer = io.BytesIO()
-#     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-#     elements = []
-#     
-#     # Define safe styles manually
-#     normal_style = ParagraphStyle('Normal', fontSize=10, leading=12)
-#     title_style = ParagraphStyle('Title', fontSize=24, leading=28, spaceAfter=20, fontName='Helvetica-Bold')
-#     
-#     # Header
-#     elements.append(Paragraph("PowerGrid", title_style))
-#     elements.append(Paragraph("Electricity Billing Statement", normal_style))
-#     elements.append(Spacer(1, 20))
-#     
-#     # Bill Number and Period
-#     elements.append(Paragraph(f"<b>Bill Number:</b> {bill.bill_number}", normal_style))
-#     if bill.billing_period:
-#         elements.append(Paragraph(f"<b>Billing Period:</b> {bill.billing_period.strftime('%B %Y')}", normal_style))
-#     elements.append(Spacer(1, 20))
-#     
-#     # Consumer Info
-#     elements.append(Paragraph("Consumer Information", heading_style))
-#     consumer_data = [
-#         ['Consumer Name:', bill.consumer.name],
-#         ['Meter Number:', bill.consumer.meter_number],
-#         ['Consumer Number:', bill.consumer.consumer_number],
-#         ['Address:', bill.consumer.address or 'N/A'],
-#     ]
-#     consumer_table = Table(consumer_data, colWidths=[2*inch, 4*inch])
-#     consumer_table.setStyle(TableStyle([
-#         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-#         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-#         ('FONTSIZE', (0, 0), (-1, -1), 10),
-#         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-#     ]))
-#     elements.append(consumer_table)
-#     elements.append(Spacer(1, 20))
-#     
-#     # Meter Readings
-#     elements.append(Paragraph("Meter Readings", heading_style))
-#     reading_data = [
-#         ['Previous Reading', 'Current Reading', 'Units Consumed'],
-#         [str(bill.meter_reading.previous_reading) if bill.meter_reading else '0',
-#          str(bill.meter_reading.current_reading) if bill.meter_reading else '0',
-#          str(bill.units)]
-#     ]
-#     reading_table = Table(reading_data, colWidths=[2*inch, 2*inch, 2*inch])
-#     reading_table.setStyle(TableStyle([
-#         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0b4f9f')),
-#         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-#         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-#         ('FONTSIZE', (0, 0), (-1, -1), 10),
-#         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-#         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-#         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-#         ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-#     ]))
-#     elements.append(reading_table)
-#     elements.append(Spacer(1, 20))
-#     
-#     # Charges
-#     elements.append(Paragraph("Charge Breakdown", heading_style))
-#     charges_data = [
-#         ['Description', 'Amount'],
-#         [f'Energy Charges ({bill.units} kWh × ₹{bill.rate_per_unit})', f'₹{bill.energy_charges:.2f}'],
-#         ['Fixed / Service Charges', f'₹{bill.fixed_charges:.2f}'],
-#         ['Total Amount Due', f'₹{bill.total_amount:.2f}'],
-#     ]
-#     charges_table = Table(charges_data, colWidths=[4*inch, 2*inch])
-#     charges_table.setStyle(TableStyle([
-#         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-#         ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-#         ('FONTSIZE', (0, 0), (-1, -1), 10),
-#         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-#         ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-#         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-#         ('GRID', (0, 0), (-1, -2), 1, colors.grey),
-#         ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#0b4f9f')),
-#         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
-#     ]))
-#     elements.append(charges_table)
-#     elements.append(Spacer(1, 20))
-#     
-#     # Due Date and Status
-#     elements.append(Paragraph(f"<b>Due Date:</b> {bill.due_date.strftime('%d %B %Y') if bill.due_date else 'N/A'}", normal_style))
-#     elements.append(Paragraph(f"<b>Status:</b> {bill.status.upper()}", normal_style))
-#     
-#     # Build PDF
-#     doc.build(elements)
-#     pdf_file = buffer.getvalue()
-#     buffer.close()
-#     
-#     response = HttpResponse(pdf_file, content_type='application/pdf')
-#     response['Content-Disposition'] = f'attachment; filename="bill-{bill.bill_number}.pdf"'
-#     return response
-
-
+_SPA_INDEX_CACHE = None
 
 def spa_index(request, path=None):
     """Render the single-page application index from energy-hub-ui/build."""
+    global _SPA_INDEX_CACHE
+    
+    if _SPA_INDEX_CACHE is not None:
+        return HttpResponse(_SPA_INDEX_CACHE)
+
     import os
     build_dir = os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist')
     index_path = os.path.join(build_dir, 'index.html')
@@ -1534,6 +1292,8 @@ def spa_index(request, path=None):
     try:
         with open(index_path, 'r', encoding='utf-8') as f:
             content = f.read()
+            if not settings.DEBUG:
+                _SPA_INDEX_CACHE = content
             return HttpResponse(content)
     except FileNotFoundError:
         return HttpResponse(
@@ -1567,11 +1327,16 @@ def api_submit_reading_and_generate_bill(request):
         consumer = get_object_or_404(Consumer, id=consumer_id)
 
         # 1. Validate using Service
-        from django.core.exceptions import ValidationError
+        # ← FIXED: Better error handling for ValidationError
         try:
             previous_reading = BillingService.validate_reading(consumer, reading_date, current_reading)
         except ValidationError as e:
-            return JsonResponse({'success': False, 'error': str(e.message)}, status=400)
+            error_msg = e.message if hasattr(e, 'message') else str(e)
+            already_exists = "already exists" in error_msg.lower()
+            response_data = {'success': False, 'error': error_msg, 'already_exists': already_exists}
+            if "cannot be less than previous" in error_msg.lower():
+                response_data['previous_reading'] = error_msg
+            return JsonResponse(response_data, status=400)
 
         # 2. Create Reading
         reading = MeterReading.objects.create(
@@ -1595,6 +1360,8 @@ def api_submit_reading_and_generate_bill(request):
 
         # 4. Calculate Bill using Service logic (Tiered Tariff)
         BillingService.calculate_bill(bill.id)
+        # Auto-finalize so the bill is locked, download-ready, and payable instantly without UI draft phase
+        BillingService.finalize_bill(bill.id, request.user)
         bill.refresh_from_db()
 
         return JsonResponse({
@@ -1603,7 +1370,23 @@ def api_submit_reading_and_generate_bill(request):
             'bill_id': bill.id,
             'bill_number': bill.bill_number,
             'total_amount': bill.total_amount,
-            'status': bill.status
+            'status': bill.status,
+            'reading': {
+                'id': reading.id,
+                'current_reading': reading.current_reading,
+                'previous_reading': reading.previous_reading,
+                'units_consumed': reading.units_consumed,
+            },
+            'bill': {
+                'id': bill.id,
+                'bill_number': bill.bill_number,
+                'total_amount': bill.total_amount,
+                'units': bill.units,
+                'status': bill.status,
+                'energy_charges': bill.energy_charges,
+                'fixed_charges': bill.fixed_charges,
+                'grand_total': bill.total_amount,
+            }
         })
 
     except Exception as e:
@@ -1617,6 +1400,7 @@ def api_finalize_bill(request, bill_id):
     Admin-only: Finalize a draft bill and lock its financial snapshot.
     This implements the 'Bill Locked' part of the workflow.
     """
+    # ← FIXED: Reordered exception handling - specific errors first
     try:
         bill = BillingService.finalize_bill(bill_id, request.user)
         return JsonResponse({
@@ -1625,14 +1409,11 @@ def api_finalize_bill(request, bill_id):
             'bill_id': bill.id,
             'status': bill.status
         })
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
     except OperationalError as e:
         error_msg = str(e)
         if "readonly" in error_msg.lower():
             error_msg = "Database is read-only. Please stop the server and run: cd /Users/anasahmad/Documents/eMeter.web/electricity_system && chmod 664 db.sqlite3 && python3 manage.py migrate"
-        return JsonResponse({'success': False, 'error': error_msg}, status=400)
+        return JsonResponse({'success': False, 'error': error_msg}, status=500)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
@@ -1642,13 +1423,13 @@ def api_finalize_bill(request, bill_id):
 def api_get_settings(request):
     """Retrieve current billing settings"""
     
-    settings = BillingSettings.get_settings()
+    settings_obj = BillingSettings.get_settings()
     data = {
-        'rate_per_unit': settings.rate_per_unit,
-        'fixed_charge_per_kw': settings.fixed_charge_per_kw,
-        'phase_1_rent': settings.phase_1_rent,
-        'phase_3_rent': settings.phase_3_rent,
-        'duty_percentage': settings.duty_percentage,
+        'rate_per_unit': settings_obj.rate_per_unit,
+        'fixed_charge_per_kw': settings_obj.fixed_charge_per_kw,
+        'phase_1_rent': settings_obj.phase_1_rent,
+        'phase_3_rent': settings_obj.phase_3_rent,
+        'duty_percentage': settings_obj.duty_percentage,
     }
     return JsonResponse(data)
 
@@ -1659,27 +1440,27 @@ def api_update_settings(request):
     
     try:
         data = json.loads(request.body)
-        settings = BillingSettings.get_settings()
+        settings_obj = BillingSettings.get_settings()
         
         # Check if we got a mock object (no _state attribute is a good check for Django models)
-        if not hasattr(settings, '_state'):
+        if not hasattr(settings_obj, '_state'):
             return JsonResponse({
                 'success': False, 
                 'error': 'Database error: Settings table is missing or database is locked. Please contact administrator.'
             }, status=500)
 
         if 'rate_per_unit' in data:
-            settings.rate_per_unit = float(data['rate_per_unit'])
+            settings_obj.rate_per_unit = float(data['rate_per_unit'])
         if 'fixed_charge_per_kw' in data:
-            settings.fixed_charge_per_kw = float(data['fixed_charge_per_kw'])
+            settings_obj.fixed_charge_per_kw = float(data['fixed_charge_per_kw'])
         if 'phase_1_rent' in data:
-            settings.phase_1_rent = float(data['phase_1_rent'])
+            settings_obj.phase_1_rent = float(data['phase_1_rent'])
         if 'phase_3_rent' in data:
-            settings.phase_3_rent = float(data['phase_3_rent'])
+            settings_obj.phase_3_rent = float(data['phase_3_rent'])
         if 'duty_percentage' in data:
-            settings.duty_percentage = float(data['duty_percentage'])
+            settings_obj.duty_percentage = float(data['duty_percentage'])
             
-        settings.save()
+        settings_obj.save()
         return JsonResponse({'success': True, 'message': 'Settings updated successfully'})
     except ValueError as e:
         return JsonResponse({'success': False, 'error': f'Invalid numeric value: {str(e)}'}, status=400)
@@ -1738,9 +1519,17 @@ def api_calculate_estimate(request):
     phase_1_rent       = float(billing_settings.phase_1_rent)
     phase_3_rent       = float(billing_settings.phase_3_rent)
 
-    # ── Billing math — identical to Bill.save() ──────────────────────────────
-    load_kw        = float(getattr(consumer, 'load_kw', 1.0))
-    energy_charges = round(units_consumed * rate_per_unit, 2)
+    # ── BUG-09 FIX: Use same tiered tariff as BillingService.calculate_bill ──
+    # Old code used flat rate (units × rate_per_unit) which differed from actual bills.
+    # Tiered: 0-100 units = ₹5, 101-300 = ₹7, 301+ = ₹10
+    load_kw = float(getattr(consumer, 'load_kw', 1.0))
+    if units_consumed <= 100:
+        energy_charges = round(units_consumed * 5, 2)
+    elif units_consumed <= 300:
+        energy_charges = round((100 * 5) + ((units_consumed - 100) * 7), 2)
+    else:
+        energy_charges = round((100 * 5) + (200 * 7) + ((units_consumed - 300) * 10), 2)
+
     fixed_charges  = round(load_kw * fixed_charge_per_kw, 2)
     duty_charge    = round((energy_charges + fixed_charges) * (duty_percentage / 100), 2)
     meter_rent     = phase_1_rent if consumer.meter_type == '10' else phase_3_rent
@@ -1779,12 +1568,10 @@ def api_calculate_estimate(request):
         'total_amount': int(total_amount),
     })
 
+@api_view(['POST'])
 @require_role('admin', 'meter_reader')
 def api_send_bill_sms(request):
     """Send bill summary SMS to consumer's phone number via Twilio."""
-    if request.method != 'POST':
-        return JsonResponse({'detail': 'Method not allowed'}, status=405)
-
     try:
         data = json.loads(request.body)
         bill_id = data.get('bill_id')
@@ -1879,13 +1666,12 @@ def api_send_bill_sms(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-#17 - Edit Today's Reading Only
+@api_view(['PUT', 'PATCH'])
 @require_role('admin', 'meter_reader')
 def api_edit_today_reading(request, reading_id):
     """Edit a meter reading — only allowed if reading_date is today."""
     if request.method not in ['PUT', 'PATCH']:
         return JsonResponse({'detail': 'Method not allowed'}, status=405)
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
 
     try:
         reading = get_object_or_404(MeterReading, id=reading_id)
@@ -1914,22 +1700,17 @@ def api_edit_today_reading(request, reading_id):
         reading.units_consumed = new_current_reading - reading.previous_reading
         reading.save()
 
-        # Update linked bill if exists
+        # Update linked bill if exists and not locked
         linked_bill = Bill.objects.filter(meter_reading=reading).first()
-        if linked_bill:
-            units = reading.units_consumed
-            linked_bill.units = units
-            linked_bill.energy_charges = units * linked_bill.rate_per_unit
+        if linked_bill and not linked_bill.is_locked:
+            linked_bill.units = reading.units_consumed
+            linked_bill.save(update_fields=['units'])
 
-            # Recalculate arrears
-            unpaid_bills = Bill.objects.filter(
-                consumer=reading.consumer,
-                status__in=['unpaid', 'overdue', 'pending']
-            ).exclude(id=linked_bill.id)
-            arrears = sum(b.total_amount for b in unpaid_bills)
-
-            linked_bill.total_amount = linked_bill.energy_charges + linked_bill.fixed_charges + arrears
-            linked_bill.save()
+            # BUG-11 FIX: Delegate to calculate_bill so ALL charges are recalculated:
+            # duty_charge, meter_rent, regulatory_surcharge, late_payment_surcharge
+            # were all omitted by the old manual arithmetic.
+            BillingService.calculate_bill(linked_bill.id)
+            linked_bill.refresh_from_db()
 
             return JsonResponse({
                 'success': True,
@@ -1944,7 +1725,8 @@ def api_edit_today_reading(request, reading_id):
                     'bill_number': linked_bill.bill_number,
                     'units': linked_bill.units,
                     'energy_charges': round(linked_bill.energy_charges, 2),
-                    'arrears': round(arrears, 2),
+                    'duty_charge': round(linked_bill.duty_charge, 2),
+                    'meter_rent': round(linked_bill.meter_rent, 2),
                     'grand_total': round(linked_bill.total_amount, 2),
                 }
             })
@@ -2091,11 +1873,18 @@ def api_manual_generate_bill(request):
             billing_period=billing_period,
             due_date=due_date
         )
-        
+
+        # BUG-16 FIX: Must call calculate_bill or total_amount stays 0.
+        BillingService.calculate_bill(bill.id)
+        # Auto-finalize so the bill is locked, download-ready, and payable instantly without UI draft phase
+        BillingService.finalize_bill(bill.id, request.user)
+        bill.refresh_from_db()
+
         return JsonResponse({
             'success': True,
             'bill_id': bill.id,
             'bill_number': bill.bill_number,
+            'total_amount': float(bill.total_amount),
             'created_at': bill.created_at.isoformat() if bill.created_at else None,
             'message': 'Bill generated successfully'
         })
@@ -2122,13 +1911,9 @@ def api_import_readings(request):
         4. Validate reading value (must be >= previous), then save + generate bill
     """
 
-    # Safe role check — handle users without a profile object gracefully
-    try:
-        if request.user.profile.role != 'admin':
-            return JsonResponse({'detail': 'Admin authentication required'}, status=403)
-    except Exception:
-        if not (request.user.is_staff or request.user.is_superuser):
-            return JsonResponse({'detail': 'Admin authentication required'}, status=403)
+    # ← FIXED: Safe role check using user.role
+    if request.user.role != 'admin':
+        return JsonResponse({'detail': 'Admin authentication required'}, status=403)
 
     if 'file' not in request.FILES:
         return JsonResponse({'error': 'No file provided'}, status=400)
@@ -2144,8 +1929,6 @@ def api_import_readings(request):
         error_count = 0
         errors = []
         bills_created = []
-
-        from django.db import transaction
 
         # ── Auto-detect column layout ────────────────────────────────────────
         # Peek at row 2 (first data row).  If col B parses as a number → 3-col;
@@ -2266,7 +2049,7 @@ def api_import_readings(request):
                     consumer=consumer
                 ).order_by('-reading_date', '-id').first()
 
-            previous_val = float(last_reading.current_reading) if last_reading else float(consumer.initial_reading or 0)
+            previous_val = float(last_reading.current_reading) if last_reading else float(getattr(consumer, 'initial_reading', 0) or 0)
 
             if curr_val < previous_val:
                 errors.append(
@@ -2299,6 +2082,12 @@ def api_import_readings(request):
                         due_date=due_date,
                     )
 
+                    # BUG-41 FIX: Must calculate charges or every imported bill has total_amount = 0.
+                    BillingService.calculate_bill(bill.id)
+                    # Auto-finalize so the bill is locked, download-ready, and payable instantly without UI draft phase
+                    BillingService.finalize_bill(bill.id, request.user)
+                    bill.refresh_from_db()
+
                     bills_created.append({
                         'consumer_number': consumer.consumer_number,
                         'consumer_name': consumer.name,
@@ -2307,7 +2096,7 @@ def api_import_readings(request):
                         'previous_reading': previous_val,
                         'current_reading': curr_val,
                         'units': round(units_consumed, 2),
-                        'total_amount': float(bill.total_amount or 0),
+                        'total_amount': float(bill.total_amount),
                         'due_date': due_date.strftime('%Y-%m-%d'),
                         'status': bill.status,
                     })
@@ -2335,4 +2124,3 @@ def api_import_readings(request):
     except Exception as e:
         import traceback
         return JsonResponse({'error': f'Failed to process file: {str(e)}', 'trace': traceback.format_exc()}, status=500)
-

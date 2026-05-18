@@ -13,6 +13,8 @@ Two roles are supported:
 from django.db import models, OperationalError
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+import random
+import string
 
 
 # ─────────────────────────────────────────────────────────────
@@ -162,6 +164,12 @@ class MeterReading(models.Model):
         verbose_name        = 'Meter Reading'
         verbose_name_plural = 'Meter Readings'
         ordering            = ['-reading_date']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(current_reading__gte=models.F('previous_reading')),
+                name='reading_current_gte_previous',
+            )
+        ]
 
     def save(self, *args, **kwargs):
         # Auto-calculate units consumed before saving
@@ -231,6 +239,7 @@ class Bill(models.Model):
     tax_snapshot               = models.FloatField(null=True, blank=True)   # duty + regulatory
     total_amount_snapshot      = models.FloatField(null=True, blank=True)
     consumer_name_snapshot     = models.CharField(max_length=255, null=True, blank=True)
+    consumer_number_snapshot   = models.CharField(max_length=50,  null=True, blank=True)  # BUG-39 FIX: was missing, causing AttributeError in api_get_bill_pdf
     meter_number_snapshot      = models.CharField(max_length=100, null=True, blank=True)
     billing_date_snapshot      = models.DateField(null=True, blank=True)
 
@@ -249,8 +258,16 @@ class Bill(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.bill_number:
-            import random, string
-            self.bill_number = 'BILL' + ''.join(random.choices(string.digits, k=8))
+            # BUG-08 FIX: Try generating a unique bill number with collision detection.
+            # 8 digits gives 100M combinations, but we retry up to 10 times to prevent IntegrityError crash.
+            for _ in range(10):
+                candidate = 'BILL' + ''.join(random.choices(string.digits, k=8))
+                if not Bill.objects.filter(bill_number=candidate).exists():
+                    self.bill_number = candidate
+                    break
+            else:
+                # If we miraculously collide 10 times, try a longer one as absolute fallback
+                self.bill_number = 'BILL' + ''.join(random.choices(string.digits, k=12))
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -345,7 +362,8 @@ class BillingSettings(models.Model):
         verbose_name_plural = 'Billing Settings'
 
     def __str__(self):
-        return f"Billing Settings (updated {self.updated_at:%Y-%m-%d})"
+        updated_str = self.updated_at.strftime('%Y-%m-%d') if self.updated_at else 'never'
+        return f"Billing Settings (updated {updated_str})"
 
     @classmethod
     def get_settings(cls):
@@ -354,7 +372,9 @@ class BillingSettings(models.Model):
             instance, _ = cls.objects.get_or_create(id=1)
             return instance
         except Exception as exc:
-            print(f"ERROR: BillingSettings unavailable — using defaults. ({exc})")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"BillingSettings unavailable — using defaults. ({exc})", exc_info=True)
 
             class _Defaults:
                 rate_per_unit       = 8.56

@@ -167,7 +167,9 @@ export default function DashboardScreen({ navigation }) {
                 </View>
                 <View style={styles.roleBadge}>
                     <Ionicons name="flash" size={14} color={colors.accent} />
-                    <Text style={styles.roleText}>Meter Reader</Text>
+                    <Text style={styles.roleText}>
+                        {user?.role === 'admin' ? 'Administrator' : 'Meter Reader'}
+                    </Text>
                 </View>
             </View>
 

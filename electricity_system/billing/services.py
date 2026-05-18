@@ -69,6 +69,7 @@ class BillingService:
         
         m_type = getattr(bill.consumer, 'meter_type', '10')
         bill.meter_rent = float(settings.phase_1_rent if m_type == '10' else settings.phase_3_rent)
+        bill.late_payment_surcharge = round(bill.arrears * 0.015, 2) if bill.arrears > 0 else 0.0
         
         bill.total_amount = round(
             bill.energy_charges + bill.fixed_charges + bill.duty_charge + 
@@ -87,17 +88,19 @@ class BillingService:
         if bill.status != 'draft':
             raise ValidationError("Only draft bills can be finalized.")
 
-        # Create snapshots
+        # BUG-10 FIX: meter_reading is nullable — guard before attribute access.
+        # Falls back to bill.units when no reading is linked (e.g. manually created bills).
         reading = bill.meter_reading
-        bill.previous_reading_snapshot = reading.previous_reading
-        bill.current_reading_snapshot = reading.current_reading
-        bill.units_consumed_snapshot = bill.units
+        bill.previous_reading_snapshot = reading.previous_reading if reading else 0
+        bill.current_reading_snapshot  = reading.current_reading  if reading else bill.units
+        bill.units_consumed_snapshot   = bill.units
         bill.rate_per_unit_snapshot = bill.rate_per_unit # Not used in tiered but kept for model consistency
         bill.subtotal_snapshot = bill.energy_charges + bill.fixed_charges
         bill.tax_snapshot = bill.duty_charge + bill.regulatory_surcharge
         bill.total_amount_snapshot = bill.total_amount
-        bill.consumer_name_snapshot = bill.consumer.name
-        bill.meter_number_snapshot = bill.consumer.meter_number
+        bill.consumer_name_snapshot   = bill.consumer.name
+        bill.consumer_number_snapshot = bill.consumer.consumer_number  # BUG-39 FIX: populate the new snapshot field
+        bill.meter_number_snapshot    = bill.consumer.meter_number
         bill.billing_date_snapshot = timezone.now().date()
 
         bill.status = 'finalized'
@@ -121,20 +124,35 @@ class BillingService:
         if not bill.is_locked:
             raise ValidationError("PDF can only be generated for finalized bills.")
 
-        # Logic for PDF generation using snapshots would go here.
-        # For now, we return the data structure that the PDF generator will use.
-        snapshot_data = {
+        from .pdf_generator import BillPDFGenerator
+        
+        pdf_data = {
             'bill_number': bill.bill_number,
+            'bill_date': bill.locked_at.strftime('%d %b %Y') if bill.locked_at else timezone.now().strftime('%d %b %Y'),
+            'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
+            'connection_type': bill.consumer.connection_type,
+            'load_kw': bill.consumer.load_kw,
+            'billing_period': bill.billing_period.strftime('%B %Y') if bill.billing_period else 'N/A',
             'consumer_name': bill.consumer_name_snapshot,
+            'consumer_number': bill.consumer_number_snapshot or bill.consumer.consumer_number,
             'meter_number': bill.meter_number_snapshot,
+            'address': bill.consumer.address,
             'previous_reading': bill.previous_reading_snapshot,
             'current_reading': bill.current_reading_snapshot,
             'units': bill.units_consumed_snapshot,
+            'rate_per_unit': bill.rate_per_unit_snapshot,
+            'energy_charges': bill.subtotal_snapshot, # In snapshots subtotal = energy + fixed
+            'fixed_charges': 0, # Already included in subtotal snapshot for simplicity
+            'duty_charge': bill.tax_snapshot,
+            'meter_rent': bill.meter_rent,
+            'meter_type': '1' if bill.consumer.meter_type == '10' else '3',
+            'regulatory_surcharge': 0,
+            'arrears': bill.arrears,
+            'late_payment_surcharge': bill.late_payment_surcharge,
             'total_amount': bill.total_amount_snapshot,
-            'billing_date': bill.billing_date_snapshot,
-            'status': bill.status,
+            'total_payable': int(round(bill.total_amount_snapshot)),
+            'current_year': timezone.now().year,
+            'is_finalized': True
         }
         
-        # Real PDF generation logic (e.g. using WeasyPrint or ReportLab)
-        # This calls the existing generator but ensures it uses snapshots.
-        return snapshot_data
+        return BillPDFGenerator.generate_bill_pdf(pdf_data)

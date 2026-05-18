@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
-import { submitReadingAndBillAPI, calculateEstimateAPI } from '../services/api';
+import { submitReadingAndBillAPI, calculateEstimateAPI, getBillDetailAPI } from '../services/api';  // BUG-29 FIX: added getBillDetailAPI
 import { saveOfflineReading, getOfflineQueue } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 
@@ -53,8 +53,8 @@ export default function SubmitReadingScreen({ route, navigation }) {
         checkExistingReading();
     }, [consumer.id]);
 
-    // Debounced server-side estimate — fires 600ms after the user stops typing
     useEffect(() => {
+        let isMounted = true;
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
         const parsed = Number(currentReading);
@@ -63,25 +63,35 @@ export default function SubmitReadingScreen({ route, navigation }) {
             return;
         }
 
+        setEstimateLoading(true);
+
         debounceTimer.current = setTimeout(async () => {
             try {
-                setEstimateLoading(true);
                 const result = await calculateEstimateAPI(
                     consumer.id,
                     parsed,
                     previousReading
                 );
-                setEstimate(result);
+                if (isMounted) {
+                    setEstimate(result);
+                }
             } catch (err) {
                 // Network is down — silently clear estimate; offline path handles it
                 console.warn('Estimate fetch failed (offline?):', err.message);
-                setEstimate(null);
+                if (isMounted) {
+                    setEstimate(null);
+                }
             } finally {
-                setEstimateLoading(false);
+                if (isMounted) {
+                    setEstimateLoading(false);
+                }
             }
         }, 600);
 
-        return () => clearTimeout(debounceTimer.current);
+        return () => {
+            isMounted = false;
+            clearTimeout(debounceTimer.current);
+        };
     }, [currentReading, consumer.id, previousReading]);
 
     const now = new Date();
@@ -137,9 +147,50 @@ export default function SubmitReadingScreen({ route, navigation }) {
                     await markAsSynced(match.id);
                 }
 
+                // BUG-29 FIX: backend only returns bill_id — fetch the full bill object
+                // so BillPreviewScreen has every field it needs without crashing.
+                let fullBill = null;
+                try {
+                    fullBill = await getBillDetailAPI(data.bill_id);
+                } catch (fetchErr) {
+                    console.warn('Could not fetch full bill detail:', fetchErr.message);
+                    // Minimal fallback so BillPreviewScreen can still render
+                    fullBill = {
+                        id: data.bill_id,
+                        bill_number: data.bill_number,
+                        total_amount: data.total_amount,
+                        grand_total: data.total_amount,
+                        status: data.status,
+                        consumer_name: consumer.name,
+                        consumer_number: consumer.consumer_number,
+                        meter_number: consumer.meter_number,
+                        units: Number(currentReading) - previousReading,
+                        rate_per_unit: null,
+                        energy_charges: 0,
+                        fixed_charges: 0,
+                        duty_charge: 0,
+                        meter_rent: 0,
+                        regulatory_surcharge: 0,
+                        arrears: 0,
+                        late_payment_surcharge: 0,
+                        load_kw: consumer.load_kw,
+                        meter_type: consumer.meter_type,
+                        address: consumer.address,
+                        billing_period: today.substring(0, 7),
+                        due_date: null,
+                        created_at: new Date().toISOString(),
+                    };
+                }
+
+                const readingPayload = {
+                    previous_reading: previousReading,
+                    current_reading: Number(currentReading),
+                    id: null,
+                };
+
                 navigation.replace('BillPreview', {
-                    bill: data.bill,
-                    reading: data.reading,
+                    bill: fullBill,
+                    reading: readingPayload,
                     consumer,
                 });
             } else {

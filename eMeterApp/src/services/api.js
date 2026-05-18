@@ -7,7 +7,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For local dev: use your computer's local IP (not localhost)
 // e.g., 'http://192.168.1.100:8000'
 // ================================================
-const BASE_URL = 'http://10.11.53.13:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+if (!BASE_URL) {
+    throw new Error(
+        'EXPO_PUBLIC_API_URL is not set. Create eMeterApp/.env with:\n' +
+        'EXPO_PUBLIC_API_URL=http://<YOUR_MACHINE_IP>:8000'
+    );
+}
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -31,7 +37,9 @@ api.interceptors.request.use(async (config) => {
 
     if (currentToken) {
         config.headers['Authorization'] = `Token ${currentToken}`;
-        console.log('DEBUG: Sending request with Token:', currentToken.substring(0, 5) + '...');
+        if (__DEV__) {
+            console.log('DEBUG: Sending request with Token:', currentToken.substring(0, 5) + '...');
+        }
     }
     
     return config;
@@ -54,11 +62,10 @@ api.interceptors.response.use(
 // Auth APIs
 // ========================
 
-export const loginAPI = async (username, password, role = 'admin') => {
+export const loginAPI = async (username, password) => {
     const response = await api.post('/api/login/', {
         username,
         password,
-        role,
     });
 
     // Extract session cookies from response (handles both lower and Pascal case)
@@ -140,7 +147,7 @@ export const searchConsumerAPI = async (meterNumber) => {
 };
 
 export const getConsumerDetailAPI = async (consumerId) => {
-    const response = await api.get(`/api/consumer/${consumerId}/`);
+    const response = await api.get(`/api/consumers/${consumerId}/`);
     return response.data;
 };
 
@@ -213,11 +220,25 @@ export const addConsumerAPI = async (consumerData) => {
 };
 
 // ========================
+// Bill Detail API
+// ========================
+
+/**
+ * BUG-29 FIX: Fetch full bill details by bill ID.
+ * The /api/reading-and-bill/ endpoint only returns bill_id, not a full bill object.
+ * BillPreviewScreen needs the complete bill, so we fetch it here after submission.
+ */
+export const getBillDetailAPI = async (billId) => {
+    const response = await api.get(`/api/bill/${billId}/`);
+    return response.data;
+};
+
+// ========================
 // Bill PDF API
 // ========================
 
 export const getBillPdfUrl = (billId) => {
-    return `${BASE_URL}/bill/${billId}/pdf/`;
+    return `${BASE_URL}/api/bill/${billId}/pdf/`;   // BUG-32 FIX: added /api/ prefix
 };
 
 // ========================

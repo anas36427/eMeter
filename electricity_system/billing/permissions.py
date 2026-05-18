@@ -6,13 +6,13 @@ class IsAdminUser(permissions.BasePermission):
         return bool(
             request.user and 
             request.user.is_authenticated and 
-            getattr(request.user.profile, 'role', 'consumer') == 'admin'
+            getattr(request.user, 'role', 'meter_reader') == 'admin'
         )
 
 class IsMeterReader(permissions.BasePermission):
     """Allows access to users with 'admin' or 'meter_reader' roles."""
     def has_permission(self, request, view):
-        role = getattr(request.user.profile, 'role', 'consumer')
+        role = getattr(request.user, 'role', 'meter_reader')
         return bool(
             request.user and 
             request.user.is_authenticated and 
@@ -26,7 +26,7 @@ class IsOwnerOrAdmin(permissions.BasePermission):
     """
     def has_object_permission(self, request, view, obj):
         # Admin can do anything
-        if getattr(request.user.profile, 'role', 'consumer') == 'admin':
+        if getattr(request.user, 'role', 'meter_reader') == 'admin':
             return True
         
         # Check if the object belongs to the user

@@ -30,8 +30,10 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-s(++$8^mg#8qqq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-# ALLOWED_HOSTS - Add your domain here for production
-ALLOWED_HOSTS = ["*"]
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '').split(',') if host.strip()]
     # '127.0.0.1',
     # 'localhost',
     # '10.215.227.32',
@@ -74,15 +76,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Disable COOP header to allow access via IP addresses over HTTP without browser warnings
-SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+if DEBUG:
+    # Disable COOP header to allow access via IP addresses over HTTP without browser warnings in dev
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'electricity_system.authentication.CsrfExemptSessionAuthentication',
-    ],
-}
+
 
 ROOT_URLCONF = 'electricity_system.urls'
 
@@ -113,12 +111,18 @@ WSGI_APPLICATION = 'electricity_system.wsgi.application'
 import os
 
 
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+if not DB_PASSWORD:
+    if not DEBUG:
+        raise ValueError("DB_PASSWORD environment variable is not set in production!")
+    DB_PASSWORD = 'anas167'  # safe local development fallback
+
 DATABASES = {
     'default': {
         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
         'NAME': os.environ.get('DB_NAME', 'emeter_db'),
         'USER': os.environ.get('DB_USER', 'emeter_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'anas167'),
+        'PASSWORD': DB_PASSWORD,
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
@@ -178,6 +182,16 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
+# BUG-01 FIX: Single authoritative REST_FRAMEWORK block.
+# Uses CsrfExemptSessionAuthentication so the /api/login/ endpoint works
+# before a session exists, while all other endpoints stay CSRF-protected.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'electricity_system.authentication.CsrfExemptSessionAuthentication',
+    ],
+}
+
 # Security settings
 if not DEBUG:
     # --- Production: Full HTTPS enforcement ---
@@ -208,9 +222,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://10.11.53.13:8000",
     "http://10.11.53.13:8081",
     "http://10.11.53.13:8082",
-    # Previous IPs (kept for reference)
-    "http://10.215.227.32:8082",
+    # Previous / New IPs
+    "http://10.215.227.32:3000",
     "http://10.215.227.32:8000",
+    "http://10.215.227.32:8081",
+    "http://10.215.227.32:8082",
     "http://10.86.158.33:8000",
     "http://10.86.158.33:8081",
 ]
@@ -231,14 +247,16 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.11.53.13:8000',
     'http://10.11.53.13:8081',
     'http://10.11.53.13:8082',
-    # Previous IPs (kept for reference)
+    # Previous / New IPs (kept for reference)
     'http://10.131.109.32:8083',
     'http://10.86.112.32:8000',
     'http://10.91.159.32:8000',
     'http://10.86.158.33:8000',
     'http://10.86.158.33:8081',
-    'http://10.215.227.32:8082',
+    'http://10.215.227.32:3000',
     'http://10.215.227.32:8000',
+    'http://10.215.227.32:8081',
+    'http://10.215.227.32:8082',
 ]
 
 # CSRF cookie: NOT HttpOnly so SPA JS can read and attach it to X-CSRFToken header.

@@ -8,7 +8,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'electricity_system.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from billing.models import Consumer, MeterReading, Bill, Payment, UserProfile
+from billing.models import Consumer, MeterReading, Bill, Payment
 
 User = get_user_model()
 

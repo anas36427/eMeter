@@ -20,10 +20,35 @@ export default function BillPreviewScreen({ route, navigation }) {
     const { colors, isDark } = useTheme();
     const styles = createStyles(colors);
 
-    const { bill, reading, consumer } = route.params;
+    const bill = route?.params?.bill;
+    const reading = route?.params?.reading;
+    const consumer = route?.params?.consumer;
+
+    console.log("Bill:", bill);
+
+    // BUG-28 FIX: All hooks must come before any conditional return.
+    // Moving useState calls here prevents the React rules-of-hooks violation.
     const [whatsappSending, setWhatsappSending] = React.useState(false);
     const [whatsappSent, setWhatsappSent] = React.useState(false);
     const [pdfDownloading, setPdfDownloading] = React.useState(false);
+
+    // BUG-30 FIX: Guard against missing bill or reading before any field access.
+    // reading may be undefined if navigation didn't pass it (see BUG-29).
+    if (!bill || !reading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors?.bgDark || '#111' }}>
+                <Text style={{ color: colors?.danger || '#ef4444', fontSize: 15, textAlign: 'center', paddingHorizontal: 32 }}>
+                    Bill data is unavailable.{`\n`}Please go back and try again.
+                </Text>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={{ marginTop: 24, paddingVertical: 12, paddingHorizontal: 28, backgroundColor: colors?.primary || '#3b82f6', borderRadius: 10 }}
+                >
+                    <Text style={{ color: '#fff', fontWeight: '700' }}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     const formatTimestamp = (isoString) => {
         if (!isoString) return new Date().toLocaleString();
@@ -90,8 +115,8 @@ export default function BillPreviewScreen({ route, navigation }) {
                         <Ionicons name="checkmark-circle" size={56} color={colors.success} />
                     </View>
                     <Text style={styles.successTitle}>Bill Generated Successfully!</Text>
-                    <Text style={styles.billNumber}>{bill.bill_number}</Text>
-                    <Text style={styles.billTimestamp}>Generated on: {formatTimestamp(bill.created_at)}</Text>
+                    <Text style={styles.billNumber}>{bill?.bill_number || "N/A"}</Text>
+                    <Text style={styles.billTimestamp}>Generated on: {bill?.created_at ? formatTimestamp(bill.created_at) : "N/A"}</Text>
                 </View>
 
                 {/* Consumer Info */}
@@ -192,8 +217,8 @@ export default function BillPreviewScreen({ route, navigation }) {
                     <View style={styles.metaItem}>
                         <Ionicons name="time" size={16} color={colors.textMuted} />
                         <Text style={styles.metaLabel}>Generated On</Text>
-                        <Text style={styles.metaValue}>{formatTimestamp(bill.created_at).split(',')[1].trim()}</Text>
-                        <Text style={styles.metaDate}>{formatTimestamp(bill.created_at).split(',')[0].trim()}</Text>
+                        <Text style={styles.metaValue}>{bill?.created_at ? formatTimestamp(bill.created_at).split(',')[1]?.trim() : "N/A"}</Text>
+                        <Text style={styles.metaDate}>{bill?.created_at ? formatTimestamp(bill.created_at).split(',')[0]?.trim() : "N/A"}</Text>
                     </View>
                     <View style={styles.metaItem}>
                         <Ionicons name="alert-circle" size={16} color={colors.warning} />
@@ -278,7 +303,7 @@ export default function BillPreviewScreen({ route, navigation }) {
                                             <tr>
                                                 <td width="50%">
                                                     <strong>Bill No:</strong> ${bill.bill_number || 'N/A'}<br/>
-                                                    <strong>Bill Date:</strong> ${formatTimestamp(bill.created_at)}<br/>
+                                                    <strong>Bill Date:</strong> ${bill?.created_at ? formatTimestamp(bill.created_at) : "N/A"}<br/>
                                                     <strong>Due Date:</strong> <span style="color: #dc2626; font-weight: bold;">${bill.due_date}</span>
                                                 </td>
                                                 <td width="50%" style="text-align: right;">

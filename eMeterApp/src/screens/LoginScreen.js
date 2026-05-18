@@ -37,7 +37,7 @@ export default function LoginScreen({ onLogin }) {
         setError('');
 
         try {
-            const data = await loginAPI(username.trim(), password, 'meter_reader');
+            const data = await loginAPI(username.trim(), password);
 
             if (data.success) {
                 if (data.role !== 'meter_reader' && data.role !== 'admin') {

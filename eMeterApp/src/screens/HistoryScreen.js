@@ -30,7 +30,9 @@ export default function HistoryScreen({ navigation }) {
     const [newReadingValue, setNewReadingValue] = useState('');
     const [editLoading, setEditLoading] = useState(false);
 
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                    .toISOString().split('T')[0];
 
     const formatRecordedTime = (isoString) => {
         if (!isoString) return '';

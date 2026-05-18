@@ -83,7 +83,7 @@ export const markAsSynced = async (offlineId) => {
     try {
         const queue = await getOfflineQueue();
         const updated = queue.map((r) =>
-            r.id === offlineId ? { ...r, status: 'synced' } : r
+            r.id === offlineId ? { ...r, status: 'synced', updatedAt: new Date().toISOString() } : r
         );
         await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(updated));
     } catch (error) {
@@ -159,7 +159,7 @@ export const syncOfflineReadings = async (submitFn) => {
     const updatedQueue = await getOfflineQueue();
     const cleaned = updatedQueue.filter((r) => {
         if (r.status === 'synced') {
-            const savedTime = new Date(r.savedAt).getTime();
+            const savedTime = new Date(r.updatedAt || r.savedAt).getTime();
             const now = Date.now();
             return (now - savedTime) < 24 * 60 * 60 * 1000; // Keep synced for 24h, then drop
         }
@@ -239,7 +239,7 @@ export const exportQueueToExcel = async () => {
         const toExport = queue.filter((r) => {
             if (r.status === 'pending' || r.status === 'failed') return true;
             if (r.status === 'synced') {
-                const savedTime = new Date(r.savedAt).getTime();
+                const savedTime = new Date(r.updatedAt || r.savedAt).getTime();
                 const now = Date.now();
                 return (now - savedTime) < 24 * 60 * 60 * 1000;
             }

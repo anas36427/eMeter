@@ -13,11 +13,11 @@ import json
 from datetime import date, timedelta
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test.utils import override_settings
 
-from .models import Consumer, MeterReading, Bill, BillingSettings, UserProfile
+from .models import Consumer, MeterReading, Bill, BillingSettings
 from rest_framework.authtoken.models import Token
 
 
@@ -26,9 +26,9 @@ from rest_framework.authtoken.models import Token
 # ─────────────────────────────────────────────────────────────
 
 def make_user(username="reader", role="meter_reader"):
-    """Create a test user + profile + DRF token."""
-    user = User.objects.create_user(username=username, password="testpass123")
-    UserProfile.objects.create(user=user, role=role)
+    """Create a test user + role + DRF token."""
+    User = get_user_model()
+    user = User.objects.create_user(username=username, password="testpass123", role=role)
     token, _ = Token.objects.get_or_create(user=user)
     return user, token.key
 
@@ -91,20 +91,24 @@ class BillingMathUnitTest(TestCase):
             current_reading=units,
             reading_date=date.today(),
         )
-        return Bill.objects.create(
+        bill = Bill.objects.create(
             consumer=self.consumer,
             meter_reading=reading,
             units=units,
             billing_period=date.today().replace(day=1),
             due_date=date.today() + timedelta(days=30),
         )
+        from .services import BillingService
+        BillingService.calculate_bill(bill.id)
+        bill.refresh_from_db()
+        return bill
 
     # ── test cases ───────────────────────────────────────────
 
     def test_energy_charges_basic(self):
-        """energy_charges = units × rate_per_unit"""
+        """energy_charges calculated via tiered tariff (e.g. 100 units = 100 * 5)"""
         bill = self._create_bill(units=100)
-        expected = round(100 * 8.56, 2)
+        expected = round(100 * 5.0, 2)
         self.assertAlmostEqual(bill.energy_charges, expected, places=2,
             msg=f"energy_charges should be {expected}, got {bill.energy_charges}")
 
@@ -118,7 +122,7 @@ class BillingMathUnitTest(TestCase):
     def test_duty_charge_calculation(self):
         """duty = (energy_charges + fixed_charges) × duty_percentage / 100"""
         bill = self._create_bill(units=100, load_kw=1.0)
-        energy = round(100 * 8.56, 2)
+        energy = round(100 * 5.0, 2)
         fixed = round(1.0 * 400.0, 2)
         expected_duty = round((energy + fixed) * 0.075, 2)
         self.assertAlmostEqual(bill.duty_charge, expected_duty, places=2,
@@ -139,7 +143,7 @@ class BillingMathUnitTest(TestCase):
     def test_total_amount_formula(self):
         """total_amount = energy + fixed + duty + meter_rent (no arrears, no surcharge)"""
         bill = self._create_bill(units=200, load_kw=2.0)
-        energy = round(200 * 8.56, 2)
+        energy = round((100 * 5.0) + (100 * 7.0), 2)
         fixed = round(2.0 * 400.0, 2)
         duty = round((energy + fixed) * 0.075, 2)
         meter_rent = 10.0
@@ -156,12 +160,19 @@ class BillingMathUnitTest(TestCase):
         self.assertGreater(bill.total_amount, 0,
             msg="Total should be > 0 even at zero units (fixed + duty + rent)")
 
-    def test_rate_change_propagates(self):
-        """Changing rate in BillingSettings updates new bills (not old ones)."""
-        make_settings(rate=10.00)
-        bill = self._create_bill(units=100)
-        self.assertAlmostEqual(bill.energy_charges, 100 * 10.00, places=2,
-            msg="New rate should be used for new bills")
+    def test_tiered_tariff_thresholds(self):
+        """Tiered tariff works across all 3 tiers (0-100 = 5/u, 101-300 = 7/u, 301+ = 10/u)"""
+        # Tier 1: 50 units -> 250
+        b1 = self._create_bill(units=50)
+        self.assertAlmostEqual(b1.energy_charges, 250.0, places=2)
+
+        # Tier 2: 150 units -> (100*5) + (50*7) = 850
+        b2 = self._create_bill(units=150)
+        self.assertAlmostEqual(b2.energy_charges, 850.0, places=2)
+
+        # Tier 3: 350 units -> (100*5) + (200*7) + (50*10) = 2400
+        b3 = self._create_bill(units=350)
+        self.assertAlmostEqual(b3.energy_charges, 2400.0, places=2)
 
     def test_bill_number_is_auto_generated(self):
         """Every bill must get a unique bill_number starting with 'BILL'."""
@@ -194,6 +205,9 @@ class BillingMathUnitTest(TestCase):
             billing_period=date.today().replace(day=1),
             due_date=date.today() + timedelta(days=30),
         )
+        from .services import BillingService
+        BillingService.calculate_bill(bill.id)
+        bill.refresh_from_db()
         expected_lps = round(1000.0 * 0.015, 2)
         self.assertAlmostEqual(bill.late_payment_surcharge, expected_lps, places=2,
             msg=f"late_payment_surcharge should be {expected_lps}, got {bill.late_payment_surcharge}")
@@ -229,8 +243,8 @@ class CalculateEstimateUnitTest(TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
 
-        # Independently compute expected values
-        energy = round(units * 8.56, 2)
+        # Independently compute expected values using tiered tariff
+        energy = round((100 * 5.0) + (50 * 7.0), 2)  # 850.0
         fixed = round(2.0 * 400.0, 2)
         duty = round((energy + fixed) * 0.075, 2)
         meter_rent = 10.0
@@ -426,7 +440,7 @@ class QueryPerformanceTest(TestCase):
 
     def setUp(self):
         make_settings()
-        _, self.token = make_user()
+        _, self.token = make_user(role="admin")
         self.client = Client()
 
         # Seed 20 consumers, each with 1 reading + 1 bill

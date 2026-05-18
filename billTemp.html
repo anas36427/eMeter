@@ -1,0 +1,196 @@
+<!doctype html>
+<html class="h-full">
+ <head>
+  <meta charset="utf-8">
+  <title>Electricity Bill - AMU eMeter</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+        body { font-family: 'IBM Plex Sans', sans-serif; }
+        @page { size: A4; margin: 1.5cm; }
+        .watermark {
+            position: absolute;
+            top: 50%; left: 50%;
+            margin-left: -200px; margin-top: -60px;
+            transform: rotate(-45deg);
+            font-size: 100px;
+            color: rgba(0,0,0,0.02);
+            z-index: -1;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+    </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gray-100 p-6 overflow-auto">
+  <div class="max-w-[210mm] mx-auto bg-white shadow-lg p-8 relative" id="bill-container">
+   <div class="watermark" style="position: absolute; top: 50%; left: 50%; margin-left: -100px; margin-top: -100px; width: 200px; height: 200px; z-index: 0;">
+    <img src="../../assets/amu-logo.png" alt="AMU Logo" style="width: 100%; height: 100%; opacity: 0.08; object-fit: contain;">
+   </div><!-- Header -->
+   <div class="flex justify-between items-start border-b-2 border-emerald-900 pb-3 mb-5">
+    <div class="flex-1 text-center">
+     <h1 id="org-name" class="text-emerald-900 text-2xl font-bold uppercase tracking-wide m-0">eMeter AMU</h1>
+     <p id="tagline" class="text-sm font-semibold text-gray-600 mt-1">Aligarh Muslim University Electricity Billing System</p>
+    </div>
+    <div style="width: 100px; height: 100px; flex-shrink: 0;"><img src="../../assets/amu-logo.png" alt="AMU Logo" style="width: 100%; height: 100%; object-fit: contain;">
+    </div>
+   </div><!-- Bill Meta -->
+   <div class="flex justify-between text-sm mb-5">
+    <div>
+     <p><strong>Bill No:</strong> EMT-2024-001587</p>
+     <p><strong>Bill Date:</strong> 15-Jan-2025</p>
+     <p><strong>Due Date:</strong> <span class="text-red-600 font-bold">31-Jan-2025</span></p>
+    </div>
+    <div class="text-right">
+     <p><strong>Connection Type:</strong> Domestic</p>
+     <p><strong>Load:</strong> 3.0 KW</p>
+     <p><strong>Billing Period:</strong> Dec 2024</p>
+    </div>
+   </div><!-- Consumer Details -->
+   <div class="bg-gray-50 border-l-4 border-emerald-900 px-3 py-1 font-bold text-sm mb-3">
+    Consumer Details
+   </div>
+   <div class="flex justify-between text-sm mb-5 px-2">
+    <div>
+     <p><strong>Name:</strong> Prof. Ahmed Khan</p>
+     <p><strong>Address:</strong> Quarter No. 15, Sir Syed Nagar, AMU Campus</p>
+    </div>
+    <div class="text-right">
+     <p><strong>Meter No:</strong> AMU-M-004521</p>
+     <p><strong>Consumer ID:</strong> CON-78452</p>
+    </div>
+   </div><!-- Meter Reading -->
+   <div class="bg-gray-50 border-l-4 border-emerald-900 px-3 py-1 font-bold text-sm mb-3">
+    Meter Reading
+   </div>
+   <table class="w-full border-collapse text-xs mb-5">
+    <thead>
+     <tr class="bg-emerald-900 text-white">
+      <th class="border border-gray-300 p-2 text-left">Previous Reading</th>
+      <th class="border border-gray-300 p-2 text-left">Current Reading</th>
+      <th class="border border-gray-300 p-2 text-left">Units Consumed</th>
+      <th class="border border-gray-300 p-2 text-left">Rate (₹/Unit)</th>
+     </tr>
+    </thead>
+    <tbody>
+     <tr>
+      <td class="border border-gray-200 p-2">14,520</td>
+      <td class="border border-gray-200 p-2">14,780</td>
+      <td class="border border-gray-200 p-2 font-bold">260</td>
+      <td class="border border-gray-200 p-2">₹ 5.50</td>
+     </tr>
+    </tbody>
+   </table><!-- Charges Breakdown -->
+   <div class="bg-gray-50 border-l-4 border-emerald-900 px-3 py-1 font-bold text-sm mb-3">
+    Charges Breakdown
+   </div>
+   <table class="w-full border-collapse text-xs mb-5">
+    <thead>
+     <tr class="bg-emerald-900 text-white">
+      <th class="border border-gray-300 p-2 text-left">Description</th>
+      <th class="border border-gray-300 p-2 text-right">Amount (₹)</th>
+     </tr>
+    </thead>
+    <tbody>
+     <tr>
+      <td class="border border-gray-200 p-2">Energy Charges (260 units × ₹5.50)</td>
+      <td class="border border-gray-200 p-2 text-right">1,430.00</td>
+     </tr>
+     <tr>
+      <td class="border border-gray-200 p-2">Fixed/Demand Charges</td>
+      <td class="border border-gray-200 p-2 text-right">150.00</td>
+     </tr>
+     <tr>
+      <td class="border border-gray-200 p-2">Electricity Duty (5%)</td>
+      <td class="border border-gray-200 p-2 text-right">71.50</td>
+     </tr>
+     <tr>
+      <td class="border border-gray-200 p-2">Meter Rent</td>
+      <td class="border border-gray-200 p-2 text-right">25.00</td>
+     </tr>
+     <tr class="bg-red-50">
+      <td class="border border-gray-200 p-2 text-red-700 font-semibold">Arrears (Previous Due)</td>
+      <td class="border border-gray-200 p-2 text-right text-red-700 font-semibold">320.00</td>
+     </tr>
+     <tr class="bg-gray-50 font-bold">
+      <td class="border border-gray-200 p-2">Sub Total</td>
+      <td class="border border-gray-200 p-2 text-right">1,996.50</td>
+     </tr>
+    </tbody>
+   </table><!-- Total Box -->
+   <div class="bg-emerald-900 text-white p-5 rounded text-right">
+    <p class="text-sm mb-1">Total Amount Payable</p>
+    <p class="text-3xl font-bold m-0">₹ 1,996.50</p>
+   </div><!-- Footer -->
+   <div class="mt-12 text-xs text-gray-500 text-center border-t border-gray-200 pt-3">
+    <p>This is a computer-generated bill. For queries, contact the Electricity Section, AMU.</p>
+    <p>Generated by eMeter AMU — Aligarh Muslim University Electricity Billing System</p>
+   </div>
+  </div>
+  <script>
+        const defaultConfig = {
+            organization_name: 'eMeter AMU',
+            tagline: 'Aligarh Muslim University Electricity Billing System',
+            background_color: '#f3f4f6',
+            surface_color: '#ffffff',
+            text_color: '#333333',
+            primary_action: '#064e3b',
+            secondary_action: '#dc2626',
+            font_family: 'IBM Plex Sans',
+            font_size: 14
+        };
+
+        function applyConfig(config) {
+            document.getElementById('org-name').textContent = config.organization_name || defaultConfig.organization_name;
+            document.getElementById('tagline').textContent = config.tagline || defaultConfig.tagline;
+
+            const bg = config.background_color || defaultConfig.background_color;
+            const surface = config.surface_color || defaultConfig.surface_color;
+            const text = config.text_color || defaultConfig.text_color;
+            const primary = config.primary_action || defaultConfig.primary_action;
+            const secondary = config.secondary_action || defaultConfig.secondary_action;
+            const font = config.font_family || defaultConfig.font_family;
+            const size = config.font_size || defaultConfig.font_size;
+
+            document.body.style.backgroundColor = bg;
+            document.getElementById('bill-container').style.backgroundColor = surface;
+            document.body.style.color = text;
+            document.body.style.fontFamily = `${font}, sans-serif`;
+            document.body.style.fontSize = `${size}px`;
+
+            document.getElementById('org-name').style.color = primary;
+            document.querySelector('.border-b-2').style.borderColor = primary;
+
+            document.querySelectorAll('.border-l-4').forEach(el => el.style.borderColor = primary);
+            document.querySelectorAll('thead tr').forEach(el => el.style.backgroundColor = primary);
+            document.querySelector('.bg-emerald-900.text-white.p-5').style.backgroundColor = primary;
+
+            document.querySelectorAll('.text-red-600, .text-red-700').forEach(el => el.style.color = secondary);
+        }
+
+        window.elementSdk.init({
+            defaultConfig,
+            onConfigChange: async (config) => applyConfig(config),
+            mapToCapabilities: (config) => ({
+                recolorables: [
+                    { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+                    { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+                    { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+                    { get: () => config.primary_action || defaultConfig.primary_action, set: (v) => { config.primary_action = v; window.elementSdk.setConfig({ primary_action: v }); } },
+                    { get: () => config.secondary_action || defaultConfig.secondary_action, set: (v) => { config.secondary_action = v; window.elementSdk.setConfig({ secondary_action: v }); } }
+                ],
+                borderables: [],
+                fontEditable: { get: () => config.font_family || defaultConfig.font_family, set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
+                fontSizeable: { get: () => config.font_size || defaultConfig.font_size, set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
+            }),
+            mapToEditPanelValues: (config) => new Map([
+                ['organization_name', config.organization_name || defaultConfig.organization_name],
+                ['tagline', config.tagline || defaultConfig.tagline]
+            ])
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fda182e36a98aec',t:'MTc3OTA5OTI2MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

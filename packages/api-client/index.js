@@ -13,6 +13,17 @@ export const createApiClient = (config) => {
       return req;
     });
   }
+
+  // Centralized Token authentication interceptor
+  instance.interceptors.request.use(req => {
+    if (typeof localStorage !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        req.headers.Authorization = `Token ${token}`;
+      }
+    }
+    return req;
+  });
   
   instance.interceptors.response.use(
     res => {
@@ -38,9 +49,10 @@ export const createApiClient = (config) => {
   return instance;
 };
 
-export const login = (api, u, p, r) => api.post('/api/login/', { username: u, password: p, role: r });
+export const login = (api, u, p) => api.post('/api/login/', { username: u, password: p });
 export const logout = (api) => api.post('/api/logout/');
 export const getCurrentUser = (api) => api.get('/api/me/');
+export const updateProfile = (api, d) => api.post('/api/profile/update/', d);
 export const fetchCsrfToken = (api) => api.get('/api/csrf-token/');
 
 export const getConsumers = (api) => api.get('/api/consumers/');

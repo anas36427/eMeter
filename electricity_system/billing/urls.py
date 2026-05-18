@@ -6,6 +6,7 @@ urlpatterns = [
     # Auth Endpoints
     path('login/', views.api_login, name='api_login'),
     path('me/', views.api_me, name='api_me'),
+    path('profile/update/', views.api_update_profile, name='api_update_profile'),
     path('logout/', views.api_logout, name='api_logout'),
     path('csrf/', views.get_csrf, name='api_csrf'),
     
@@ -18,8 +19,8 @@ urlpatterns = [
     # Consumer Management
     path('consumers/', views.api_consumer_list, name='api_consumer_list'),
     path('consumers/<int:consumer_id>/', views.api_consumer_detail, name='api_consumer_detail'),
+    path('consumer/<int:consumer_id>/', views.api_consumer_detail, name='api_consumer_detail_singular'),
     path('consumers/search/', views.api_consumer_search, name='api_consumer_search'),
-    path('consumer/<int:consumer_id>/', views.api_consumer_detail, name='api_get_consumer'),
     path('consumer/<int:consumer_id>/readings/', views.api_consumer_readings, name='api_consumer_readings'),
     
     # Reading & Billing

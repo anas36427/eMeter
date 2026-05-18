@@ -1,4 +1,3 @@
-
 import os
 import django
 
@@ -6,8 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'electricity_system.settings')
 django.setup()
 
-from django.contrib.auth.models import User
-from billing.models import UserProfile
+from django.contrib.auth import get_user_model
 
 def create_reader():
     username = 'reader1'
@@ -16,26 +14,16 @@ def create_reader():
     
     print(f"Processing user: {username}...")
     
+    User = get_user_model()
     # Get or create user
     user, created = User.objects.get_or_create(username=username)
+    user.role = role
+    user.set_password(password)
+    user.save()
     if created:
-        user.set_password(password)
-        user.save()
-        print(f"  - User '{username}' created with password '{password}'.")
+        print(f"  - User '{username}' created with password '{password}' and role '{role}'.")
     else:
-        print(f"  - User '{username}' already exists. Updating password...")
-        user.set_password(password)
-        user.save()
-        
-    # Get or create profile
-    profile, p_created = UserProfile.objects.get_or_create(user=user)
-    profile.role = role
-    profile.save()
-    
-    if p_created:
-        print(f"  - UserProfile created with role: {role}")
-    else:
-        print(f"  - UserProfile updated with role: {role}")
+        print(f"  - User '{username}' already exists. Updated role to '{role}'.")
 
     print("\nAccount setup complete!")
 
