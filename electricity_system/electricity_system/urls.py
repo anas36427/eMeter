@@ -28,16 +28,16 @@ import os
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('billing.urls')),
-    
-    # Serve Vite assets
-    path('assets/<path:path>', serve, {
-        'document_root': os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist', 'assets'),
-    }),
-
-    # Catch-all for React SPA
-    path('', views.spa_index, name='spa_index'),
-    path('<path:path>', views.spa_index),
 ]
 
+# Only serve the local Vite SPA build during local development
 if settings.DEBUG:
+    urlpatterns += [
+        path('assets/<path:path>', serve, {
+            'document_root': os.path.join(settings.BASE_DIR.parent, 'energy-hub-ui', 'dist', 'assets'),
+        }),
+        path('', views.spa_index, name='spa_index'),
+        path('<path:path>', views.spa_index),
+    ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
