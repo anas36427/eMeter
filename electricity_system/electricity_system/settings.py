@@ -24,6 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+# SECURITY WARNING: don't run with debug turned on in production!
+# NOTE: DEBUG must be defined BEFORE SECRET_KEY to avoid NameError (FIX B-01)
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
@@ -32,20 +36,14 @@ if not SECRET_KEY:
     # Local dev fallback only (do not use in production)
     SECRET_KEY = 'django-insecure-local-dev-key-change-me'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
     ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '').split(',') if host.strip()]
-    # '127.0.0.1',
-    # 'localhost',
-    # '10.173.34.32',
-    # '10.86.158.33',
-    # '10.86.112.32',
-    # '10.91.159.32',
-    # '10.131.109.32',
+    # Auto-detect Render's external URL for ALLOWED_HOSTS (FIX REC-3)
+    from urllib.parse import urlparse
+    if _render_url := os.environ.get('RENDER_EXTERNAL_URL', ''):
+        ALLOWED_HOSTS.append(urlparse(_render_url).hostname)
 
 
 
@@ -140,6 +138,20 @@ if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
         'connect_timeout': 5,
     }
 
+# FIX D-01 & D-03: Support DATABASE_URL from Neon with SSL
+# Neon provides a single DATABASE_URL. If set, it overrides the individual DB_* vars.
+import dj_database_url as _dj_db_url
+if _db_url := os.environ.get('DATABASE_URL'):
+    DATABASES['default'] = _dj_db_url.parse(_db_url, conn_max_age=600)
+    # Neon requires SSL — enforce it regardless of URL params
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
+    DATABASES['default']['OPTIONS']['connect_timeout'] = 5
+elif not DEBUG and DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    # Fallback: individual vars with SSL enforced for production
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
+
 # Swap to SQLite3 for testing to avoid PostgreSQL permission errors
 import sys
 if 'test' in sys.argv:
@@ -190,7 +202,12 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
     BASE_DIR.parent / 'energy-hub-ui' / 'dist',
 ]
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# FIX B-05: STATICFILES_STORAGE deprecated in Django 4.2+; use STORAGES dict in Django 6.x
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Media files
 MEDIA_URL = '/media/'
@@ -214,18 +231,19 @@ REST_FRAMEWORK = {
 
 # Security settings
 if not DEBUG:
-    # --- Production: Full HTTPS enforcement ---
+    # --- Production: Full HTTPS enforcement (Render provides HTTPS termination) ---
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = False # Temporarily False for local HTTP testing
-    # NOTE: Cookies cannot be Secure over HTTP — set to False for local simulation only.
-    # In real production (with HTTPS), these MUST be True.
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
+    # Render handles SSL termination at the edge; keep False to avoid redirect loops
+    SECURE_SSL_REDIRECT = False
+    # FIX B-03: Must be True in production with HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = 0  # Disabled locally to avoid browser caching HTTPS-only policy
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    # FIX B-03: Enable HSTS in production
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 else:
     # --- Development: No HTTPS, but still enable HttpOnly protections ---
     SECURE_SSL_REDIRECT = False
@@ -260,26 +278,32 @@ _EXTRA_CORS = [
 CORS_ALLOWED_ORIGINS = _BASE_CORS + _EXTRA_CORS
 CSRF_TRUSTED_ORIGINS = _BASE_CORS + _EXTRA_CORS
 
-# Allow dynamic Localtunnel domains (*.loca.lt) over the internet and any Internal IPs
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://.*\.loca\.lt$",
-    r"^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
-    r"^http://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
-    r"^http://172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$"
-]
-CSRF_TRUSTED_ORIGINS.append("https://*.loca.lt")
+# Allow dynamic Localtunnel/ngrok domains in dev only
+# In production, CORS is controlled exclusively via CORS_ALLOWED_ORIGINS_EXTRA env var
+if DEBUG:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://.*\.loca\.lt$",          # Localtunnel dev tunnels
+        r"^https://.*\.ngrok\.io$",          # ngrok dev tunnels
+        r"^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",      # Local LAN (dev only)
+        r"^http://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",          # Local LAN (dev only)
+        r"^http://172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$"  # Local LAN (dev only)
+    ]
+    CSRF_TRUSTED_ORIGINS.append("https://*.loca.lt")
 
-# Dynamically allow the local network IP
-import socket
-try:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    local_ip = s.getsockname()[0]
-    s.close()
-    CORS_ALLOWED_ORIGINS.extend([f"http://{local_ip}:3000", f"http://{local_ip}:5173"])
-    CSRF_TRUSTED_ORIGINS.extend([f"http://{local_ip}:3000", f"http://{local_ip}:5173"])
-except Exception:
-    pass
+    # Dynamically allow the dev machine's LAN IP (local VM/WiFi testing)
+    import socket as _socket
+    try:
+        _s = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+        _s.connect(("8.8.8.8", 80))
+        _local_ip = _s.getsockname()[0]
+        _s.close()
+        CORS_ALLOWED_ORIGINS.extend([f"http://{_local_ip}:3000", f"http://{_local_ip}:5173"])
+        CSRF_TRUSTED_ORIGINS.extend([f"http://{_local_ip}:3000", f"http://{_local_ip}:5173"])
+    except Exception:
+        pass
+else:
+    # Production: no private IP ranges — Vercel domain is added via CORS_ALLOWED_ORIGINS_EXTRA
+    CORS_ALLOWED_ORIGIN_REGEXES = []
 
 # CSRF cookie: NOT HttpOnly so SPA JS can read and attach it to X-CSRFToken header.
 # This is the standard Django SPA pattern — do NOT set True.

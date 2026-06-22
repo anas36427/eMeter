@@ -3,6 +3,12 @@
 # Generated from: pip freeze (venv) + codebase dependency scan
 # ============================================================
 
+# --- Production WSGI Server (required for Render) ---
+gunicorn==22.0.0
+
+# --- Database URL parsing (required for Neon DATABASE_URL) ---
+dj-database-url==2.3.0
+
 # --- Django Core ---
 Django==6.0.5
 asgiref==3.11.1

@@ -183,7 +183,7 @@ class BillingService:
         # Generate Audit Log
         AuditLog.objects.create(
             user=user,
-            action='bill_generated_final',
+            action='bill_finalize',  # FIX B-08: 'bill_generated_final' is not a valid AuditLog.Action choice
             bill=bill,
             details={'total_amount': float(bill.total_amount), 'units': float(bill.units), 'created_source': created_source}
         )

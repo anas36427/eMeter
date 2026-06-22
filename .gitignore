@@ -7,6 +7,9 @@ __pycache__/
 node_modules/
 dist/
 .env
+.env.local
+.env.production.local
+.env.*.local
 env/
 .pytest_cache/
 .vscode/
@@ -14,6 +17,11 @@ env/
 coverage/
 *.sqlite3
 static/frontend/dist/
+
+# Django production files (generated, not to be committed)
+electricity_system/staticfiles/
+electricity_system/logs/
+electricity_system/media/
 
 # Mobile App
 eMeterApp/node_modules/
@@ -28,3 +36,6 @@ scratch/
 dissertation.tex
 fix_bill_preview.py
 tsconfig.json
+
+# macOS
+**/.DS_Store

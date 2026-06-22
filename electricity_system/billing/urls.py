@@ -1,7 +1,10 @@
 from django.urls import path
+from django.http import JsonResponse
 from . import views
 
 urlpatterns = [
+    # Health check endpoint for Render's uptime monitoring
+    path('health/', lambda r: JsonResponse({'status': 'ok', 'service': 'emeter-backend'}), name='health_check'),
     path('', views.api_root, name='api_root'),
     # Auth Endpoints
     path('login/', views.api_login, name='api_login'),

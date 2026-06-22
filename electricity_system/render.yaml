@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: emeter-backend
+    env: python
+    rootDir: electricity_system
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn electricity_system.wsgi:application
+    healthCheckPath: /api/
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: emeter-backend.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: emeter-db
+          property: connectionString
+      - key: CORS_ALLOWED_ORIGINS_EXTRA
+        value: "https://your-app.vercel.app"
+      - key: PYTHON_VERSION
+        value: "3.12.3"
+
+databases:
+  - name: emeter-db
+    databaseName: emeter_db
+    user: emeter_user
+    plan: free
