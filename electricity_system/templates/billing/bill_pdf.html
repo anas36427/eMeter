@@ -6,7 +6,7 @@
     <style>
         @page { 
             size: A4; 
-            margin: 1.5cm; 
+            margin: 1.0cm; 
         }
         body { 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
@@ -14,12 +14,12 @@
             background-color: #ffffff;
             margin: 0; 
             padding: 0; 
-            line-height: 1.4;
-            font-size: 13px;
+            line-height: 1.35;
+            font-size: 12px;
         }
         .watermark {
             position: absolute;
-            top: 35%;
+            top: 30%;
             left: 25%;
             width: 350px;
             height: 350px;
@@ -29,8 +29,8 @@
         .header-table {
             width: 100%;
             border-bottom: 3px solid #064e3b;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
         }
         .header-left {
             vertical-align: middle;
@@ -38,7 +38,7 @@
         }
         .header-left h1 {
             color: #064e3b;
-            font-size: 26px;
+            font-size: 24px;
             font-weight: bold;
             margin: 0;
             text-transform: uppercase;
@@ -46,74 +46,74 @@
         }
         .header-left p {
             color: #4b5563;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             margin: 4px 0 0 0;
         }
         .header-right {
-            width: 90px;
+            width: 80px;
             text-align: right;
             vertical-align: middle;
         }
         .header-right img {
-            width: 85px;
-            height: 85px;
+            width: 70px;
+            height: 70px;
         }
         .meta-table {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
         .meta-left {
             width: 50%;
             text-align: left;
-            line-height: 1.6;
+            line-height: 1.5;
         }
         .meta-right {
             width: 50%;
             text-align: right;
-            line-height: 1.6;
+            line-height: 1.5;
         }
         .section-title {
             background-color: #f9fafb;
             border-left: 4px solid #064e3b;
-            padding: 6px 12px;
+            padding: 4px 10px;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
             color: #064e3b;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .details-table {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
         .details-left {
             width: 50%;
             text-align: left;
-            line-height: 1.6;
+            line-height: 1.5;
         }
         .details-right {
             width: 50%;
             text-align: right;
-            line-height: 1.6;
+            line-height: 1.5;
         }
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 12px;
+            margin-bottom: 12px;
+            font-size: 11px;
         }
         .data-table th {
             background-color: #064e3b;
             color: #ffffff;
             font-weight: bold;
             text-align: left;
-            padding: 8px 10px;
+            padding: 6px 8px;
             border: 1px solid #064e3b;
         }
         .data-table td {
-            padding: 8px 10px;
+            padding: 6px 8px;
             border: 1px solid #e5e7eb;
         }
         .text-right {
@@ -139,38 +139,38 @@
         .total-box {
             background-color: #064e3b;
             color: #ffffff;
-            padding: 16px 20px;
+            padding: 10px 15px;
             border-radius: 6px;
             text-align: right;
-            margin-top: 25px;
+            margin-top: 12px;
         }
         .total-label {
-            font-size: 13px;
-            margin-bottom: 4px;
+            font-size: 12px;
+            margin-bottom: 2px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             opacity: 0.9;
         }
         .total-amount {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             margin: 0;
         }
         .footer {
-            margin-top: 45px;
+            margin-top: 20px;
             text-align: center;
-            font-size: 11px;
+            font-size: 10px;
             color: #6b7280;
             border-top: 1px solid #e5e7eb;
-            padding-top: 12px;
-            line-height: 1.5;
+            padding-top: 8px;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
     <!-- Watermark Logo -->
     <div class="watermark">
-        <img src="/Users/anasahmad/Documents/eMeter.web/eMeterApp/assets/amu-logo.png" alt="AMU logo watermark"/>
+        <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo watermark"/>
     </div>
 
     <!-- Header Section -->
@@ -181,7 +181,7 @@
                 <p>Aligarh Muslim University Electricity Billing System</p>
             </td>
             <td class="header-right">
-                <img src="/Users/anasahmad/Documents/eMeter.web/eMeterApp/assets/amu-logo.png" alt="AMU logo"/>
+                <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo"/>
             </td>
         </tr>
     </table>
@@ -237,7 +237,7 @@
                 <td>{{ previous_reading }}</td>
                 <td>{{ current_reading }}</td>
                 <td class="font-bold">{{ units }}</td>
-                <td>₹ {{ rate_per_unit|default:'8.56' }}</td>
+                <td>₹ {{ rate_per_unit|floatformat:2|default:'0.00' }}</td>
             </tr>
         </tbody>
     </table>
@@ -255,7 +255,7 @@
         </thead>
         <tbody>
             <tr>
-                <td>Energy Charges ({{ units|default:0 }} units × ₹{{ rate_per_unit|default:'8.56' }})</td>
+                <td>Energy Charges ({{ units|default:0 }} units × ₹{{ rate_per_unit|floatformat:2|default:'0.00' }})</td>
                 <td class="text-right">{{ energy_charges|default:0|floatformat:2 }}</td>
             </tr>
             <tr>

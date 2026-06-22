@@ -3,6 +3,7 @@ import os
 import django
 import random
 from datetime import datetime, timedelta
+from django.utils import timezone
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'electricity_system.settings')
 django.setup()
@@ -38,7 +39,7 @@ def create_sample_data():
                 'address': data['address'],
                 'status': 'active',
                 'connection_type': 'residential',
-                'created_at': datetime.now()
+                'created_at': timezone.localtime()
             }
         )
         consumers.append(consumer)
@@ -49,7 +50,7 @@ def create_sample_data():
     for consumer in consumers:
         # Create readings for last 3 months
         for i in range(3):
-            reading_date = datetime.now() - timedelta(days=30 * (i + 1))
+            reading_date = timezone.localtime() - timedelta(days=30 * (i + 1))
             previous_reading = random.randint(100, 500)
             current_reading = previous_reading + random.randint(50, 200)
             
@@ -61,7 +62,7 @@ def create_sample_data():
                     'current_reading': current_reading,
                     'units_consumed': current_reading - previous_reading,
                     'created_by': admin_user,
-                    'created_at': datetime.now()
+                    'created_at': timezone.localtime()
                 }
             )
             if created:
@@ -88,7 +89,7 @@ def create_sample_data():
                     'billing_period': billing_period,
                     'due_date': due_date,
                     'status': status,
-                    'created_at': datetime.now()
+                    'created_at': timezone.localtime()
                 }
             )
             

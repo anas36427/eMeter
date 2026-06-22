@@ -63,9 +63,10 @@ class BillForm(forms.ModelForm):
     class Meta:
         model = Bill
         fields = ['consumer', 'meter_reading', 'units', 'rate_per_unit', 
-                  'fixed_charges', 'billing_period', 'due_date']
+                  'fixed_charges', 'billing_period_start', 'billing_period_end', 'due_date']
         widgets = {
-            'billing_period': forms.DateInput(attrs={'type': 'month'}),
+            'billing_period_start': forms.DateInput(attrs={'type': 'date'}),
+            'billing_period_end': forms.DateInput(attrs={'type': 'date'}),
             'due_date': forms.DateInput(attrs={'type': 'date'}),
             'units': forms.NumberInput(attrs={'class': 'form-control'}),
             'rate_per_unit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),

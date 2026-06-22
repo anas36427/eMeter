@@ -22,14 +22,22 @@
       },
       "package": "com.amu.emeterreader",
       "permissions": [
-        "CAMERA",
-        "ACCESS_FINE_LOCATION"
-      ]
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "usesCleartextTraffic": true
     },
     "plugins": [
       "expo-camera",
       "expo-image-picker",
-      "expo-asset"
-    ]
+      "expo-asset",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1710a7cb-7854-4dfa-9180-7616ad803072"
+      }
+    }
   }
 }

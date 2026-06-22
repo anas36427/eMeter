@@ -91,13 +91,7 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-    return (
-        <NavigationContainer>
-            <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                <RootStack.Screen name="Main" component={MainTabs} />
-            </RootStack.Navigator>
-        </NavigationContainer>
-    );
+    return <MainTabs />;
 }
 
 // Simple Profile/Settings tab
@@ -134,7 +128,7 @@ function ProfileTab({ navigation }) {
                 <View style={styles.infoRow}>
                     <Ionicons name="business" size={20} color={colors.info} />
                     <Text style={styles.infoLabel}>Organization</Text>
-                    <Text style={styles.infoValue}>AMU - PowerGrid</Text>
+                    <Text style={styles.infoValue}>eMeter-AMU</Text>
                 </View>
                 <View style={styles.infoRow}>
                     <Ionicons name="phone-portrait" size={20} color={colors.accent} />

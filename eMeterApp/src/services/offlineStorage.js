@@ -1,181 +1,298 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { query, initDatabase } from './sqliteDb';
 import * as XLSX from 'xlsx';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-const OFFLINE_QUEUE_KEY = 'offline_readings_queue';
-
 /**
- * Save a reading to offline queue (when no internet)
+ * Initialize the SQLite database tables on app launch
  */
-export const saveOfflineReading = async (readingData) => {
+export const initializeAppDb = async () => {
     try {
-        const queue = await getOfflineQueue();
-        
-        // Find existing reading for same consumer on same date
-        const existingIndex = queue.findIndex(r => 
-            r.consumer_id === readingData.consumer_id && 
-            r.reading_date === readingData.reading_date &&
-            r.status !== 'synced' // Only update pending/failed
-        );
-
-        let offlineReading;
-        if (existingIndex >= 0) {
-            offlineReading = {
-                ...queue[existingIndex],
-                ...readingData,
-                status: readingData.status || 'pending',
-                lastError: null,
-                updatedAt: new Date().toISOString(),
-            };
-            queue[existingIndex] = offlineReading;
-            console.log('🔄 [Storage] Updated existing offline reading:', offlineReading.id);
-        } else {
-            offlineReading = {
-                ...readingData,
-                id: `offline_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-                status: readingData.status || 'pending',
-                savedAt: new Date().toISOString(),
-            };
-            queue.push(offlineReading);
-            console.log('✅ [Storage] Saved new offline reading:', offlineReading.id);
-        }
-        
-        await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-        
-        return offlineReading;
-    } catch (error) {
-        console.error('❌ [Storage] Error saving offline reading:', error);
-        throw error;
+        await initDatabase();
+        console.log('✅ SQLite Database successfully initialized');
+    } catch (err) {
+        console.error('❌ Failed to initialize SQLite database:', err);
     }
 };
 
 /**
- * Get all offline readings from the queue
+ * Cache downloaded consumer registry into local SQLite consumers table
  */
-export const getOfflineQueue = async () => {
+export const cacheConsumersToDb = async (consumers) => {
     try {
-        const data = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-        return data ? JSON.parse(data) : [];
-    } catch (error) {
-        console.error('Error getting offline queue:', error);
+        for (const c of consumers) {
+            await query(
+                `INSERT OR REPLACE INTO consumers 
+                (id, consumer_number, name, email, phone, address, meter_number, meter_type, load_kw, previous_reading, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    c.id,
+                    c.consumer_number,
+                    c.name,
+                    c.email || '',
+                    c.phone || '',
+                    c.address || '',
+                    c.meter_number || '',
+                    c.meter_type || '10',
+                    Number(c.load_kw || 1.0),
+                    Number(c.previous_reading || 0.0),
+                    c.status || 'active'
+                ]
+            );
+        }
+        console.log(`✅ Cached ${consumers.length} consumers into local SQLite`);
+    } catch (err) {
+        console.error('Error caching consumers in SQLite:', err);
+    }
+};
+
+/**
+ * Perform completely offline consumer search inside SQLite
+ */
+export const searchConsumersOffline = async (searchQuery) => {
+    try {
+        if (!searchQuery.trim()) {
+            const result = await query(`SELECT * FROM consumers LIMIT 50`);
+            return result.rows;
+        }
+        const term = `%${searchQuery.trim()}%`;
+        const result = await query(
+            `SELECT * FROM consumers WHERE 
+            name LIKE ? OR 
+            consumer_number LIKE ? OR 
+            meter_number LIKE ?`,
+            [term, term, term]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Offline consumer search failed:', err);
         return [];
     }
 };
 
 /**
- * Remove a synced reading from the offline queue
+ * Cache central billing settings to local SQLite for offline estimate computations
  */
-export const removeFromOfflineQueue = async (offlineId) => {
+export const cacheBillingSettings = async (settings) => {
     try {
-        const queue = await getOfflineQueue();
-        const updated = queue.filter((r) => r.id !== offlineId);
-        await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(updated));
-    } catch (error) {
-        console.error('Error removing from offline queue:', error);
-    }
-};
-
-/**
- * Mark a reading as synced in the queue
- */
-export const markAsSynced = async (offlineId) => {
-    try {
-        const queue = await getOfflineQueue();
-        const updated = queue.map((r) =>
-            r.id === offlineId ? { ...r, status: 'synced', updatedAt: new Date().toISOString() } : r
+        await query(
+            `INSERT OR REPLACE INTO billing_settings 
+            (id, rate_per_unit, fixed_charge_per_kw, duty_percentage, phase_1_rent, phase_3_rent, surcharge_percentage)
+            VALUES (1, ?, ?, ?, ?, ?, ?)`,
+            [
+                Number(settings.rate_per_unit || 6.50),
+                Number(settings.fixed_charge_per_kw || 50.00),
+                Number(settings.duty_percentage || 5.00),
+                Number(settings.phase_1_rent || 10.00),
+                Number(settings.phase_3_rent || 25.00),
+                Number(settings.surcharge_percentage || 2.00)
+            ]
         );
-        await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(updated));
-    } catch (error) {
-        console.error('Error marking as synced:', error);
+        console.log('✅ SQLite: Saved latest billing settings locally');
+    } catch (err) {
+        console.error('Failed to cache settings in SQLite:', err);
     }
 };
 
 /**
- * Get count of pending (unsynced) readings
+ * Perform 100% offline billing estimate calculation using SQLite values
+ */
+export const calculateOfflineEstimate = async (consumerId, currentVal, prevVal) => {
+    try {
+        const settingsRes = await query(`SELECT * FROM billing_settings WHERE id = 1`);
+        const settings = settingsRes.rows[0] || {
+            rate_per_unit: 6.50,
+            fixed_charge_per_kw: 50.00,
+            duty_percentage: 5.00,
+            meter_rent: 10.00,
+            surcharge_percentage: 2.00
+        };
+
+        const consumerRes = await query(`SELECT * FROM consumers WHERE id = ?`, [consumerId]);
+        const consumer = consumerRes.rows[0] || { load_kw: 1.0 };
+
+        const units = Number(currentVal) - Number(prevVal);
+        const energyCharges = units * settings.rate_per_unit;
+        const fixedCharges = (consumer.load_kw || 1.0) * settings.fixed_charge_per_kw;
+        const dutyCharge = energyCharges * (settings.duty_percentage / 100);
+        
+        // Dynamic meter rent based on meter_type
+        const actualMeterRent = String(consumer.meter_type) === '10' ? settings.phase_1_rent : settings.phase_3_rent;
+        
+        const regulatorySurcharge = energyCharges * (settings.surcharge_percentage / 100);
+        const total = energyCharges + fixedCharges + dutyCharge + actualMeterRent + regulatorySurcharge;
+
+        return {
+            units_consumed: units,
+            load_kw: consumer.load_kw,
+            total_amount: Number(total.toFixed(2)),
+            breakdown: {
+                rate_per_unit: settings.rate_per_unit,
+                energy_charges: energyCharges,
+                fixed_charge_per_kw: settings.fixed_charge_per_kw,
+                fixed_charges: fixedCharges,
+                duty_percentage: settings.duty_percentage,
+                duty_charge: dutyCharge,
+                meter_rent: actualMeterRent,
+                regulatory_surcharge: regulatorySurcharge
+            }
+        };
+    } catch (err) {
+        console.error('Error calculating offline estimate:', err);
+        return null;
+    }
+};
+
+/**
+ * Save a new reading into the offline queue in SQLite
+ */
+export const saveOfflineReading = async (readingData) => {
+    try {
+        const id = `offline_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        await query(
+            `INSERT OR REPLACE INTO meter_readings 
+            (id, consumer_id, consumer_number, consumer_name, meter_number, current_reading, previous_reading, reading_date, status, saved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_create', ?)`,
+            [
+                id,
+                readingData.consumer_id,
+                readingData.consumer_number,
+                readingData.consumer_name,
+                readingData.meter_number,
+                Number(readingData.current_reading),
+                Number(readingData.previous_reading),
+                readingData.reading_date,
+                new Date().toISOString()
+            ]
+        );
+        console.log('✅ SQLite: Saved new offline reading:', id);
+        return { id, ...readingData, status: 'pending_create' };
+    } catch (error) {
+        console.error('❌ SQLite: Error saving offline reading:', error);
+        throw error;
+    }
+};
+
+/**
+ * Retrieve all offline readings from SQLite queue
+ */
+export const getOfflineQueue = async () => {
+    try {
+        const result = await query(`SELECT * FROM meter_readings ORDER BY saved_at DESC`);
+        return result.rows;
+    } catch (error) {
+        console.error('Error getting offline queue from SQLite:', error);
+        return [];
+    }
+};
+
+/**
+ * Get count of pending (unsynced) readings in SQLite
  */
 export const getPendingCount = async () => {
-    const queue = await getOfflineQueue();
-    // Count both fresh 'pending' and server-rejected 'failed' readings
-    return queue.filter((r) => r.status === 'pending' || r.status === 'failed').length;
+    try {
+        const result = await query(
+            `SELECT COUNT(*) as count FROM meter_readings WHERE status = 'pending_create' OR status = 'pending_update'`
+        );
+        return result.rows[0]?.count || 0;
+    } catch (err) {
+        return 0;
+    }
 };
 
 /**
- * Clear all readings from the queue (manual reset)
+ * Clear SQLite offline queue (manual reset)
  */
 export const clearOfflineQueue = async () => {
     try {
-        await AsyncStorage.removeItem(OFFLINE_QUEUE_KEY);
-        console.log('🧹 [Storage] Offline queue cleared manually');
-    } catch (error) {
-        console.error('Error clearing offline queue:', error);
+        await query(`DELETE FROM meter_readings`);
+        console.log('🧹 SQLite: Queue cleared');
+    } catch (err) {
+        console.error(err);
     }
 };
 
 /**
- * Sync all pending readings with the server
- * @param {Function} submitFn - the API function to call for each reading
- * @returns {Object} { synced: number, failed: number }
+ * Mark a specific offline reading as synced after successful server submission.
+ * Prevents duplicates accumulating in the queue indefinitely.
  */
-export const markAsFailed = async (offlineId, errorMessage) => {
+export const markAsSynced = async (id) => {
     try {
-        const queue = await getOfflineQueue();
-        const updated = queue.map((r) =>
-            r.id === offlineId ? { ...r, status: 'failed', lastError: errorMessage } : r
-        );
-        await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(updated));
-    } catch (error) {
-        console.error('Error marking as failed:', error);
+        await query(`UPDATE meter_readings SET status = 'synced' WHERE id = ?`, [id]);
+        console.log('✅ SQLite: Marked reading as synced:', id);
+    } catch (err) {
+        console.error('❌ SQLite: Failed to mark reading as synced:', err);
+        throw err;
     }
 };
 
-export const syncOfflineReadings = async (submitFn) => {
-    const queue = await getOfflineQueue();
-    // Try to sync both 'pending' and previously 'failed' ones (in case they were fixed or transient)
-    const toSync = queue.filter((r) => r.status === 'pending' || r.status === 'failed');
+/**
+ * Pull and Download Latest Registry from Server (Pull Button Trigger)
+ */
+export const pullRegistryFromServer = async (getConsumersFn, getSettingsFn) => {
+    try {
+        const data = await getConsumersFn();
+        const consumers = data.consumers || [];
+        await cacheConsumersToDb(consumers);
 
+        const settings = await getSettingsFn();
+        if (settings) {
+            await cacheBillingSettings(settings);
+        }
+        return { success: true, count: consumers.length };
+    } catch (err) {
+        console.error('Pull registry failed:', err);
+        throw err;
+    }
+};
+
+export const pushOfflineQueueToServer = async (submitFn) => {
+    const readings = await getOfflineQueue();
+    const toPush = readings.filter(r => r.status === 'pending_create' || r.status === 'pending_update');
+    
     let synced = 0;
     let failed = 0;
     const errors = [];
 
-    for (const reading of toSync) {
+    for (const r of toPush) {
         try {
-            await submitFn(reading.consumer_id, reading.current_reading, reading.reading_date);
-            await markAsSynced(reading.id);
+            await submitFn(r.consumer_id, r.current_reading, r.reading_date);
+            await query(`UPDATE meter_readings SET status = 'synced' WHERE id = ?`, [r.id]);
+            // Only update local previous_reading AFTER server confirms success
+            await query(
+                `UPDATE consumers SET previous_reading = ? WHERE id = ?`,
+                [Number(r.current_reading), r.consumer_id]
+            );
             synced++;
         } catch (error) {
             const errorDetail = error.response?.data?.error || error.response?.data?.detail || error.message;
-            console.error('Failed to sync reading:', reading.id, errorDetail);
             
-            // Mark as failed locally so we know WHY it failed
-            await markAsFailed(reading.id, errorDetail);
-            
-            errors.push({ id: reading.id, consumer: reading.consumer_name, error: errorDetail });
-            failed++;
+            // BUG-FIX: Handle cases where the reading actually succeeded previously but network dropped
+            if (errorDetail && errorDetail.toLowerCase().includes('already exists')) {
+                await query(`UPDATE meter_readings SET status = 'synced', last_error = NULL WHERE id = ?`, [r.id]);
+                await query(
+                    `UPDATE consumers SET previous_reading = ? WHERE id = ?`,
+                    [Number(r.current_reading), r.consumer_id]
+                );
+                synced++;
+            } else {
+                await query(`UPDATE meter_readings SET status = 'conflict', last_error = ? WHERE id = ?`, [errorDetail, r.id]);
+                errors.push({ id: r.id, consumer: r.consumer_name, error: errorDetail });
+                failed++;
+            }
         }
     }
-
-    // Clean up synced readings older than 24 hours
-    const updatedQueue = await getOfflineQueue();
-    const cleaned = updatedQueue.filter((r) => {
-        if (r.status === 'synced') {
-            const savedTime = new Date(r.updatedAt || r.savedAt).getTime();
-            const now = Date.now();
-            return (now - savedTime) < 24 * 60 * 60 * 1000; // Keep synced for 24h, then drop
-        }
-        return true;
-    });
-    await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(cleaned));
 
     return { synced, failed, errors };
 };
 
 /**
- * Export specific readings to an Excel file and trigger sharing.
+ * Export offline readings to spreadsheet
  */
-export const exportReadingsToExcel = async (readings, title = 'Readings') => {
+export const exportQueueToExcel = async () => {
     try {
-        if (!readings || readings.length === 0) {
+        const queue = await getOfflineQueue();
+        if (queue.length === 0) {
             throw new Error('No readings to export.');
         }
 
@@ -183,76 +300,113 @@ export const exportReadingsToExcel = async (readings, title = 'Readings') => {
         const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
         const headerRow = [
-            'Consumer Number',   // A
-            'Consumer Name',     // B
-            'Meter Number',      // C
-            'Current Reading',   // D
-            'Previous Reading',  // E
-            'Units Consumed',    // F
-            'Reading Date',      // G
+            'Consumer Number',
+            'Consumer Name',
+            'Meter Number',
+            'Current Reading',
+            'Previous Reading',
+            'Units Consumed',
+            'Reading Date',
+            'Sync Status'
         ];
 
-        const dataRows = readings.map((r) => [
-            String(r.consumer_number || r.consumer_id || ''), 
+        const dataRows = queue.map((r) => [
+            String(r.consumer_number || ''),
             String(r.consumer_name || ''),
             String(r.meter_number || ''),
-            Number(r.current_reading || r.reading || 0),
-            Number(r.previous_reading || r.prev || 0),
-            Number(r.units_consumed || r.usage || 0),
-            r.reading_date || r.date || today,
+            Number(r.current_reading || 0),
+            Number(r.previous_reading || 0),
+            Number(r.current_reading - r.previous_reading),
+            r.reading_date || today,
+            r.status
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
-        ws['!cols'] = [
-            { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }
-        ];
-
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Readings');
 
         const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-        const fileName = `${title.replace(/\s+/g, '_')}_${today}.xlsx`;
-        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        const fileUri = `${FileSystem.documentDirectory}Offline_Readings_${today}.xlsx`;
 
         await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' });
 
         if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(fileUri, {
-                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                dialogTitle: `Share ${readings.length} Reading(s)`,
-                UTI: 'com.microsoft.excel.xlsx',
-            });
-            return { shared: true, count: readings.length };
+            await Sharing.shareAsync(fileUri);
+            return { success: true, count: queue.length };
         } else {
             throw new Error('Sharing is not available');
         }
-    } catch (error) {
-        console.error('Error exporting:', error);
-        throw error;
+    } catch (err) {
+        console.error(err);
+        throw err;
     }
 };
 
-export const exportQueueToExcel = async () => {
+/**
+ * Remove a specific reading from the offline queue
+ */
+export const removeFromOfflineQueue = async (itemId) => {
     try {
-        const queue = await getOfflineQueue();
-        // Export everything from the last 24 hours (pending, failed, OR synced)
-        const toExport = queue.filter((r) => {
-            if (r.status === 'pending' || r.status === 'failed') return true;
-            if (r.status === 'synced') {
-                const savedTime = new Date(r.updatedAt || r.savedAt).getTime();
-                const now = Date.now();
-                return (now - savedTime) < 24 * 60 * 60 * 1000;
-            }
-            return false;
-        });
+        await query(`DELETE FROM meter_readings WHERE id = ?`, [itemId]);
+        console.log('✅ SQLite: Removed offline reading:', itemId);
+    } catch (err) {
+        console.error('❌ SQLite: Failed to remove reading:', err);
+        throw err;
+    }
+};
 
-        if (toExport.length === 0) {
-            throw new Error('No recent readings to export.');
+/**
+ * Export specific readings array to spreadsheet
+ */
+export const exportReadingsToExcel = async (readings, title) => {
+    try {
+        if (!readings || readings.length === 0) {
+            throw new Error('No readings to export.');
         }
 
-        return await exportReadingsToExcel(toExport, 'Recent_Readings');
-    } catch (error) {
-        console.error('Error exporting to Excel:', error);
-        throw error;
+        const now = new Date();
+        const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        const safeTitle = title ? title.replace(/[^a-zA-Z0-9]/g, '_') : 'Readings';
+
+        const headerRow = [
+            'Consumer Number',
+            'Consumer Name',
+            'Meter Number',
+            'Previous Reading',
+            'Current Reading',
+            'Units',
+            'Date',
+            'Status'
+        ];
+
+        const dataRows = readings.map(r => [
+            String(r.consumer_number || ''),
+            String(r.consumer_name || ''),
+            String(r.meter_number || ''),
+            Number(r.previous_reading || 0),
+            Number(r.current_reading || 0),
+            Number(r.units_consumed || (Number(r.current_reading) - Number(r.previous_reading)) || 0),
+            String(r.reading_date || today),
+            String(r.is_offline_pending ? 'Offline' : (r.status || 'Synced'))
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Readings');
+
+        const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+        const fileUri = `${FileSystem.documentDirectory}${safeTitle}_${today}.xlsx`;
+
+        await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' });
+
+        if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(fileUri);
+            return { success: true, count: readings.length };
+        } else {
+            throw new Error('Sharing is not available');
+        }
+    } catch (err) {
+        console.error(err);
+        throw err;
     }
 };

@@ -29,58 +29,70 @@ export default function SearchScreen({ navigation }) {
     const [searched, setSearched] = useState(false);
     const [loadingAll, setLoadingAll] = useState(true);
 
-    // Auto-refresh when screen comes into focus (e.g. after adding a consumer)
+    const [searchTimeout, setSearchTimeout] = useState(null);
+
+    // Auto-refresh when screen comes into focus
     useFocusEffect(
         useCallback(() => {
-            loadAllConsumers();
+            let isActive = true;
+            const fetchConsumers = async () => {
+                try {
+                    const { searchConsumersOffline } = require('../services/offlineStorage');
+                    const offlineRows = await searchConsumersOffline('');
+                    if (isActive && offlineRows && offlineRows.length > 0) {
+                        setAllConsumers(offlineRows);
+                    }
+                    const data = await getConsumersAPI();
+                    if (isActive) {
+                        const consumers = data.consumers || [];
+                        setAllConsumers(consumers);
+                        const { cacheConsumersToDb } = require('../services/offlineStorage');
+                        await cacheConsumersToDb(consumers);
+                    }
+                } catch (err) {
+                    console.warn('Network fetch failed, using SQLite cache:', err.message);
+                } finally {
+                    if (isActive) setLoadingAll(false);
+                }
+            };
+            fetchConsumers();
+            return () => { isActive = false; };
         }, [])
     );
 
-    const loadAllConsumers = async () => {
-        try {
-            // 1. Try to load from cache first for immediate UI
-            const cached = await AsyncStorage.getItem('cached_consumers');
-            if (cached) {
-                setAllConsumers(JSON.parse(cached));
-            }
-
-            // 2. Fetch fresh data from API
-            const data = await getConsumersAPI();
-            const consumers = data.consumers || [];
-            setAllConsumers(consumers);
-            
-            // 3. Update cache
-            await AsyncStorage.setItem('cached_consumers', JSON.stringify(consumers));
-        } catch (err) {
-            console.warn('Network fetch failed, using cache:', err.message);
-            // Fallback is already handled by loading the cache first
-        } finally {
-            setLoadingAll(false);
+    const performSearch = async (searchQuery) => {
+        if (!searchQuery.trim()) {
+            setSearched(false);
+            setResults([]);
+            return;
         }
-    };
-
-    const handleSearch = async () => {
-        if (!query.trim()) return;
-        Keyboard.dismiss();
         setLoading(true);
         setSearched(true);
-
         try {
-            const data = await searchConsumerAPI(query.trim());
+            const data = await searchConsumerAPI(searchQuery.trim());
             setResults(data.consumers || []);
         } catch (err) {
-            console.warn('Search failed:', err.message);
-            // Try local filter as fallback
-            const filtered = allConsumers.filter(
-                (c) =>
-                    c.meter_number?.toLowerCase().includes(query.toLowerCase()) ||
-                    c.name?.toLowerCase().includes(query.toLowerCase()) ||
-                    c.consumer_number?.toLowerCase().includes(query.toLowerCase())
-            );
+            console.warn('Search failed, performing SQLite indexed search:', err.message);
+            const { searchConsumersOffline } = require('../services/offlineStorage');
+            const filtered = await searchConsumersOffline(searchQuery);
             setResults(filtered);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSearch = () => {
+        Keyboard.dismiss();
+        if (searchTimeout) clearTimeout(searchTimeout);
+        performSearch(query);
+    };
+
+    const handleTextChange = (text) => {
+        setQuery(text);
+        if (searchTimeout) clearTimeout(searchTimeout);
+        setSearchTimeout(setTimeout(() => {
+            performSearch(text);
+        }, 500));
     };
 
     const handleSelectConsumer = async (consumer) => {
@@ -159,7 +171,7 @@ export default function SearchScreen({ navigation }) {
                     <TextInput
                         style={styles.searchInput}
                         value={query}
-                        onChangeText={setQuery}
+                        onChangeText={handleTextChange}
                         placeholder="Search by Meter#, Name, or User ID"
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="none"
@@ -225,14 +237,6 @@ export default function SearchScreen({ navigation }) {
                 </>
             )}
 
-            {/* Floating Action Button - Add Consumer */}
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={() => navigation.navigate('AddConsumer')}
-                activeOpacity={0.85}
-            >
-                <Ionicons name="add" size={28} color={colors.white} />
-            </TouchableOpacity>
         </View>
     );
 }

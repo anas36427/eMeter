@@ -1,0 +1,1210 @@
+ERROR 2026-05-19 10:21:28,044 log 89781 123145517715456 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 10:21:28,046 log 89781 123145517715456 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-19 10:30:47,164 log 89781 123145433767936 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 10:30:47,167 log 89781 123145433767936 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-19 10:40:02,645 log 89781 123145433767936 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 10:40:02,647 log 89781 123145433767936 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-19 10:52:55,563 log 90776 123145500307456 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 10:52:55,575 log 90776 123145500307456 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-19 11:19:31,394 log 91143 123145603379200 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 11:19:31,405 log 91143 123145603379200 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-19 11:20:05,350 log 91143 123145620168704 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 11:20:05,351 log 91143 123145620168704 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-19 11:23:41,948 log 91143 123145586589696 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-19 11:23:41,950 log 91143 123145586589696 "POST /api/bills/manual-generate/ HTTP/1.1" 500 76
+ERROR 2026-05-25 16:08:49,413 log 96180 4357924352 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:08:51,957 log 96180 4357924352 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:08:54,936 log 96180 4357924352 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:08:59,805 log 96180 4357924352 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:08:59,840 log 96180 4357924352 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:09:06,336 log 96180 4357924352 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:11:55,825 log 96317 4719547904 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:11:58,734 log 96317 4719547904 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:12:01,173 log 96317 4719547904 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:12:06,970 log 96317 4719547904 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:12:06,981 log 96317 4719547904 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 16:12:11,135 log 96317 4719547904 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:03:59,725 log 4710 4659398144 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:04:02,469 log 4710 4659398144 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:04:05,102 log 4710 4659398144 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:04:11,171 log 4710 4659398144 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:04:11,178 log 4710 4659398144 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:04:17,000 log 4710 4659398144 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:08:51,836 log 5384 4523746816 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:08:57,093 log 5384 4523746816 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:09:00,412 log 5384 4523746816 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:09:07,491 log 5384 4523746816 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:09:07,504 log 5384 4523746816 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 17:09:13,992 log 5384 4523746816 Internal Server Error: /api/bills/manual-generate/
+ERROR 2026-05-25 18:02:24,154 log 12646 123145614110720 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:02:24,173 log 12646 123145614110720 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:02:27,484 log 12646 123145614110720 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:02:27,491 log 12646 123145630900224 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:02:27,508 log 12646 123145614110720 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:02:27,510 log 12646 123145630900224 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:08:49,996 log 12646 123145546952704 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:08:49,997 log 12646 123145563742208 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:08:50,002 log 12646 123145580531712 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:08:50,010 log 12646 123145546952704 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:16:03,110 log 15189 123145364099072 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:16:03,111 log 15189 123145380888576 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:16:03,121 log 15189 123145364099072 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:16:03,123 log 15189 123145364099072 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-05-25 18:16:06,587 log 15189 123145364099072 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:16:06,612 log 15189 123145364099072 "POST /api/login/ HTTP/1.1" 500 24632
+ERROR 2026-05-25 18:16:07,594 log 15189 123145364099072 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:16:07,614 log 15189 123145364099072 "POST /api/login/ HTTP/1.1" 500 24632
+ERROR 2026-05-25 18:16:13,445 log 15189 123145364099072 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:16:13,457 log 15189 123145364099072 "POST /api/login/ HTTP/1.1" 500 24632
+ERROR 2026-05-25 18:18:53,641 log 15189 123145380888576 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:18:53,654 log 15189 123145380888576 "POST /api/login/ HTTP/1.1" 500 24632
+ERROR 2026-05-25 18:18:54,642 log 15189 123145380888576 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:18:54,650 log 15189 123145380888576 "POST /api/login/ HTTP/1.1" 500 24632
+ERROR 2026-05-25 18:19:08,378 log 15189 123145397678080 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:19:08,384 log 15189 123145397678080 "POST /api/login/ HTTP/1.1" 500 24561
+ERROR 2026-05-25 18:19:17,637 log 15189 123145380888576 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:19:17,643 log 15189 123145380888576 "POST /api/login/ HTTP/1.1" 500 24632
+ERROR 2026-05-25 18:19:31,194 log 15189 123145431257088 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:19:31,223 log 15189 123145431257088 "POST /api/login/ HTTP/1.1" 500 24873
+ERROR 2026-05-25 18:19:35,888 log 15189 123145431257088 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:19:35,922 log 15189 123145431257088 "POST /api/login/ HTTP/1.1" 500 24873
+ERROR 2026-05-25 18:19:38,581 log 15189 123145431257088 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: billing_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 131, in api_login
+    user = authenticate(request, username=username, password=password)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/__init__.py", line 114, in authenticate
+    user = backend.authenticate(request, **credentials)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/backends.py", line 65, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/contrib/auth/base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/sqlite3/base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: billing_user
+ERROR 2026-05-25 18:19:38,622 log 15189 123145431257088 "POST /api/login/ HTTP/1.1" 500 24873
+ERROR 2026-06-17 03:55:22,451 log 35777 123145521152000 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 03:55:22,464 log 35777 123145521152000 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 03:55:30,279 log 35777 123145521152000 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 03:55:30,288 log 35777 123145521152000 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 03:55:33,332 log 35777 123145521152000 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 03:55:33,338 log 35777 123145521152000 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:04:26,911 log 36870 123145358229504 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:04:26,915 log 36870 123145358229504 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:04:35,449 log 36870 123145391808512 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:04:35,453 log 36870 123145391808512 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:04:49,607 log 36870 123145391808512 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:04:49,610 log 36870 123145391808512 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:06:13,068 log 36870 123145358229504 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:06:13,072 log 36870 123145358229504 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:06:13,075 log 36870 123145358229504 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:06:13,147 log 36870 123145358229504 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-17 04:44:17,234 log 39409 123145426989056 Internal Server Error: /api/consumers/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column billing_consumer.billing_type does not exist
+LINE 1: ...er_number", "billing_consumer"."connection_type", "billing_c...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 807, in api_consumer_list
+    for c in consumers:
+             ^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/models/query.py", line 390, in __iter__
+    self._fetch_all()
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column billing_consumer.billing_type does not exist
+LINE 1: ...er_number", "billing_consumer"."connection_type", "billing_c...
+                                                             ^
+
+ERROR 2026-06-17 04:44:17,261 log 39409 123145426989056 "GET /api/consumers/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:17:36,509 log 39933 123145623785472 Internal Server Error: /api/bill/12/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:17:36,553 log 39933 123145623785472 "GET /api/bill/12/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:17:39,825 log 39933 123145623785472 Internal Server Error: /api/bill/12/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:17:39,836 log 39933 123145623785472 "GET /api/bill/12/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:17:48,970 log 39933 123145623785472 Internal Server Error: /api/bill/24/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:17:48,976 log 39933 123145623785472 "GET /api/bill/24/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:18:03,691 log 39933 123145623785472 Internal Server Error: /api/bill/24/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:18:03,735 log 39933 123145623785472 "GET /api/bill/24/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:20:11,943 log 39933 123145623785472 Internal Server Error: /api/bill/24/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:20:11,953 log 39933 123145623785472 "GET /api/bill/24/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:20:20,125 log 39933 123145623785472 Internal Server Error: /api/bill/24/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:20:20,136 log 39933 123145623785472 "GET /api/bill/24/ HTTP/1.1" 500 145
+ERROR 2026-06-17 05:20:30,750 log 39933 123145623785472 Internal Server Error: /api/bill/23/
+Traceback (most recent call last):
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/.pyenv/versions/3.12.6/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/electricity_system/authentication.py", line 72, in wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 1317, in api_bill_detail
+    'paid_date': bill.paid_date.strftime('%Y-%m-%d') if bill.paid_date else None,
+                                                        ^^^^^^^^^^^^^^
+AttributeError: 'Bill' object has no attribute 'paid_date'
+ERROR 2026-06-17 05:20:30,759 log 39933 123145623785472 "GET /api/bill/23/ HTTP/1.1" 500 145
+ERROR 2026-06-21 15:01:54,130 log 8854 123145612541952 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-21 15:01:54,148 log 8854 123145612541952 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-06-21 15:03:34,419 log 8854 123145612541952 Internal Server Error: /api/login/
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "authtoken_token_user_id_key"
+DETAIL:  Key (user_id)=(1) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/billing/views.py", line 155, in api_login
+    token = Token.objects.create(user=user)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 669, in create
+    obj.save(force_insert=True, using=self.db)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/rest_framework/authtoken/models.py", line 41, in save
+    return super().save(*args, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/base.py", line 874, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/base.py", line 966, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, insert_fields, returning_fields, raw
+    )
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/base.py", line 1220, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/query.py", line 1918, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1925, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/Users/anasahmad/Documents/eMeter.web/electricity_system/venv/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "authtoken_token_user_id_key"
+DETAIL:  Key (user_id)=(1) already exists.
+
+ERROR 2026-06-21 15:03:34,454 log 8854 123145612541952 "POST /api/login/ HTTP/1.1" 500 24448

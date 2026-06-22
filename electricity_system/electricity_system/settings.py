@@ -25,7 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-s(++$8^mg#8qqq%oua0yv#h+h3$7ftz1(i=mhi#md)k*d4b4y4')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ValueError("DJANGO_SECRET_KEY environment variable is not set in production!")
+    # Local dev fallback only (do not use in production)
+    SECRET_KEY = 'django-insecure-local-dev-key-change-me'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -36,7 +41,7 @@ else:
     ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '').split(',') if host.strip()]
     # '127.0.0.1',
     # 'localhost',
-    # '10.215.227.32',
+    # '10.173.34.32',
     # '10.86.158.33',
     # '10.86.112.32',
     # '10.91.159.32',
@@ -89,7 +94,7 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             BASE_DIR / 'templates',
-            BASE_DIR.parent / 'energy-hub-ui' / 'build',
+            BASE_DIR.parent / 'energy-hub-ui' / 'dist',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -114,8 +119,9 @@ import os
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
 if not DB_PASSWORD:
     if not DEBUG:
+        
         raise ValueError("DB_PASSWORD environment variable is not set in production!")
-    DB_PASSWORD = 'anas167'  # safe local development fallback
+    DB_PASSWORD = 'dev_password_change_me'  # safe local development fallback (configure your .env!)
 
 DATABASES = {
     'default': {
@@ -125,8 +131,22 @@ DATABASES = {
         'PASSWORD': DB_PASSWORD,
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 600 if os.environ.get('DB_ENGINE', 'django.db.backends.postgresql') == 'django.db.backends.postgresql' else 0,
     }
 }
+
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default']['OPTIONS'] = {
+        'connect_timeout': 5,
+    }
+
+# Swap to SQLite3 for testing to avoid PostgreSQL permission errors
+import sys
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
 
 
 
@@ -154,7 +174,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -188,76 +208,78 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        'electricity_system.authentication.CsrfExemptSessionAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
 }
 
 # Security settings
 if not DEBUG:
     # --- Production: Full HTTPS enforcement ---
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = False # Temporarily False for local HTTP testing
+    # NOTE: Cookies cannot be Secure over HTTP — set to False for local simulation only.
+    # In real production (with HTTPS), these MUST be True.
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 0  # Disabled locally to avoid browser caching HTTPS-only policy
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 else:
     # --- Development: No HTTPS, but still enable HttpOnly protections ---
     SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False  # Can't be True without HTTPS locally
-    CSRF_COOKIE_SECURE = False     # Same reason
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 # CORS settings - Explicit whitelist only; never allow all origins
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
+# Base always-allowed origins (localhost for web dev only)
+_BASE_CORS = [
     "http://localhost:5173",
-    "http://localhost:8082",
-    "http://localhost:8080",
     "http://localhost:3000",
-    # Current machine IP
-    "http://10.11.53.13:3000",
-    "http://10.11.53.13:8000",
-    "http://10.11.53.13:8081",
-    "http://10.11.53.13:8082",
-    # Previous / New IPs
-    "http://10.215.227.32:3000",
-    "http://10.215.227.32:8000",
-    "http://10.215.227.32:8081",
-    "http://10.215.227.32:8082",
-    "http://10.86.158.33:8000",
-    "http://10.86.158.33:8081",
+    "http://localhost:8080",
+    "http://localhost:8081",
+    "http://localhost:8082",
+    "http://localhost:8083",
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:8081",
+    "http://127.0.0.1:8082",
+    "http://127.0.0.1:8083",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    'http://localhost:8081',
-    'http://127.0.0.1:8081',
-    'http://localhost:8082',
-    'http://127.0.0.1:8082',
-    'http://localhost:8083',
-    'http://127.0.0.1:8083',
-    # Current machine IP
-    'http://10.11.53.13:3000',
-    'http://10.11.53.13:8000',
-    'http://10.11.53.13:8081',
-    'http://10.11.53.13:8082',
-    # Previous / New IPs (kept for reference)
-    'http://10.131.109.32:8083',
-    'http://10.86.112.32:8000',
-    'http://10.91.159.32:8000',
-    'http://10.86.158.33:8000',
-    'http://10.86.158.33:8081',
-    'http://10.215.227.32:3000',
-    'http://10.215.227.32:8000',
-    'http://10.215.227.32:8081',
-    'http://10.215.227.32:8082',
+import os
+# Runtime additions via env var (comma-separated), e.g. for ngrok or Cloudflare tunnel, or current LAN IP
+_EXTRA_CORS = [
+    o.strip()
+    for o in os.environ.get('CORS_ALLOWED_ORIGINS_EXTRA', '').split(',')
+    if o.strip()
 ]
+
+CORS_ALLOWED_ORIGINS = _BASE_CORS + _EXTRA_CORS
+CSRF_TRUSTED_ORIGINS = _BASE_CORS + _EXTRA_CORS
+
+# Allow dynamic Localtunnel domains (*.loca.lt) over the internet and any Internal IPs
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.loca\.lt$",
+    r"^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
+    r"^http://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
+    r"^http://172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$"
+]
+CSRF_TRUSTED_ORIGINS.append("https://*.loca.lt")
+
+# Dynamically allow the local network IP
+import socket
+try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    local_ip = s.getsockname()[0]
+    s.close()
+    CORS_ALLOWED_ORIGINS.extend([f"http://{local_ip}:3000", f"http://{local_ip}:5173"])
+    CSRF_TRUSTED_ORIGINS.extend([f"http://{local_ip}:3000", f"http://{local_ip}:5173"])
+except Exception:
+    pass
 
 # CSRF cookie: NOT HttpOnly so SPA JS can read and attach it to X-CSRFToken header.
 # This is the standard Django SPA pattern — do NOT set True.
@@ -277,3 +299,50 @@ TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 # For SMS use: '+1234567890'. For WhatsApp use: 'whatsapp:+14155238886'
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')
 TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
+
+# --- Logging System with Rotation ---
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'emeter.log',
+            'maxBytes': 1024 * 1024 * 10, # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'billing': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

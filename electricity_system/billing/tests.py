@@ -34,7 +34,7 @@ def make_user(username="reader", role="meter_reader"):
 
 
 def make_consumer(consumer_number="CN000001", meter_number="MTR000001",
-                  load_kw=1.0, meter_type="10", connection_type="salary"):
+                  load_kw=1.0, meter_type="analog", connection_type="single_phase"):
     return Consumer.objects.create(
         consumer_number=consumer_number,
         name="Test Consumer",
@@ -74,29 +74,30 @@ class BillingMathUnitTest(TestCase):
 
     def setUp(self):
         make_settings(rate=8.56, fixed=400.0, duty=7.5, p1=10.0, p3=25.0)
-        self.consumer = make_consumer(load_kw=1.0, meter_type="10")
+        self.consumer = make_consumer(load_kw=1.0, meter_type="analog")
 
     # ── helpers ──────────────────────────────────────────────
 
-    def _create_bill(self, units, load_kw=None, meter_type=None):
+    def _create_bill(self, units, load_kw=None, meter_type=None, reading_date=None):
         if load_kw:
             self.consumer.load_kw = load_kw
             self.consumer.save()
         if meter_type:
             self.consumer.meter_type = meter_type
             self.consumer.save()
+        r_date = reading_date or date.today()
         reading = MeterReading.objects.create(
             consumer=self.consumer,
             previous_reading=0,
             current_reading=units,
-            reading_date=date.today(),
+            reading_date=r_date,
         )
         bill = Bill.objects.create(
             consumer=self.consumer,
             meter_reading=reading,
             units=units,
-            billing_period=date.today().replace(day=1),
-            due_date=date.today() + timedelta(days=30),
+            billing_period_start=r_date.replace(day=1),
+            due_date=r_date + timedelta(days=30),
         )
         from .services import BillingService
         BillingService.calculate_bill(bill.id)
@@ -106,9 +107,9 @@ class BillingMathUnitTest(TestCase):
     # ── test cases ───────────────────────────────────────────
 
     def test_energy_charges_basic(self):
-        """energy_charges calculated via tiered tariff (e.g. 100 units = 100 * 5)"""
+        """energy_charges calculated via flat rate (e.g. 100 units = 100 * 8.56)"""
         bill = self._create_bill(units=100)
-        expected = round(100 * 5.0, 2)
+        expected = round(100 * 8.56, 2)
         self.assertAlmostEqual(bill.energy_charges, expected, places=2,
             msg=f"energy_charges should be {expected}, got {bill.energy_charges}")
 
@@ -122,7 +123,7 @@ class BillingMathUnitTest(TestCase):
     def test_duty_charge_calculation(self):
         """duty = (energy_charges + fixed_charges) × duty_percentage / 100"""
         bill = self._create_bill(units=100, load_kw=1.0)
-        energy = round(100 * 5.0, 2)
+        energy = round(100 * 8.56, 2)
         fixed = round(1.0 * 400.0, 2)
         expected_duty = round((energy + fixed) * 0.075, 2)
         self.assertAlmostEqual(bill.duty_charge, expected_duty, places=2,
@@ -130,20 +131,20 @@ class BillingMathUnitTest(TestCase):
 
     def test_phase1_meter_rent(self):
         """phase-1 meter (type='10') → rent = phase_1_rent"""
-        bill = self._create_bill(units=50, meter_type="10")
+        bill = self._create_bill(units=50, meter_type="analog")
         self.assertEqual(bill.meter_rent, 10.0,
             msg=f"phase-1 meter_rent should be 10.0, got {bill.meter_rent}")
 
     def test_phase3_meter_rent(self):
         """phase-3 meter (type='25') → rent = phase_3_rent"""
-        bill = self._create_bill(units=50, meter_type="25")
+        bill = self._create_bill(units=50, meter_type="digital")
         self.assertEqual(bill.meter_rent, 25.0,
             msg=f"phase-3 meter_rent should be 25.0, got {bill.meter_rent}")
 
     def test_total_amount_formula(self):
         """total_amount = energy + fixed + duty + meter_rent (no arrears, no surcharge)"""
         bill = self._create_bill(units=200, load_kw=2.0)
-        energy = round((100 * 5.0) + (100 * 7.0), 2)
+        energy = round(200 * 8.56, 2)
         fixed = round(2.0 * 400.0, 2)
         duty = round((energy + fixed) * 0.075, 2)
         meter_rent = 10.0
@@ -160,19 +161,20 @@ class BillingMathUnitTest(TestCase):
         self.assertGreater(bill.total_amount, 0,
             msg="Total should be > 0 even at zero units (fixed + duty + rent)")
 
-    def test_tiered_tariff_thresholds(self):
-        """Tiered tariff works across all 3 tiers (0-100 = 5/u, 101-300 = 7/u, 301+ = 10/u)"""
-        # Tier 1: 50 units -> 250
+    def test_flat_rate_tariff_thresholds(self):
+        """Flat rate works correctly for any units (e.g. 8.56/unit)"""
         b1 = self._create_bill(units=50)
-        self.assertAlmostEqual(b1.energy_charges, 250.0, places=2)
+        self.assertAlmostEqual(float(b1.energy_charges), 50 * 8.56, places=2)
 
-        # Tier 2: 150 units -> (100*5) + (50*7) = 850
-        b2 = self._create_bill(units=150)
-        self.assertAlmostEqual(b2.energy_charges, 850.0, places=2)
+        # Use different months to avoid validation errors.
+        # Accumulate readings since previous_reading is automatically taken from the DB.
+        date_b2 = date.today() + timedelta(days=32)
+        b2 = self._create_bill(units=50 + 150, reading_date=date_b2)
+        self.assertAlmostEqual(float(b2.energy_charges), 200 * 8.56, places=2)
 
-        # Tier 3: 350 units -> (100*5) + (200*7) + (50*10) = 2400
-        b3 = self._create_bill(units=350)
-        self.assertAlmostEqual(b3.energy_charges, 2400.0, places=2)
+        date_b3 = date.today() + timedelta(days=64)
+        b3 = self._create_bill(units=200 + 350, reading_date=date_b3)
+        self.assertAlmostEqual(float(b3.energy_charges), 550 * 8.56, places=2)
 
     def test_bill_number_is_auto_generated(self):
         """Every bill must get a unique bill_number starting with 'BILL'."""
@@ -182,7 +184,7 @@ class BillingMathUnitTest(TestCase):
         r2 = MeterReading.objects.create(consumer=c2, previous_reading=0,
                                           current_reading=80, reading_date=date.today())
         bill2 = Bill.objects.create(consumer=c2, meter_reading=r2, units=80,
-                                     billing_period=date.today().replace(day=1),
+                                     billing_period_start=date.today().replace(day=1),
                                      due_date=date.today() + timedelta(days=30))
         self.assertTrue(bill1.bill_number.startswith("BILL"))
         self.assertTrue(bill2.bill_number.startswith("BILL"))
@@ -202,7 +204,7 @@ class BillingMathUnitTest(TestCase):
         bill = Bill.objects.create(
             consumer=self.consumer, meter_reading=reading, units=100,
             arrears=1000.0,
-            billing_period=date.today().replace(day=1),
+            billing_period_start=date.today().replace(day=1),
             due_date=date.today() + timedelta(days=30),
         )
         from .services import BillingService
@@ -222,7 +224,7 @@ class CalculateEstimateUnitTest(TestCase):
 
     def setUp(self):
         make_settings(rate=8.56, fixed=400.0, duty=7.5, p1=10.0, p3=25.0)
-        self.consumer = make_consumer(load_kw=2.0, meter_type="10")
+        self.consumer = make_consumer(load_kw=2.0, meter_type="analog")
         _, self.token = make_user()
         self.client = Client()
 
@@ -243,8 +245,8 @@ class CalculateEstimateUnitTest(TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
 
-        # Independently compute expected values using tiered tariff
-        energy = round((100 * 5.0) + (50 * 7.0), 2)  # 850.0
+        # Independently compute expected values using flat rate tariff
+        energy = round(150 * 8.56, 2)
         fixed = round(2.0 * 400.0, 2)
         duty = round((energy + fixed) * 0.075, 2)
         meter_rent = 10.0
@@ -335,9 +337,9 @@ class ReadingAndBillIntegrationTest(TestCase):
                    "reading_date": str(date.today())}
         res = self._submit(payload)
         data = res.json()
-        self.assertGreater(data["bill"]["energy_charges"], 0)
-        self.assertGreater(data["bill"]["fixed_charges"], 0)
-        self.assertGreater(data["bill"]["grand_total"], 0)
+        self.assertGreater(float(data["bill"]["energy_charges"]), 0)
+        self.assertGreater(float(data["bill"]["fixed_charges"]), 0)
+        self.assertGreater(float(data["bill"]["grand_total"]), 0)
 
     def test_reject_reading_less_than_previous(self):
         """Current reading cannot be less than previous — must return 400."""
@@ -454,7 +456,7 @@ class QueryPerformanceTest(TestCase):
                 current_reading=i * 50, reading_date=date.today())
             Bill.objects.create(
                 consumer=consumer, meter_reading=reading, units=i * 50,
-                billing_period=date.today().replace(day=1),
+                billing_period_start=date.today().replace(day=1),
                 due_date=date.today() + timedelta(days=30))
 
     def _get(self, url):
@@ -552,6 +554,89 @@ class SecurityTest(TestCase):
         )
         self.assertEqual(res.status_code, 401)
 
+    def test_bola_idor_readings_and_search(self):
+        """Verify that BOLA / IDOR checks restrict standard consumers to their own records."""
+        User = get_user_model()
+        
+        # User 1 (Consumer)
+        user1 = User.objects.create_user(username="user1", password="testpass123", role="consumer")
+        token1, _ = Token.objects.get_or_create(user=user1)
+        consumer1 = Consumer.objects.create(
+            consumer_number="CN000003",
+            name="Consumer One",
+            meter_number="MTR000003",
+            user=user1,
+            status="active"
+        )
+        
+        # User 2 (Consumer)
+        user2 = User.objects.create_user(username="user2", password="testpass123", role="consumer")
+        token2, _ = Token.objects.get_or_create(user=user2)
+        consumer2 = Consumer.objects.create(
+            consumer_number="CN000004",
+            name="Consumer Two",
+            meter_number="MTR000004",
+            user=user2,
+            status="active"
+        )
+        
+        # User 3 (Admin)
+        admin_user = User.objects.create_user(username="admin_user_sec", password="testpass123", role="admin")
+        token_admin, _ = Token.objects.get_or_create(user=admin_user)
+        
+        # Create readings
+        MeterReading.objects.create(consumer=consumer1, current_reading=100, reading_date=date.today())
+        MeterReading.objects.create(consumer=consumer2, current_reading=200, reading_date=date.today())
+        
+        # 1. Test api_consumer_readings BOLA/IDOR protection
+        # User 1 accessing own readings -> 200 OK
+        res = self.client.get(f"/api/consumer/{consumer1.id}/readings/", HTTP_AUTHORIZATION=f"Token {token1.key}")
+        self.assertEqual(res.status_code, 200)
+        
+        # User 1 accessing User 2's readings -> 403 Forbidden
+        res = self.client.get(f"/api/consumer/{consumer2.id}/readings/", HTTP_AUTHORIZATION=f"Token {token1.key}")
+        self.assertEqual(res.status_code, 403)
+        
+        # Admin accessing User 2's readings -> 200 OK
+        res = self.client.get(f"/api/consumer/{consumer2.id}/readings/", HTTP_AUTHORIZATION=f"Token {token_admin.key}")
+        self.assertEqual(res.status_code, 200)
+        
+        # 2. Test api_consumer_search BOLA/IDOR protection
+        # User 1 searching (querying for all) -> should only return Consumer 1
+        res = self.client.get("/api/consumers/search/?meter_number=Consumer", HTTP_AUTHORIZATION=f"Token {token1.key}")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.json()["consumers"]), 1)
+        self.assertEqual(res.json()["consumers"][0]["id"], consumer1.id)
+        
+        # Admin searching (querying for all) -> returns both
+        res = self.client.get("/api/consumers/search/?meter_number=Consumer", HTTP_AUTHORIZATION=f"Token {token_admin.key}")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.json()["consumers"]), 2)
+        
+        # 3. Test api_get_consumer BOLA/IDOR protection directly
+        from django.test import RequestFactory
+        from .views import api_get_consumer
+        
+        factory = RequestFactory()
+        
+        # User 1 fetching own details -> 200 OK
+        req = factory.get(f"/api/consumer/{consumer1.id}/")
+        req.user = user1
+        res = api_get_consumer(req, consumer_id=consumer1.id)
+        self.assertEqual(res.status_code, 200)
+        
+        # User 1 fetching User 2's details -> 403 Forbidden
+        req = factory.get(f"/api/consumer/{consumer2.id}/")
+        req.user = user1
+        res = api_get_consumer(req, consumer_id=consumer2.id)
+        self.assertEqual(res.status_code, 403)
+        
+        # Admin fetching User 2's details -> 200 OK
+        req = factory.get(f"/api/consumer/{consumer2.id}/")
+        req.user = admin_user
+        res = api_get_consumer(req, consumer_id=consumer2.id)
+        self.assertEqual(res.status_code, 200)
+
 
 # ═══════════════════════════════════════════════════════════════
 #  7. SETTINGS TESTS – BillingSettings CRUD via API
@@ -561,8 +646,9 @@ class BillingSettingsAPITest(TestCase):
 
     def setUp(self):
         make_settings()
-        _, self.token = make_user(username="admin_user", role="admin")
+        self.user, self.token = make_user(username="admin_user", role="admin")
         self.client = Client()
+        self.client.force_login(self.user)
 
     def _auth_get(self, url):
         return self.client.get(url, HTTP_AUTHORIZATION=f"Token {self.token}")

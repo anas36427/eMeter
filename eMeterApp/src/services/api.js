@@ -3,37 +3,43 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ================================================
 // API Configuration
-// Change this to your Django server's IP address
-// For local dev: use your computer's local IP (not localhost)
-// e.g., 'http://192.168.1.100:8000'
 // ================================================
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-if (!BASE_URL) {
-    throw new Error(
-        'EXPO_PUBLIC_API_URL is not set. Create eMeterApp/.env with:\n' +
-        'EXPO_PUBLIC_API_URL=http://<YOUR_MACHINE_IP>:8000'
+// Fallback BASE_URL if none stored in AsyncStorage
+const FALLBACK_URL = process.env.EXPO_PUBLIC_API_URL || '';
+
+if (!FALLBACK_URL) {
+    console.warn(
+        '⚠️ WARNING: EXPO_PUBLIC_API_URL is not set. Online API endpoints will be inaccessible, ' +
+        'but you can still fully use offline SQLite features.'
     );
 }
 
 const api = axios.create({
-    baseURL: BASE_URL,
     timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
+        'Bypass-Tunnel-Reminder': 'true'
     },
-    withCredentials: true,
+    // BUG-03 FIX: removed withCredentials: true as it has no effect on React Native and complicates CORS
 });
 
-// Session/Token management
-let authToken = null;
-let csrfToken = null;
-let sessionId = null;
-
-// Attach auth tokens to every request
+// Attach dynamic baseURL and auth tokens to every request
 api.interceptors.request.use(async (config) => {
-    // Always fetch latest token from storage to avoid stale module variable state
+    // BUG-01/02 FIX: Dynamically resolve server URL at request time
+    const storedUrl = await AsyncStorage.getItem('serverUrl');
+    const baseUrl = storedUrl?.trim() || FALLBACK_URL;
+    
+    if (!baseUrl) {
+        return Promise.reject(new Error('NO_SERVER_CONFIGURED'));
+    }
+    
+    // Only set baseURL if the URL isn't already absolute
+    if (!config.url.startsWith('http')) {
+        config.baseURL = baseUrl;
+    }
+
+    // Always fetch latest token from storage to avoid stale module variable state (BUG-05 FIX)
     const currentToken = await AsyncStorage.getItem('authToken');
-    const currentCsrfToken = await AsyncStorage.getItem('csrfToken');
 
     if (currentToken) {
         config.headers['Authorization'] = `Token ${currentToken}`;
@@ -66,45 +72,22 @@ export const loginAPI = async (username, password) => {
     const response = await api.post('/api/login/', {
         username,
         password,
+        source: 'mobile',
     });
 
-    // Extract session cookies from response (handles both lower and Pascal case)
-    const setCookieHeader = response.headers['set-cookie'] || response.headers['Set-Cookie'];
-    if (setCookieHeader) {
-        console.log('DEBUG: set-cookie header found:', setCookieHeader);
-        const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader.split(',');
-        for (const cookie of cookies) {
-            if (cookie.includes('sessionid=')) {
-                const match = cookie.match(/sessionid=([^;]+)/);
-                if (match) {
-                    sessionId = match[1];
-                    console.log('DEBUG: Extracted sessionId from header:', sessionId);
-                    await AsyncStorage.setItem('sessionId', sessionId);
-                }
-            }
-            if (cookie.includes('csrftoken=')) {
-                const match = cookie.match(/csrftoken=([^;]+)/);
-                if (match) {
-                    csrfToken = match[1];
-                    console.log('DEBUG: Extracted csrfToken from header:', csrfToken);
-                    await AsyncStorage.setItem('csrfToken', csrfToken);
-                }
-            }
-        }
-    }
+    // BUG-04 FIX: Removed Set-Cookie parsing because React Native strips it anyway.
     
     // Token Fallback: Preferred for Mobile
     if (response.data.token) {
-        authToken = response.data.token;
+        const authToken = response.data.token;
         console.log('DEBUG: Found authToken in response body:', authToken);
         await AsyncStorage.setItem('authToken', authToken);
     }
     if (response.data.csrftoken) {
-        csrfToken = response.data.csrftoken;
+        const csrfToken = response.data.csrftoken;
         console.log('DEBUG: Found csrfToken in response body:', csrfToken);
         await AsyncStorage.setItem('csrfToken', csrfToken);
     }
-
 
     // Also check response data for tokens
     if (response.data.success) {
@@ -123,9 +106,6 @@ export const logoutAPI = async () => {
     try {
         await api.post('/api/logout/');
     } finally {
-        authToken = null;
-        sessionId = null;
-        csrfToken = null;
         await AsyncStorage.multiRemove(['authToken', 'sessionId', 'csrfToken', 'user']);
     }
 };
@@ -171,8 +151,8 @@ export const editReadingAPI = async (readingId, currentReading) => {
     return response.data;
 };
 
-export const getReadingsAPI = async () => {
-    const response = await api.get('/api/readings/');
+export const getReadingsAPI = async (params = {}) => {
+    const response = await api.get('/api/readings/', { params });
     return response.data;
 };
 
@@ -237,8 +217,11 @@ export const getBillDetailAPI = async (billId) => {
 // Bill PDF API
 // ========================
 
-export const getBillPdfUrl = (billId) => {
-    return `${BASE_URL}/api/bill/${billId}/pdf/`;   // BUG-32 FIX: added /api/ prefix
+export const getBillPdfUrl = async (billId) => {
+    // BUG-06 FIX: use dynamic URL
+    const storedUrl = await AsyncStorage.getItem('serverUrl');
+    const baseUrl = storedUrl?.trim() || FALLBACK_URL || '';
+    return `${baseUrl}/api/bill/${billId}/pdf/`;
 };
 
 // ========================
@@ -262,6 +245,18 @@ export const calculateEstimateAPI = async (consumerId, currentReading, previousR
     return response.data;
 };
 
+// ========================
+// Notifications API
+// ========================
 
-export { BASE_URL };
+export const getNotificationsAPI = async () => {
+    const response = await api.get('/api/notifications/');
+    return response.data;
+};
+
+export const markNotificationsReadAPI = async (notificationId = null) => {
+    const payload = notificationId ? { notification_id: notificationId } : {};
+    const response = await api.post('/api/notifications/mark-read/', payload);
+    return response.data;
+};
 export default api;

@@ -36,13 +36,16 @@ urlpatterns = [
     path('bill/<int:bill_id>/pdf/', views.api_get_bill_pdf, name='api_get_bill_pdf'),
     path('bills/<int:bill_id>/mark-paid/', views.api_mark_bill_paid, name='api_mark_bill_paid'),
     path('bills/<int:bill_id>/mark-unpaid/', views.api_mark_bill_unpaid, name='api_mark_bill_unpaid'),
-    path('bills/<int:bill_id>/finalize/', views.api_finalize_bill, name='api_finalize_bill'),
 
     path('bills/manual-generate/', views.api_manual_generate_bill, name='api_manual_generate_bill'),
     
     path('send-bill-sms/', views.api_send_bill_sms, name='api_send_bill_sms'),
-    path('calculate-bill/', views.api_calculate_bill, name='api_calculate_bill'),
 
     # Single Source of Truth: live estimate using DB BillingSettings (for mobile)
     path('calculate-estimate/', views.api_calculate_estimate, name='api_calculate_estimate'),
+
+    # Admin Notifications
+    path('notifications/', views.api_get_notifications, name='api_get_notifications'),
+    path('notifications/mark-read/', views.api_mark_notifications_read, name='api_mark_notifications_read'),
+    path('start-reading-cycle/', views.api_start_reading_cycle, name='api_start_reading_cycle'),
 ]

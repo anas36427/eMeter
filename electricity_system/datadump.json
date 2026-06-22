@@ -1,0 +1,84 @@
+[
+{
+    "model": "sessions.session",
+    "pk": "7kxdnxti258zvuexibxcp9enr15ah6ot",
+    "fields": {
+        "session_data": ".eJxVjDsOwjAQRO_iGln-bD6mpOcMlte7xgFkS3FSIe4OllJAM8W8N_MSPuxb9nvj1S8kzkKL02-HIT64dED3UG5Vxlq2dUHZFXnQJq-V-Hk53L-DHFrua9Ij28FgdBw0JmC0ykUFqCYDkzJ2doMFDUgJk5ndNxRqIE3WQhrF-wPogje6:1wXDeT:vvIyoNh9zCix0I5olQ7JzvW4kN3jGJ9SbZsgAtwB3EE",
+        "expire_date": "2026-06-10T15:47:05.648Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "9lgxslaxksfopss5ga9fspjry8doejpn",
+    "fields": {
+        "session_data": ".eJxVjDsOwjAQRO_iGln-bD6mpOcMlte7xgFkS3FSIe4OllJAM8W8N_MSPuxb9nvj1S8kzkKL02-HIT64dED3UG5Vxlq2dUHZFXnQJq-V-Hk53L-DHFrua9Ij28FgdBw0JmC0ykUFqCYDkzJ2doMFDUgJk5ndNxRqIE3WQhrF-wPogje6:1wXZGC:7-SauZzwtBam4HhkFQBWrkAwaCFFogBfdWXJyrDodOk",
+        "expire_date": "2026-06-11T14:51:28.891Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "wye41h8iod10qgkg4jhsb6wnxyvyfddi",
+    "fields": {
+        "session_data": ".eJxVjDsOwjAQRO_iGln-bD6mpOcMlte7xgFkS3FSIe4OllJAM8W8N_MSPuxb9nvj1S8kzkKL02-HIT64dED3UG5Vxlq2dUHZFXnQJq-V-Hk53L-DHFrua9Ij28FgdBw0JmC0ykUFqCYDkzJ2doMFDUgJk5ndNxRqIE3WQhrF-wPogje6:1wXDex:7lujatvYwiqhoI6asyOg2b32qWvj8L4C4F122sYAXWM",
+        "expire_date": "2026-06-10T15:47:35.187Z"
+    }
+},
+{
+    "model": "billing.user",
+    "fields": {
+        "password": "pbkdf2_sha256$1200000$bRVqNjqNRpXAmzku9khFjv$OSGIoPPtrWQN96jEgBFg0x07a6HpA5EzSYmDXi0+oNI=",
+        "last_login": "2026-06-11T06:51:28.879Z",
+        "is_superuser": true,
+        "username": "admin",
+        "first_name": "",
+        "last_name": "",
+        "email": "admin@amu.ac.in",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2026-06-10T07:16:56.821Z",
+        "role": "admin",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "billing.user",
+    "fields": {
+        "password": "pbkdf2_sha256$1200000$CNmX3mG5Tp91U0jQXIvRxC$JK2wgdnpC3uU3u4vDM4cjK1+o1yo2J8cMhmclPBsZMU=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "reader",
+        "first_name": "",
+        "last_name": "",
+        "email": "reader@amu.ac.in",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-06-10T07:16:58.274Z",
+        "role": "meter_reader",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "billing.billingsettings",
+    "pk": 1,
+    "fields": {
+        "rate_per_unit": 8.56,
+        "fixed_charge_per_kw": 400.0,
+        "phase_1_rent": 10.0,
+        "phase_3_rent": 25.0,
+        "duty_percentage": 7.5,
+        "updated_at": "2026-06-10T07:16:59.622Z"
+    }
+},
+{
+    "model": "authtoken.token",
+    "pk": "bd0cf8e3a94afd8218a4eb65ced87c987b952266",
+    "fields": {
+        "user": [
+            "admin"
+        ],
+        "created": "2026-06-11T06:51:28.888Z"
+    }
+}
+]

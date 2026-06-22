@@ -14,6 +14,7 @@ import { sendBillSmsAPI, getBillPdfUrl } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function BillPreviewScreen({ route, navigation }) {
@@ -62,8 +63,28 @@ export default function BillPreviewScreen({ route, navigation }) {
                 minute: '2-digit',
                 hour12: true
             });
-        } catch (e) {
-            return isoString;
+        } catch (err) {
+            return String(isoString);
+        }
+    };
+
+    const formatDate = (isoString) => {
+        if (!isoString) return "N/A";
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch (err) {
+            return "N/A";
+        }
+    };
+    
+    const formatTime = (isoString) => {
+        if (!isoString) return "N/A";
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        } catch (err) {
+            return "N/A";
         }
     };
 
@@ -168,7 +189,7 @@ export default function BillPreviewScreen({ route, navigation }) {
                     <Text style={styles.sectionTitle}>Charge Breakdown</Text>
                     <View style={styles.chargeTable}>
                         <ChargeRow
-                            label={`Energy (${bill.units || 0} kWh × ₹${bill.rate_per_unit || '8.56'})`}
+                            label={`Energy (${bill.units || 0} kWh × ₹${Number(bill.rate_per_unit || 0).toFixed(2)})`}
                             amount={`₹${Number(bill.energy_charges || 0).toFixed(2)}`}
                             colors={colors}
                         />
@@ -217,8 +238,8 @@ export default function BillPreviewScreen({ route, navigation }) {
                     <View style={styles.metaItem}>
                         <Ionicons name="time" size={16} color={colors.textMuted} />
                         <Text style={styles.metaLabel}>Generated On</Text>
-                        <Text style={styles.metaValue}>{bill?.created_at ? formatTimestamp(bill.created_at).split(',')[1]?.trim() : "N/A"}</Text>
-                        <Text style={styles.metaDate}>{bill?.created_at ? formatTimestamp(bill.created_at).split(',')[0]?.trim() : "N/A"}</Text>
+                        <Text style={styles.metaValue}>{formatTime(bill?.created_at)}</Text>
+                        <Text style={styles.metaDate}>{formatDate(bill?.created_at)}</Text>
                     </View>
                     <View style={styles.metaItem}>
                         <Ionicons name="alert-circle" size={16} color={colors.warning} />
@@ -357,7 +378,7 @@ export default function BillPreviewScreen({ route, navigation }) {
                                                 <th class="text-right">Amount</th>
                                             </tr>
                                             <tr>
-                                                <td>Energy Charges (${bill.units || 0} units × ₹${bill.rate_per_unit || '8.56'})</td>
+                                                <td>Energy Charges (${bill.units || 0} units × ₹${Number(bill.rate_per_unit || 0).toFixed(2)})</td>
                                                 <td class="text-right">${(bill.energy_charges || 0).toFixed(2)}</td>
                                             </tr>
                                             <tr>
@@ -411,7 +432,15 @@ export default function BillPreviewScreen({ route, navigation }) {
                                     base64: false,
                                 });
 
-                                await Sharing.shareAsync(uri, {
+                                // BUG-07 FIX: Move to document directory before sharing
+                                // iOS aggressively deletes temp files before share sheet opens
+                                const safeUri = `${FileSystem.documentDirectory}Bill_${bill.bill_number}.pdf`;
+                                await FileSystem.copyAsync({
+                                    from: uri,
+                                    to: safeUri
+                                });
+
+                                await Sharing.shareAsync(safeUri, {
                                     mimeType: 'application/pdf',
                                     dialogTitle: `Electricity Bill ${bill.bill_number}`,
                                     UTI: 'com.adobe.pdf',

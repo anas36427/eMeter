@@ -48,7 +48,7 @@ class AuditLogInline(admin.TabularInline):
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
     list_display  = ['bill_number', 'consumer', 'status', 'total_amount', 'is_locked', 'created_at']
-    list_filter   = ['status', 'is_locked', 'billing_period']
+    list_filter   = ['status', 'is_locked', 'billing_period_start']
     search_fields = ['bill_number', 'consumer__name', 'consumer__consumer_number']
     inlines       = [AuditLogInline]
 

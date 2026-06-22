@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { submitReadingAndBillAPI, calculateEstimateAPI, getBillDetailAPI } from '../services/api';  // BUG-29 FIX: added getBillDetailAPI
-import { saveOfflineReading, getOfflineQueue } from '../services/offlineStorage';
+import { saveOfflineReading, getOfflineQueue, markAsSynced } from '../services/offlineStorage';
 import { useTheme } from '../context/ThemeContext';
 
 export default function SubmitReadingScreen({ route, navigation }) {
@@ -76,10 +76,11 @@ export default function SubmitReadingScreen({ route, navigation }) {
                     setEstimate(result);
                 }
             } catch (err) {
-                // Network is down — silently clear estimate; offline path handles it
-                console.warn('Estimate fetch failed (offline?):', err.message);
+                console.warn('Estimate fetch failed online, falling back to local SQLite estimator:', err.message);
+                const { calculateOfflineEstimate } = require('../services/offlineStorage');
+                const offlineResult = await calculateOfflineEstimate(consumer.id, parsed, previousReading);
                 if (isMounted) {
-                    setEstimate(null);
+                    setEstimate(offlineResult);
                 }
             } finally {
                 if (isMounted) {
@@ -137,13 +138,12 @@ export default function SubmitReadingScreen({ route, navigation }) {
             );
 
             if (data.success) {
-                // Mark the local copy as already synced
-                const queue = await import('../services/offlineStorage').then(m => m.getOfflineQueue());
+                // Mark the local copy as already synced so it doesn't re-sync on next push
+                const queue = await getOfflineQueue();
                 const match = [...queue].reverse().find(
                     r => r.consumer_id === consumer.id && r.reading_date === today
                 );
                 if (match) {
-                    const { markAsSynced } = await import('../services/offlineStorage');
                     await markAsSynced(match.id);
                 }
 

@@ -13,4 +13,4 @@ else
     echo "Using system Python: $PYTHON"
 fi
 
-"$PYTHON" manage.py runserver 0.0.0.0:8001
+"$PYTHON" manage.py runserver 0.0.0.0:8000

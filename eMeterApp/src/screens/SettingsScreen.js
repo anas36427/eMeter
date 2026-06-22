@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { getSettingsAPI, updateSettingsAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 export default function SettingsScreen({ navigation }) {
     const { themeMode, toggleTheme, colors, isDark } = useTheme();
@@ -31,19 +33,59 @@ export default function SettingsScreen({ navigation }) {
         duty_percentage: '',
     });
 
+    // Server URL state
+    const [serverUrl, setServerUrl] = useState('');
+    const [serverUrlInput, setServerUrlInput] = useState('');
+    const [testingConnection, setTestingConnection] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState(null); // null | 'ok' | 'fail'
+
     useEffect(() => {
         fetchSettings();
+        loadServerUrl();
     }, []);
+
+    const loadServerUrl = async () => {
+        const saved = await AsyncStorage.getItem('serverUrl');
+        const fallback = process.env.EXPO_PUBLIC_API_URL || '';
+        const current = saved?.trim() || fallback;
+        setServerUrl(current);
+        setServerUrlInput(current);
+    };
+
+    const handleTestAndSaveUrl = async () => {
+        const url = serverUrlInput.trim().replace(/\/$/, ''); // strip trailing slash
+        if (!url) {
+            Alert.alert('Invalid URL', 'Please enter a valid server address.');
+            return;
+        }
+        setTestingConnection(true);
+        setConnectionStatus(null);
+        try {
+            await axios.get(`${url}/api/`, { timeout: 5000 });
+            await AsyncStorage.setItem('serverUrl', url);
+            setServerUrl(url);
+            setConnectionStatus('ok');
+            Alert.alert('Connected', `Server URL saved:\n${url}`);
+        } catch (err) {
+            setConnectionStatus('fail');
+            Alert.alert(
+                'Connection Failed',
+                `Could not reach:\n${url}\n\nCheck the IP address and make sure Django is running on port 8000.`
+            );
+        } finally {
+            setTestingConnection(false);
+        }
+    };
 
     const fetchSettings = async () => {
         try {
             const data = await getSettingsAPI();
             setSettings({
-                rate_per_unit: data.rate_per_unit.toString(),
-                fixed_charge_per_kw: data.fixed_charge_per_kw.toString(),
-                phase_1_rent: data.phase_1_rent.toString(),
-                phase_3_rent: data.phase_3_rent.toString(),
-                duty_percentage: data.duty_percentage.toString(),
+                rate_per_unit: String(data.rate_per_unit || ''),
+                fixed_charge_per_kw: String(data.fixed_charge_per_kw || ''),
+                phase_1_rent: String(data.phase_1_rent || ''),
+                phase_3_rent: String(data.phase_3_rent || ''),
+                duty_percentage: String(data.duty_percentage || ''),
             });
         } catch (error) {
             Alert.alert('Error', 'Failed to fetch settings from server.');
@@ -99,7 +141,63 @@ export default function SettingsScreen({ navigation }) {
             </View>
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-                {/* Theme Toggle Section */}
+
+                {/* ── Server Connection Section ───────────────────────── */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Server Connection</Text>
+
+                    <View style={styles.infoBox}>
+                        <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
+                        <Text style={styles.infoText}>
+                            Enter your Django backend URL. Use your LAN IP (e.g. http://192.168.1.10:8000) or internet domain (e.g. https://billing.amu.edu).
+                        </Text>
+                    </View>
+
+                    <Text style={styles.label}>Backend Server URL</Text>
+                    <View style={[styles.inputWrapper, { marginBottom: 8 }]}>
+                        <Ionicons name="server-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+                        <TextInput
+                            style={[styles.input, { flex: 1 }]}
+                            value={serverUrlInput}
+                            onChangeText={(v) => { setServerUrlInput(v); setConnectionStatus(null); }}
+                            placeholder="http://192.168.x.x:8000"
+                            placeholderTextColor={colors.textMuted}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="url"
+                        />
+                        {connectionStatus === 'ok' && (
+                            <Ionicons name="checkmark-circle" size={22} color="#22c55e" />
+                        )}
+                        {connectionStatus === 'fail' && (
+                            <Ionicons name="close-circle" size={22} color="#ef4444" />
+                        )}
+                    </View>
+
+                    {serverUrl ? (
+                        <Text style={[styles.label, { marginBottom: 12, color: colors.textMuted }]}>
+                            Active: {serverUrl}
+                        </Text>
+                    ) : null}
+
+                    <TouchableOpacity
+                        style={[styles.testButton, testingConnection && styles.disabledBtn]}
+                        onPress={handleTestAndSaveUrl}
+                        disabled={testingConnection}
+                        activeOpacity={0.8}
+                    >
+                        {testingConnection ? (
+                            <ActivityIndicator color={colors.white} size="small" />
+                        ) : (
+                            <>
+                                <Ionicons name="wifi-outline" size={20} color={colors.white} />
+                                <Text style={styles.saveButtonText}>Test & Save URL</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                {/* ── Theme Toggle Section ────────────────────────────── */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>App Appearance</Text>
                     <View style={styles.themeToggleCard}>
@@ -182,7 +280,7 @@ export default function SettingsScreen({ navigation }) {
 
                 {/* Taxes & Duty */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Taxes & Goverment Duty</Text>
+                    <Text style={styles.sectionTitle}>Taxes & Government Duty</Text>
 
                     <SettingInput
                         label="Electricity Duty (%)"
@@ -336,6 +434,21 @@ const createStyles = (colors) => StyleSheet.create({
         color: colors.textPrimary,
         fontSize: fontSize.md,
         fontWeight: '600',
+    },
+    testButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#0ea5e9',
+        height: 50,
+        borderRadius: borderRadius.md,
+        gap: spacing.sm,
+        shadowColor: '#0ea5e9',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 3,
+        marginBottom: spacing.sm,
     },
     saveButton: {
         flexDirection: 'row',

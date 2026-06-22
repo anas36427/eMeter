@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "64a76bd2-41eb-486f-803e-1363ac837beb"
+      }
+    },
+    "owner": "anas36427",
+    "slug": "emeterweb",
+    "android": {
+      "package": "com.anas36427.emeterweb"
+    }
+  }
+}

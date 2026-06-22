@@ -1,5 +1,5 @@
 // =============================================
-//  PowerGrid Admin Dashboard - script.js
+//  AMU eMeter Admin Dashboard - script.js
 // =============================================
 
 
@@ -208,7 +208,7 @@ function generateBill() {
       </div>
     </div>
     <div class="bill-footer">
-      PowerGrid Utility Services &nbsp;|&nbsp; support@powergrid.com &nbsp;|&nbsp; 1-800-PWR-GRID<br>
+      AMU eMeter Utility Services &nbsp;|&nbsp; support@AMU eMeter.com &nbsp;|&nbsp; 1-800-PWR-GRID<br>
       Please pay before the due date to avoid late payment charges.
     </div>
   </div>
@@ -263,7 +263,7 @@ function exportReport() {
 
     setTimeout(() => {
         const rows = [
-            ['Report: PowerGrid Admin Dashboard', '', '', '', ''],
+            ['Report: AMU eMeter Admin Dashboard', '', '', '', ''],
             [`Generated: ${new Date().toLocaleString()}`, '', '', '', ''],
             ['', '', '', '', ''],
             ['--- SUMMARY ---', '', '', '', ''],
@@ -302,7 +302,7 @@ function exportReport() {
         const url  = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href     = url;
-        link.download = `powergrid-report-${new Date().toISOString().split('T')[0]}.csv`;
+        link.download = `AMU eMeter-report-${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,7 +10,10 @@ import {
     ActivityIndicator,
     StatusBar,
     Image,
+    Modal,
+    Alert
 } from 'react-native';
+import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { loginAPI } from '../services/api';
@@ -26,6 +29,51 @@ export default function LoginScreen({ onLogin }) {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Server Configuration State
+    const [modalVisible, setModalVisible] = useState(false);
+    const [serverUrl, setServerUrl] = useState('');
+    const [serverUrlInput, setServerUrlInput] = useState('');
+    const [testingConnection, setTestingConnection] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState(null); // null | 'ok' | 'fail'
+
+    useEffect(() => {
+        loadServerUrl();
+    }, []);
+
+    const loadServerUrl = async () => {
+        const saved = await AsyncStorage.getItem('serverUrl');
+        const fallback = process.env.EXPO_PUBLIC_API_URL || '';
+        const current = saved?.trim() || fallback;
+        setServerUrl(current);
+        setServerUrlInput(current);
+    };
+
+    const handleTestAndSaveUrl = async () => {
+        const url = serverUrlInput.trim().replace(/\/$/, '');
+        if (!url) {
+            Alert.alert('Invalid URL', 'Please enter a valid server address.');
+            return;
+        }
+        setTestingConnection(true);
+        setConnectionStatus(null);
+        try {
+            await axios.get(`${url}/api/`, { timeout: 5000 });
+            await AsyncStorage.setItem('serverUrl', url);
+            setServerUrl(url);
+            setConnectionStatus('ok');
+            Alert.alert('Connected', `Server URL saved:\n${url}`);
+            setTimeout(() => setModalVisible(false), 1000);
+        } catch (err) {
+            setConnectionStatus('fail');
+            Alert.alert(
+                'Connection Failed',
+                `Could not reach:\n${url}\n\nMake sure the IP is correct and the server is running.`
+            );
+        } finally {
+            setTestingConnection(false);
+        }
+    };
 
     const handleLogin = async () => {
         if (!username.trim() || !password.trim()) {
@@ -157,8 +205,78 @@ export default function LoginScreen({ onLogin }) {
                 </View>
 
                 {/* Footer */}
-                <Text style={styles.footer}>PowerGrid eMeter System v1.0</Text>
+                <Text style={styles.footer}>AMU eMeter System v1.0</Text>
             </KeyboardAvoidingView>
+
+            {/* Server Settings Icon */}
+            <TouchableOpacity 
+                style={styles.settingsIcon} 
+                onPress={() => {
+                    loadServerUrl();
+                    setModalVisible(true);
+                    setConnectionStatus(null);
+                }}
+            >
+                <Ionicons name="settings-outline" size={26} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Server Settings Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Server Configuration</Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                <Ionicons name="close" size={24} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <Text style={styles.modalDesc}>
+                            Update your backend IP address if the server has moved. (e.g. http://192.168.x.x:8000)
+                        </Text>
+
+                        <View style={[styles.inputWrapper, { marginBottom: 16, backgroundColor: colors.bgDark }]}>
+                            <Ionicons name="server-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                value={serverUrlInput}
+                                onChangeText={(v) => { setServerUrlInput(v); setConnectionStatus(null); }}
+                                placeholder="Enter server URL"
+                                placeholderTextColor={colors.textMuted}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                keyboardType="url"
+                            />
+                            {connectionStatus === 'ok' && (
+                                <Ionicons name="checkmark-circle" size={22} color="#22c55e" />
+                            )}
+                            {connectionStatus === 'fail' && (
+                                <Ionicons name="close-circle" size={22} color="#ef4444" />
+                            )}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.loginBtn, testingConnection && styles.loginBtnDisabled]}
+                            onPress={handleTestAndSaveUrl}
+                            disabled={testingConnection}
+                        >
+                            {testingConnection ? (
+                                <ActivityIndicator color={colors.white} size="small" />
+                            ) : (
+                                <>
+                                    <Ionicons name="wifi-outline" size={20} color={colors.white} />
+                                    <Text style={styles.loginBtnText}>Test & Save Connection</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -297,8 +415,57 @@ const createStyles = (colors) => StyleSheet.create({
     },
     footer: {
         textAlign: 'center',
-        color: colors.textMuted,
-        fontSize: fontSize.xs,
         marginTop: spacing.xl,
+        color: colors.textMuted,
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    settingsIcon: {
+        position: 'absolute',
+        top: 60,
+        right: spacing.lg,
+        padding: spacing.sm,
+        backgroundColor: colors.bgCard,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: colors.bgCard,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: spacing.xl,
+        paddingBottom: Platform.OS === 'ios' ? 40 : spacing.xl,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    modalTitle: {
+        fontSize: fontSize.lg,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    modalDesc: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        marginBottom: spacing.lg,
+        lineHeight: 20,
     },
 });
