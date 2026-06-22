@@ -115,10 +115,9 @@ import os
 
 
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
-if not DB_PASSWORD:
+if not DB_PASSWORD and not os.environ.get('DATABASE_URL'):
     if not DEBUG:
-        
-        raise ValueError("DB_PASSWORD environment variable is not set in production!")
+        raise ValueError("DB_PASSWORD environment variable is not set in production (and DATABASE_URL is also missing)!")
     DB_PASSWORD = 'dev_password_change_me'  # safe local development fallback (configure your .env!)
 
 DATABASES = {
