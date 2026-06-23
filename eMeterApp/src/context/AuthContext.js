@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
             console.warn('Logout API failed:', err.message);
         } finally {
             setUser(null);
-            await AsyncStorage.multiRemove(['authToken', 'user', 'csrfToken', 'sessionId']);
+            await AsyncStorage.multiRemove(['authToken', 'user']);
         }
     };
 

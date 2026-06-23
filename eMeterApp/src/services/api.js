@@ -75,21 +75,14 @@ export const loginAPI = async (username, password) => {
         source: 'mobile',
     });
 
-    // BUG-04 FIX: Removed Set-Cookie parsing because React Native strips it anyway.
-    
-    // Token Fallback: Preferred for Mobile
+    // Token Authentication: store the token returned by the server
+    // The mobile app uses Token Auth exclusively — no CSRF cookies needed.
     if (response.data.token) {
         const authToken = response.data.token;
-        console.log('DEBUG: Found authToken in response body:', authToken);
+        if (__DEV__) console.log('DEBUG: Auth token received and stored.');
         await AsyncStorage.setItem('authToken', authToken);
     }
-    if (response.data.csrftoken) {
-        const csrfToken = response.data.csrftoken;
-        console.log('DEBUG: Found csrfToken in response body:', csrfToken);
-        await AsyncStorage.setItem('csrfToken', csrfToken);
-    }
 
-    // Also check response data for tokens
     if (response.data.success) {
         await AsyncStorage.setItem('user', JSON.stringify(response.data));
     }
@@ -106,7 +99,8 @@ export const logoutAPI = async () => {
     try {
         await api.post('/api/logout/');
     } finally {
-        await AsyncStorage.multiRemove(['authToken', 'sessionId', 'csrfToken', 'user']);
+        // Clear only the auth token — no session/CSRF tokens used in mobile
+        await AsyncStorage.multiRemove(['authToken', 'user']);
     }
 };
 
