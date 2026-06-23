@@ -310,12 +310,12 @@ else:
 # CSRF cookie: NOT HttpOnly so SPA JS can read and attach it to X-CSRFToken header.
 # This is the standard Django SPA pattern — do NOT set True.
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 # CSRF_COOKIE_SECURE is already set in the DEBUG block above.
 
 SESSION_COOKIE_DOMAIN = None
 SESSION_COOKIE_AGE = 28800
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 # HttpOnly MUST be True — JS has no legitimate need to read the session cookie.
 SESSION_COOKIE_HTTPONLY = True
 
