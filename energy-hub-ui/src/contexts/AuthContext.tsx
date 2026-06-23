@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleForceLogout = () => {
       console.warn("Forced logout triggered by 401 Unauthorized.");
+      localStorage.removeItem("token");
       sessionStorage.removeItem("auth");
       setAuth({ isAuthenticated: false, username: "", role: null });
     };
@@ -38,6 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const res = await loginApi(username, password);
     const serverRole = res.data.role as Role;
+    const token = res.data.token;
+    if (token) {
+      localStorage.setItem("token", token);
+    }
     const state: AuthState = { 
       isAuthenticated: true, 
       username: res.data.username || username, 
@@ -54,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn("Backend logout failed or session already expired.", e);
     } finally {
+      localStorage.removeItem("token");
       sessionStorage.removeItem("auth");
       setAuth({ isAuthenticated: false, username: "", role: null });
     }
