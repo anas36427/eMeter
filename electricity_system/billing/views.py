@@ -236,7 +236,6 @@ def api_dashboard_stats(request):
 
 
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication])
 @require_role('admin')
 def api_reports_data(request):
     """API endpoint for reports charts data"""
@@ -1586,7 +1585,6 @@ def api_get_settings(request):
     return JsonResponse(data)
 
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication])
 @require_role('admin')
 def api_update_settings(request):
     """Update billing settings (admin only)"""
@@ -1962,7 +1960,6 @@ def api_get_bill_pdf(request, bill_id):
 
 
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication])
 @require_role('admin')
 def api_manual_generate_bill(request):
     """Manually generate a bill for a consumer with provided data (admin only)"""
@@ -2041,7 +2038,6 @@ def api_manual_generate_bill(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 @api_view(['POST'])
-@authentication_classes([SessionAuthentication])
 @require_role('admin')
 def api_import_readings(request):
     """Import meter readings from an Excel file (admin only).
