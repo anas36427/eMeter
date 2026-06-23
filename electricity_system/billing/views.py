@@ -2017,7 +2017,7 @@ def api_manual_generate_bill(request):
                 current_reading=current_reading,
                 reading_date=timezone.localtime().date(),
                 user=request.user,
-                billing_period_start=billing_period_start,
+                billing_period=billing_period_start,
                 due_date=due_date,
                 meter=meter,
                 created_source=created_source,
@@ -2263,7 +2263,7 @@ def api_import_readings(request):
                         current_reading=curr_val,
                         reading_date=reading_date,
                         user=request.user,
-                        billing_period_start=billing_month,
+                        billing_period=billing_month,
                         due_date=due_date,
                         remarks="Imported from Excel",
                         meter=meter
