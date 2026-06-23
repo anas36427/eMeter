@@ -30,6 +30,7 @@ interface Bill {
   consumer_name?: string;
   meter_number?: string;
   connection_type?: string;
+  billing_type?: string;
 }
 
 const formatPeriod = (periodStr: string) => {
@@ -167,6 +168,7 @@ const Billing = () => {
         due_date: b.due_date,
         billing_period: b.billing_period,
         connection_type: b.connection_type,
+        billing_type: b.billing_type,
         load_kw: b.load_kw,
         meter_type: b.meter_type,
         consumer_name: b.consumer_name,
@@ -217,6 +219,7 @@ const Billing = () => {
         due_date: b.due_date,
         billing_period: b.billing_period,
         connection_type: b.connection_type,
+        billing_type: b.billing_type,
         load_kw: b.load_kw,
         meter_type: b.meter_type,
         consumer_name: b.consumer_name,
@@ -486,7 +489,7 @@ const Billing = () => {
                     <td className="py-3 px-4 text-foreground">
                       <div className="flex flex-col gap-1 items-start">
                         <span>{b.consumer_name || "—"}</span>
-                        {b.connection_type === "salary" ? (
+                        {b.billing_type === "salary" ? (
                           <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-700 border-amber-300 font-bold tracking-wider px-1.5 py-0">
                             SALARY
                           </Badge>

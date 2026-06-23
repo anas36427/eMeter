@@ -180,8 +180,8 @@ const Consumers = () => {
       statusFilter === "all" || String(c.status || "active").toLowerCase() === statusFilter;
     const matchesAccountType =
       accountTypeFilter === "all" || 
-      (accountTypeFilter === "salary" && String(c.connection_type || "").toLowerCase() === "salary") ||
-      (accountTypeFilter === "non-salary" && String(c.connection_type || "").toLowerCase() !== "salary");
+      (accountTypeFilter === "salary" && String(c.billing_type || "").toLowerCase() === "salary") ||
+      (accountTypeFilter === "non-salary" && String(c.billing_type || "").toLowerCase() !== "salary");
     return matchesSearch && matchesStatus && matchesAccountType;
   });
 

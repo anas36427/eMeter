@@ -963,9 +963,9 @@ def api_bills_list(request):
                 bills = bills.filter(status=status_filter.lower())
         
         if account_type == 'salary':
-            bills = bills.filter(consumer__connection_type='salary')
+            bills = bills.filter(consumer__billing_type='salary')
         elif account_type == 'non-salary':
-            bills = bills.exclude(consumer__connection_type='salary')
+            bills = bills.filter(consumer__billing_type='non_salary')
             
         if start_date:
             try:
@@ -1022,6 +1022,7 @@ def api_bills_list(request):
                 'status': b.status,
                 'billing_period_start': b.billing_period_start.strftime('%B %Y') if b.billing_period_start else '',
                 'connection_type': b.consumer.connection_type if b.consumer else 'residential',
+                'billing_type': b.consumer.billing_type if b.consumer else 'non_salary',
                 'due_date': b.due_date.strftime('%Y-%m-%d') if b.due_date else '',
                 'created_at': b.created_at.isoformat() if b.created_at else None,
             })
