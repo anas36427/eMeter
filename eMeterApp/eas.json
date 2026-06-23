@@ -18,7 +18,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://amuelectricity.amu.ac.in"
+        "EXPO_PUBLIC_API_URL": "https://emeter-qg2f.onrender.com"
       }
     }
   }

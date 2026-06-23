@@ -1080,6 +1080,7 @@ def api_consumer_detail(request, consumer_id):
             'connection_type': consumer.connection_type,
             'department': consumer.department,
             'post': consumer.post,
+            'billing_type': consumer.billing_type,
             'previous_reading': prev_val,
         }
         return JsonResponse(data)
