@@ -301,8 +301,11 @@ if DEBUG:
     except Exception:
         pass
 else:
-    # Production: no private IP ranges — Vercel domain is added via CORS_ALLOWED_ORIGINS_EXTRA
-    CORS_ALLOWED_ORIGIN_REGEXES = []
+    # Production: allow Vercel preview environments and production domains
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://.*\.vercel\.app$",
+    ]
+    CSRF_TRUSTED_ORIGINS.append("https://*.vercel.app")
 
 # CSRF cookie: NOT HttpOnly so SPA JS can read and attach it to X-CSRFToken header.
 # This is the standard Django SPA pattern — do NOT set True.
