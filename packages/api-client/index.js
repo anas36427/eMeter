@@ -19,7 +19,11 @@ export const createApiClient = (config) => {
     if (typeof localStorage !== 'undefined') {
       const token = localStorage.getItem('token');
       if (token) {
-        req.headers.Authorization = `Token ${token}`;
+        if (req.headers && req.headers.set) {
+          req.headers.set('Authorization', `Token ${token}`);
+        } else {
+          req.headers.Authorization = `Token ${token}`;
+        }
       }
     }
     return req;
@@ -39,7 +43,7 @@ export const createApiClient = (config) => {
       return res;
     },
     error => {
-      if (config.onUnauthorized && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (config.onUnauthorized && error.response?.status === 401) {
         config.onUnauthorized();
       }
       return Promise.reject(error);
