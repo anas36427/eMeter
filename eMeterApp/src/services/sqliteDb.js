@@ -76,6 +76,16 @@ const runMigrations = async (db) => {
     const [{ user_version: currentVersion }] = await db.getAllAsync(`PRAGMA user_version`);
     console.log(`📦 SQLite: DB is at schema version ${currentVersion}`);
 
+    const latestVersion = MIGRATIONS.length > 0 ? MIGRATIONS[MIGRATIONS.length - 1].version : 0;
+
+    // If version is 0, it's a fresh install. The `CREATE TABLE` statements below
+    // already contain the latest schema. We just set the version to latest and skip migrations.
+    if (currentVersion === 0 && latestVersion > 0) {
+        console.log(`📦 SQLite: Fresh install detected. Bypassing historical migrations and setting version to ${latestVersion}.`);
+        await db.runAsync(`PRAGMA user_version = ${latestVersion}`);
+        return;
+    }
+
     const pending = MIGRATIONS.filter(m => m.version > currentVersion);
 
     if (pending.length === 0) {
