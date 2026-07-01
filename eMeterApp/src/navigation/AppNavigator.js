@@ -14,6 +14,7 @@ import SubmitReadingScreen from '../screens/SubmitReadingScreen';
 import BillPreviewScreen from '../screens/BillPreviewScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import AddConsumerScreen from '../screens/AddConsumerScreen';
+import OfflineBanner from '../components/OfflineBanner';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -91,7 +92,14 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-    return <MainTabs />;
+    const { isOfflineMode } = useAuth();
+
+    return (
+        <View style={{ flex: 1 }}>
+            {isOfflineMode && <OfflineBanner />}
+            <MainTabs />
+        </View>
+    );
 }
 
 // Simple Profile/Settings tab

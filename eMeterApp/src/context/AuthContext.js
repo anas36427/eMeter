@@ -1,13 +1,16 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import NetInfo from '@react-native-community/netinfo';
 import { logoutAPI, checkAuthAPI } from '../services/api';
+import { removeOfflineCredentials } from '../services/offlineAuth';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isOfflineMode, setIsOfflineMode] = useState(false);
 
     useEffect(() => {
         restoreSession();
@@ -30,6 +33,22 @@ export const AuthProvider = ({ children }) => {
             }
 
             // Token exists — validate with server
+            const netState = await NetInfo.fetch();
+            if (!netState.isConnected || netState.isInternetReachable === false) {
+                // Offline start
+                console.log('App started offline. Entering offline mode using cached user.');
+                const cachedUser = await AsyncStorage.getItem('user');
+                if (cachedUser) {
+                    setUser(JSON.parse(cachedUser));
+                    setIsOfflineMode(true);
+                } else {
+                    // No cached user to use offline
+                    await SecureStore.deleteItemAsync('authToken');
+                }
+                setIsLoading(false);
+                return;
+            }
+
             const serverUser = await checkAuthAPI();
             if (serverUser && serverUser.authenticated !== false) {
                 // Merge server data with locally cached user data
@@ -37,24 +56,41 @@ export const AuthProvider = ({ children }) => {
                 const localUser = cachedUser ? JSON.parse(cachedUser) : {};
                 const mergedUser = { ...localUser, ...serverUser, success: true };
                 setUser(mergedUser);
+                setIsOfflineMode(false);
                 await AsyncStorage.setItem('user', JSON.stringify(mergedUser));
             } else {
                 throw new Error('Server returned unauthenticated');
             }
         } catch (err) {
             console.warn('Session restore failed — clearing credentials:', err.message);
+            // Check if it was a network error instead of 401
+            if (err.message === 'Network Error' || !err.response) {
+                const cachedUser = await AsyncStorage.getItem('user');
+                if (cachedUser) {
+                    console.log('Falling back to offline mode due to network error.');
+                    setUser(JSON.parse(cachedUser));
+                    setIsOfflineMode(true);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
             // Token is stale or server unreachable — clear and show login
             await SecureStore.deleteItemAsync('authToken');
             await AsyncStorage.removeItem('user');
             setUser(null);
+            setIsOfflineMode(false);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const login = async (userData) => {
+    const login = async (userData, offline = false) => {
         setUser(userData);
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        setIsOfflineMode(offline);
+        if (!offline) {
+            await AsyncStorage.setItem('user', JSON.stringify(userData));
+        }
         // Token is already stored in SecureStore by loginAPI in api.js
     };
 
@@ -64,14 +100,18 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
             console.warn('Logout API failed:', err.message);
         } finally {
+            if (user?.username) {
+                await removeOfflineCredentials(user.username);
+            }
             setUser(null);
+            setIsOfflineMode(false);
             await SecureStore.deleteItemAsync('authToken');
             await AsyncStorage.removeItem('user');
         }
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ user, isLoading, isOfflineMode, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

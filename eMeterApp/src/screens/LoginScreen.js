@@ -16,9 +16,12 @@ import { spacing, borderRadius, fontSize } from '../theme/colors';
 import { loginAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { verifyOfflineCredentials, saveOfflineCredentials } from '../services/offlineAuth';
 
 export default function LoginScreen({ onLogin }) {
     const { colors, isDark } = useTheme();
+    const { isOnline, isChecking } = useNetworkStatus();
     const styles = createStyles(colors);
 
     const [username, setUsername] = useState('');
@@ -36,6 +39,22 @@ export default function LoginScreen({ onLogin }) {
         setLoading(true);
         setError('');
 
+        if (!isOnline) {
+            try {
+                const result = await verifyOfflineCredentials(username.trim(), password);
+                if (result && result.success) {
+                    onLogin(result, true); // offline mode = true
+                } else {
+                    setError('Incorrect password or user not found on this device. You must log in online at least once.');
+                }
+            } catch (err) {
+                setError('Offline login error.');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
         try {
             const data = await loginAPI(username.trim(), password);
 
@@ -45,8 +64,12 @@ export default function LoginScreen({ onLogin }) {
                     setLoading(false);
                     return;
                 }
+                
+                // Save offline credentials (only for meter_readers as per policy)
+                await saveOfflineCredentials(username.trim(), password, data.role);
+                
                 await AsyncStorage.setItem('user', JSON.stringify(data));
-                onLogin(data);
+                onLogin(data, false);
             } else {
                 setError(data.detail || 'Login failed');
             }
@@ -81,6 +104,15 @@ export default function LoginScreen({ onLogin }) {
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Sign In</Text>
                     <Text style={styles.cardSubtitle}>Enter your credentials to continue</Text>
+
+                    {!isChecking && !isOnline && (
+                        <View style={{ backgroundColor: '#FEF3C7', padding: 12, borderRadius: 8, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="flash-off" size={20} color="#B45309" style={{ marginRight: 8 }} />
+                            <Text style={{ color: '#B45309', fontSize: 13, flex: 1, fontWeight: '500' }}>
+                                No internet connection. You can log in using cached credentials.
+                            </Text>
+                        </View>
+                    )}
 
                     {error ? (
                         <View style={styles.errorBox}>
@@ -147,11 +179,9 @@ export default function LoginScreen({ onLogin }) {
                         ) : (
                             <>
                                 <Ionicons name="log-in-outline" size={22} color={colors.white} />
-                                <Text style={styles.loginBtnText}>Sign In</Text>
+                                <Text style={styles.loginBtnText}>{!isChecking && !isOnline ? 'Sign In (Offline)' : 'Sign In'}</Text>
                             </>
                         )}
-                    </TouchableOpacity>
-
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
