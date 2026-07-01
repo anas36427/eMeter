@@ -7,6 +7,13 @@
         @page { 
             size: A4; 
             margin: 1.0cm; 
+            @frame watermark_frame {
+                y: 30%;
+                x: 25%;
+                width: 350px;
+                height: 350px;
+                z-index: -1;
+            }
         }
         body { 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
@@ -16,15 +23,6 @@
             padding: 0; 
             line-height: 1.35;
             font-size: 12px;
-        }
-        .watermark {
-            position: absolute;
-            top: 30%;
-            left: 25%;
-            width: 350px;
-            height: 350px;
-            z-index: -100;
-            opacity: 0.05;
         }
         .header-table {
             width: 100%;
@@ -169,8 +167,8 @@
 </head>
 <body>
     <!-- Watermark Logo -->
-    <div class="watermark">
-        <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo watermark"/>
+    <div id="watermark_frame">
+        <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo watermark" style="opacity: 0.1;" />
     </div>
 
     <!-- Header Section -->

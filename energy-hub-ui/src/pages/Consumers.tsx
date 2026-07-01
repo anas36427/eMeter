@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Filter } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Filter, KeyRound, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +12,17 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { getConsumers, createConsumer, updateConsumer, getConsumer, deleteConsumer } from "@/lib/api";
+import { getConsumers, createConsumer, updateConsumer, getConsumer, deleteConsumer, resetConsumerPassword } from "@/lib/api";
 import type { Consumer } from "@emeter/models";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useSearch } from "@/contexts/SearchContext";
+
+// CSRF cookie helper for portal admin API calls
+const getCookie = (name: string): string => {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : '';
+};
 
 interface Consumer {
   id: number;
@@ -169,6 +175,16 @@ const Consumers = () => {
       fetchConsumers();
     } catch (err: any) {
       toast({ title: "Deletion failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleResetPortalPassword = async (consumer: Consumer) => {
+    if (!confirm(`Reset portal password for "${consumer.name}"?\n\nNew password will be: ${consumer.consumer_number}`)) return;
+    try {
+      const data = await resetConsumerPassword(consumer.id);
+      toast({ title: 'Password reset', description: data.message || `Password for ${consumer.name} has been reset.` });
+    } catch (err: any) {
+      toast({ title: 'Reset failed', description: err.message || 'An error occurred while resetting the password.', variant: 'destructive' });
     }
   };
 
@@ -530,6 +546,10 @@ const Consumers = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2" onClick={() => handleEditClick(c)}>
                           <Edit className="w-4 h-4" /> Edit
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem className="gap-2 text-amber-500" onClick={() => handleResetPortalPassword(c)}>
+                          <KeyRound className="w-4 h-4" /> Reset Portal Password
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDeleteClick(c.id)}>
                           <Trash2 className="w-4 h-4" /> Delete

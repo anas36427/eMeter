@@ -142,12 +142,15 @@ export function generateBillHtml(bill: BillHtmlData): string {
             position: absolute; 
             top: 50%; 
             left: 50%; 
-            transform: translate(-50%, -50%) rotate(-45deg); 
-            font-size: 120px; 
-            color: rgba(0,0,0,0.02); 
+            transform: translate(-50%, -50%); 
+            width: 350px;
+            height: 350px;
             z-index: -1; 
-            white-space: nowrap;
-            font-weight: 700;
+            opacity: 0.05;
+        }
+        .watermark img {
+            width: 100%;
+            height: auto;
         }
         .arrear-row { background: #fff5f5; }
         .arrear-text { color: #c53030; }
@@ -159,7 +162,9 @@ export function generateBillHtml(bill: BillHtmlData): string {
 </head>
 <body>
     <div class="page-container">
-        <div class="watermark">AMU EMETER</div>
+        <div class="watermark">
+            <img src="/logo.png" alt="AMU Logo Watermark" />
+        </div>
 
         <div class="header">
             <h1>eMeter AMU</h1>

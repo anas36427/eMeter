@@ -65,6 +65,7 @@ export const getConsumerReadings = (api, id, params) => api.get(`/api/consumer/$
 export const createConsumer = (api, data) => api.post('/api/consumers/', data);
 export const updateConsumer = (api, id, data) => api.patch(`/api/consumer/${id}/`, data);
 export const deleteConsumer = (api, id) => api.delete(`/api/consumer/${id}/`);
+export const resetConsumerPassword = (api, id) => api.post(`/api/admin/consumer/${id}/reset-password/`);
 export const searchConsumer = (api, m) => api.get('/api/consumers/search/', { params: { q: m } });
 
 export const getReadings = (api) => api.get('/api/readings/');

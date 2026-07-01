@@ -4,18 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Settings as SettingsIcon } from "lucide-react";
-import { getCurrentUser, updateProfile, getBillingSettings, updateBillingSettings } from "@/lib/api";
+import { api, getBillingSettings, updateBillingSettings } from "@/lib/api";
 
 const Settings = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
-  // Profile State
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("+91 98765 43210"); // Local-only field
-  const [role, setRole] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
 
   // Notifications State (persisted via localStorage)
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
@@ -34,15 +28,7 @@ const Settings = () => {
     const loadSettingsData = async () => {
       try {
         setLoading(true);
-        // Load user info
-        const userRes = await getCurrentUser();
-        const userData = userRes.data || userRes;
-        if (userData && userData.authenticated) {
-          const fullName = `${userData.first_name || ""} ${userData.last_name || ""}`.trim() || userData.username;
-          setName(fullName);
-          setEmail(userData.email || "");
-          setRole(userData.role === "admin" ? "Administrator" : "Meter Reader");
-        }
+
 
         // Load billing configurations
         const billingRes = await getBillingSettings();
@@ -69,24 +55,6 @@ const Settings = () => {
     loadSettingsData();
   }, [toast]);
 
-  const handleSaveProfile = async () => {
-    try {
-      setSavingProfile(true);
-      await updateProfile({ name, email });
-      toast({
-        title: "Profile saved successfully",
-        description: "Your settings profile has been updated.",
-      });
-    } catch (err: any) {
-      toast({
-        title: "Failed to save profile",
-        description: err.message || "An error occurred while saving profile changes.",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingProfile(false);
-    }
-  };
 
   const handleNotificationChange = (key: string, value: boolean) => {
     localStorage.setItem(key, String(value));
@@ -134,36 +102,6 @@ const Settings = () => {
 
   return (
     <div className="max-w-2xl space-y-8 animate-fade-in pb-12">
-      {/* Profile */}
-      <div className="stat-card space-y-6">
-        <div className="flex items-center gap-2">
-          <SettingsIcon className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-semibold">Profile Settings</h3>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Full Name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Admin User" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Email Address</label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="admin@amu.ac.in" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Phone Number</label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 xxxxx xxxxx" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">System Role</label>
-            <Input value={role} readOnly className="bg-muted/50 font-medium" />
-          </div>
-        </div>
-        <Button onClick={handleSaveProfile} disabled={savingProfile} className="gap-2">
-          {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save Changes
-        </Button>
-      </div>
-
       {/* Notifications */}
       <div className="stat-card space-y-4">
         <h3 className="text-base font-semibold">Notifications</h3>
@@ -209,6 +147,35 @@ const Settings = () => {
         <Button onClick={handleUpdateBilling} disabled={updatingBilling} className="gap-2 bg-secondary hover:bg-secondary/90 text-white">
           {updatingBilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Update Configuration
+        </Button>
+      </div>
+
+      {/* Mobile App Sync */}
+      <div className="stat-card space-y-4">
+        <h3 className="text-base font-semibold text-blue-400">Mobile App Sync</h3>
+        <p className="text-sm text-muted-foreground">
+          Generate an offline setup file for the mobile app. This file contains the complete consumer registry and billing settings.
+          Send this file to your meter readers so they can import their consumer data offline.
+        </p>
+        <Button 
+          onClick={async () => {
+            try {
+              const res = await api.get('/api/admin/export-mobile-sync/', { responseType: 'blob' });
+              const url = window.URL.createObjectURL(new Blob([res.data]));
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', 'eMeter_Offline_Sync.json');
+              document.body.appendChild(link);
+              link.click();
+              link.parentNode?.removeChild(link);
+            } catch (err: any) {
+              toast({ title: 'Export Failed', description: err.message, variant: 'destructive' });
+            }
+          }} 
+          className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <Save className="w-4 h-4" />
+          Export Sync File
         </Button>
       </div>
     </div>

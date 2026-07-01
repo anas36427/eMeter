@@ -166,7 +166,7 @@ def api_login(request):
 @api_view(['GET'])
 def api_me(request):
     if not request.user.is_authenticated:
-        return JsonResponse({'authenticated': False}, status=200)
+        return JsonResponse({'detail': 'Not authenticated.'}, status=401)
     return JsonResponse({
         'authenticated': True,
         'username': request.user.username,
@@ -898,6 +898,18 @@ def api_consumer_list(request):
                 updated_at=timezone.now(),
             )
 
+            # Auto-generate portal account for all new consumers
+            try:
+                user = User.objects.create_user(
+                    username=consumer.consumer_number,
+                    password=consumer.consumer_number,
+                    role='consumer'
+                )
+                consumer.user = user
+                consumer.save()
+            except Exception as e:
+                print(f"Failed to auto-create portal account for {consumer.consumer_number}: {e}")
+
             # Create initial meter reading if provided
             initial_reading = data.get('initial_reading')
             if initial_reading is not None:
@@ -1351,7 +1363,7 @@ def api_mark_bill_paid(request, bill_id):
             return JsonResponse({'success': False, 'error': 'Cannot pay a draft bill. Finalize it first.'}, status=400)
         
         bill.status = 'paid'
-        bill.paid_date = timezone.now().date()
+        bill.payment_date = timezone.now().date()
         bill.save()
         
         AuditLog.objects.create(
@@ -1375,8 +1387,8 @@ def api_mark_bill_unpaid(request, bill_id):
         
     try:
         bill = get_object_or_404(Bill.objects.select_for_update(), id=bill_id)
-        bill.status = 'finalized'
-        bill.paid_date = None
+        bill.status = 'issued'
+        bill.payment_date = None
         bill.save()
         return JsonResponse({'success': True, 'message': 'Bill marked as unpaid'})
     except Exception as e:
@@ -2464,3 +2476,307 @@ def api_start_reading_cycle(request):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+# ─────────────────────────────────────────────────────────────
+# CONSUMER PORTAL API
+# New endpoints — zero impact on existing admin/mobile APIs
+# ─────────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@require_role('consumer')
+def consumer_portal_me(request):
+    """Return the logged-in consumer's profile details."""
+    try:
+        consumer = request.user.consumer_profile
+    except Exception:
+        return JsonResponse({'detail': 'No consumer profile linked to this account.'}, status=404)
+
+    return JsonResponse({
+        'consumer_number': consumer.consumer_number,
+        'name': consumer.name,
+        'meter_number': consumer.meter_number or '',
+        'email': consumer.email or '',
+        'phone': consumer.phone or '',
+        'address': consumer.address or '',
+        'connection_type': consumer.connection_type,
+        'billing_type': consumer.billing_type,
+        'status': consumer.status,
+    })
+
+
+@api_view(['GET'])
+@require_role('consumer')
+def consumer_portal_readings(request):
+    """Return paginated meter readings for the logged-in consumer."""
+    try:
+        consumer = request.user.consumer_profile
+    except Exception:
+        return JsonResponse({'detail': 'No consumer profile linked to this account.'}, status=404)
+
+    readings_qs = MeterReading.objects.filter(consumer=consumer).order_by('-reading_date')
+
+    page_num = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 12))
+    paginator = Paginator(readings_qs, page_size)
+    page = paginator.get_page(page_num)
+
+    results = [
+        {
+            'id': r.id,
+            'reading_date': r.reading_date.strftime('%Y-%m-%d') if r.reading_date else None,
+            'previous_reading': r.previous_reading,
+            'current_reading': r.current_reading,
+            'units_consumed': r.units_consumed,
+            'remarks': r.remarks or '',
+        }
+        for r in page.object_list
+    ]
+
+    return JsonResponse({
+        'results': results,
+        'count': paginator.count,
+        'total_pages': paginator.num_pages,
+        'current_page': page_num,
+    })
+
+
+@api_view(['GET'])
+@require_role('consumer')
+def consumer_portal_bills(request):
+    """Return paginated bills for the logged-in consumer."""
+    try:
+        consumer = request.user.consumer_profile
+    except Exception:
+        return JsonResponse({'detail': 'No consumer profile linked to this account.'}, status=404)
+
+    bills_qs = Bill.objects.filter(consumer=consumer).order_by('-bill_date')
+
+    page_num = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 12))
+    paginator = Paginator(bills_qs, page_size)
+    page = paginator.get_page(page_num)
+
+    results = [
+        {
+            'id': b.id,
+            'bill_number': b.bill_number,
+            'created_at': b.created_at.isoformat() if hasattr(b, 'created_at') and b.created_at else None,
+            'bill_date': b.bill_date.strftime('%Y-%m-%d') if b.bill_date else None,
+            'billing_period_start': b.billing_period_start.strftime('%Y-%m-%d') if b.billing_period_start else None,
+            'billing_period_end': b.billing_period_end.strftime('%Y-%m-%d') if b.billing_period_end else None,
+            'billing_period': f"{b.billing_period_start.strftime('%b-%y')} to {b.billing_period_end.strftime('%b-%y')}" if b.billing_period_start and b.billing_period_end else None,
+            'due_date': b.due_date.strftime('%Y-%m-%d') if b.due_date else None,
+            'connection_type': b.consumer.connection_type,
+            'billing_type': b.consumer.billing_type,
+            'load_kw': float(b.consumer.load_kw),
+            'meter_type': b.consumer.meter_type,
+            'consumer_name': b.consumer.name,
+            'consumer_number': b.consumer.consumer_number,
+            'meter_number': b.consumer.meter_number,
+            'address': b.consumer.address,
+            'previous_reading': b.meter_reading.previous_reading if hasattr(b, 'meter_reading') and b.meter_reading else 0,
+            'current_reading': b.meter_reading.current_reading if hasattr(b, 'meter_reading') and b.meter_reading else 0,
+            'units': b.units,
+            'rate_per_unit': float(b.rate_per_unit),
+            'energy_charges': float(b.energy_charges),
+            'fixed_charges': float(b.fixed_charges),
+            'duty_charge': float(b.duty_charge),
+            'meter_rent': float(b.meter_rent),
+            'regulatory_surcharge': float(b.regulatory_surcharge),
+            'arrears': float(b.arrears),
+            'late_payment_surcharge': float(b.late_payment_surcharge),
+            'total_amount': float(b.total_amount),
+            'paid_amount': float(b.paid_amount),
+            'status': b.status,
+            'is_paid': b.status == 'paid',
+        }
+        for b in page.object_list
+    ]
+
+    return JsonResponse({
+        'results': results,
+        'count': paginator.count,
+        'total_pages': paginator.num_pages,
+        'current_page': page_num,
+    })
+
+
+@api_view(['POST'])
+@require_role('consumer')
+def consumer_portal_change_password(request):
+    """Allow a consumer to change their own password."""
+    old_password = request.data.get('old_password', '').strip()
+    new_password = request.data.get('new_password', '').strip()
+    confirm_password = request.data.get('confirm_password', '').strip()
+
+    if not old_password or not new_password or not confirm_password:
+        return JsonResponse({'detail': 'All fields are required.'}, status=400)
+
+    if new_password != confirm_password:
+        return JsonResponse({'detail': 'New password and confirmation do not match.'}, status=400)
+
+    if len(new_password) < 6:
+        return JsonResponse({'detail': 'Password must be at least 6 characters.'}, status=400)
+
+    if not request.user.check_password(old_password):
+        return JsonResponse({'detail': 'Current password is incorrect.'}, status=400)
+
+    request.user.set_password(new_password)
+    request.user.save()
+
+    # Invalidate existing token so user must re-login after password change
+    Token.objects.filter(user=request.user).delete()
+
+    return JsonResponse({'success': True, 'message': 'Password changed successfully. Please log in again.'})
+
+
+@api_view(['POST'])
+@require_role('admin')
+def admin_reset_consumer_password(request, consumer_id):
+    """
+    Admin-only: reset a consumer's portal password back to their consumer_number.
+    If the consumer doesn't have a portal account yet, it creates one.
+    """
+    try:
+        consumer = Consumer.objects.get(id=consumer_id)
+    except Consumer.DoesNotExist:
+        return JsonResponse({'detail': 'Consumer not found.'}, status=404)
+
+    if not consumer.user:
+        # Auto-create the user account if it doesn't exist yet
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            user = User.objects.create_user(
+                username=consumer.consumer_number,
+                password=consumer.consumer_number,
+                role='consumer',
+                first_name=consumer.name.split()[0] if consumer.name else '',
+                last_name=' '.join(consumer.name.split()[1:]) if consumer.name and len(consumer.name.split()) > 1 else '',
+                email=consumer.email or '',
+            )
+            consumer.user = user
+            consumer.save(update_fields=['user'])
+        except Exception as e:
+            return JsonResponse({'detail': f'Failed to create portal account: {str(e)}'}, status=400)
+    else:
+        # Reset password for existing user
+        consumer.user.set_password(consumer.consumer_number)
+        consumer.user.save()
+
+        # Invalidate any existing tokens so the consumer must re-login
+        from rest_framework.authtoken.models import Token
+        Token.objects.filter(user=consumer.user).delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f"Password for {consumer.name} reset to their consumer number ({consumer.consumer_number})."
+    })
+
+
+@api_view(['POST'])
+@require_role('admin')
+def admin_create_consumer_portal_account(request, consumer_id):
+    """
+    Admin-only: create a portal User account for an existing consumer.
+    Username = consumer_number, default password = consumer_number.
+    Idempotent — safe to call even if account already exists.
+    """
+    try:
+        consumer = Consumer.objects.get(id=consumer_id)
+    except Consumer.DoesNotExist:
+        return JsonResponse({'detail': 'Consumer not found.'}, status=404)
+
+    if consumer.user:
+        return JsonResponse({
+            'success': True,
+            'already_exists': True,
+            'message': f'Portal account already exists for {consumer.name} (username: {consumer.user.username}).'
+        })
+
+    # Create the User account
+    user = User.objects.create_user(
+        username=consumer.consumer_number,
+        password=consumer.consumer_number,
+        role=User.Role.CONSUMER,
+        first_name=consumer.name.split()[0] if consumer.name else '',
+        last_name=' '.join(consumer.name.split()[1:]) if consumer.name and len(consumer.name.split()) > 1 else '',
+        email=consumer.email or '',
+    )
+    consumer.user = user
+    consumer.save(update_fields=['user'])
+
+    return JsonResponse({
+        'success': True,
+        'already_exists': False,
+        'message': f'Portal account created for {consumer.name}. Username: {consumer.consumer_number}.'
+    })
+
+
+@api_view(['GET'])
+@require_role('admin')
+def export_mobile_sync(request):
+    """
+    Exports a JSON file containing all data needed for the mobile app
+    to operate in 'Total Offline Mode'.
+    """
+    import json
+    from datetime import datetime
+    from django.http import HttpResponse
+
+
+    # 2. Get Consumers
+    consumers = Consumer.objects.filter(status='active')
+    consumers_data = []
+    for c in consumers:
+        last_reading = MeterReading.objects.filter(consumer=c).order_by('-reading_date', '-id').first()
+        prev_val = last_reading.current_reading if last_reading else 0.0
+
+        consumers_data.append({
+            'id': c.id,
+            'consumer_number': c.consumer_number,
+            'name': c.name,
+            'email': c.email,
+            'phone': c.phone,
+            'address': c.address,
+            'meter_number': c.meter_number,
+            'meter_type': c.connection_type,
+            'load_kw': float(c.load_kw) if c.load_kw else 1.0,
+            'previous_reading': float(prev_val),
+            'status': c.status
+        })
+        
+    # 3. Get Billing Settings
+    try:
+        settings = BillingSettings.objects.get(id=1)
+        settings_data = {
+            'rate_per_unit': float(settings.rate_per_unit),
+            'fixed_charge_per_kw': float(settings.fixed_charge_per_kw),
+            'duty_percentage': float(settings.duty_percentage),
+            'phase_1_rent': float(settings.phase_1_rent),
+            'phase_3_rent': float(settings.phase_3_rent),
+        }
+    except BillingSettings.DoesNotExist:
+        # Defaults if settings not configured
+        settings_data = {
+            'rate_per_unit': 6.50,
+            'fixed_charge_per_kw': 50.00,
+            'duty_percentage': 5.00,
+            'phase_1_rent': 10.00,
+            'phase_3_rent': 25.00,
+        }
+        
+    sync_data = {
+        'version': 1,
+        'exported_at': datetime.now().isoformat(),
+        'consumers': consumers_data,
+        'settings': settings_data
+    }
+    
+    response = HttpResponse(
+        json.dumps(sync_data),
+        content_type='application/json'
+    )
+    response['Content-Disposition'] = f'attachment; filename="eMeter_Sync_{datetime.now().strftime("%Y%m%d_%H%M")}.json"'
+    return response

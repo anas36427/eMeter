@@ -42,6 +42,7 @@ export const getConsumerReadings = (id: number, params?: any) => Client.getConsu
 export const createConsumer = (data: any) => Client.createConsumer(api, data);
 export const updateConsumer = (id: number, data: any) => Client.updateConsumer(api, id, data);
 export const deleteConsumer = (id: number) => Client.deleteConsumer(api, id);
+export const resetConsumerPassword = (id: number) => Client.resetConsumerPassword(api, id);
 export const searchConsumer = (m: string) => Client.searchConsumer(api, m);
 
 export const getReadings = () => Client.getReadings(api);

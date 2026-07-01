@@ -31,7 +31,8 @@
       "expo-camera",
       "expo-image-picker",
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

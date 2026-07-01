@@ -67,7 +67,7 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="flex flex-col">
             <span className="font-bold text-base leading-none tracking-tight">eMeter AMU</span>
-            <span className="text-[10px] text-sidebar-foreground/50 font-bold uppercase tracking-wider mt-1">AMU Service</span>
+            <span className="text-[10px] text-sidebar-foreground/50 font-bold uppercase tracking-wider mt-1">ADMIN PORTAL</span>
           </div>
         )}
       </div>
@@ -79,8 +79,8 @@ export function AppSidebar() {
             key={item.url}
             to={item.url}
             end={item.url === "/dashboard"}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-            activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-150 group"
+            activeClassName="bg-blue-600/10 text-blue-600 border border-blue-600/20 shadow-sm"
           >
             <item.icon className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span>{item.title}</span>}
@@ -94,8 +94,8 @@ export function AppSidebar() {
           <NavLink
             key={item.url}
             to={item.url}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-            activeClassName="bg-sidebar-accent text-sidebar-foreground"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-150 group"
+            activeClassName="bg-blue-600/10 text-blue-600 border border-blue-600/20 shadow-sm"
           >
             <item.icon className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span>{item.title}</span>}

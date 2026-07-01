@@ -82,11 +82,47 @@ class AuditLogAdmin(admin.ModelAdmin):
         return False  # Audit logs must never be deleted
 
 
+from django import forms
+
+class ConsumerAdminForm(forms.ModelForm):
+    new_password = forms.CharField(
+        required=False,
+        help_text="Enter a new password to reset this consumer's login. Leave blank to keep current password.<br><b>Note:</b> For security, existing passwords are cryptographically hashed and cannot be read."
+    )
+
+    class Meta:
+        model = Consumer
+        fields = '__all__'
+
+    def save(self, commit=True):
+        consumer = super().save(commit=False)
+        new_pass = self.cleaned_data.get('new_password')
+        if new_pass and consumer.user:
+            consumer.user.set_password(new_pass)
+            consumer.user.save()
+        if commit:
+            consumer.save()
+        return consumer
+
+
 @admin.register(Consumer)
 class ConsumerAdmin(admin.ModelAdmin):
+    form = ConsumerAdminForm
     list_display  = ['consumer_number', 'name', 'meter_number', 'connection_type', 'status']
     list_filter   = ['status', 'connection_type']
     search_fields = ['name', 'consumer_number', 'meter_number', 'department']
+    
+    fieldsets = (
+        ('Account Access', {
+            'fields': ('user', 'new_password')
+        }),
+        ('Consumer Details', {
+            'fields': ('consumer_number', 'name', 'email', 'phone', 'address', 'post', 'department')
+        }),
+        ('Meter & Billing', {
+            'fields': ('meter_number', 'meter_type', 'connection_type', 'billing_type', 'load_kw', 'status')
+        }),
+    )
 
 
 @admin.register(MeterReading)

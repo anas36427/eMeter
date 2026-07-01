@@ -32,6 +32,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN        = 'admin',        'Administrator'
         METER_READER = 'meter_reader', 'Meter Reader'
+        CONSUMER     = 'consumer',     'Consumer'
 
     role = models.CharField(
         max_length=20,

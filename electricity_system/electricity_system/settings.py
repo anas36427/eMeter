@@ -40,6 +40,7 @@ if DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
     ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '').split(',') if host.strip()]
+    ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost'])
     # Auto-detect Render's external URL for ALLOWED_HOSTS (FIX REC-3)
     from urllib.parse import urlparse
     if _render_url := os.environ.get('RENDER_EXTERNAL_URL', ''):

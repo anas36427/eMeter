@@ -102,6 +102,10 @@ const HistoryModal = ({ consumer, onClose }: { consumer: Consumer; onClose: () =
 
   const handleExportExcel = () => {
     const ws_data = [
+      ["Reading History Report"],
+      [`Consumer: ${consumer.name}`, `Consumer #: ${consumer.consumer_number}`, `Meter #: ${consumer.meter_number}`],
+      [`Total Records: ${filteredHistory.length}`, `Total Usage: ${totalUsage} kWh`, `Exported: ${new Date().toLocaleDateString()}`],
+      [],
       ["Date", "Reading (kWh)", "Previous (kWh)", "Usage (kWh)", "Recorded By", "Remarks"],
       ...filteredHistory.map(r => [
         r.date, r.reading, r.prev, r.usage, r.recorded_by, r.remarks || ""
@@ -109,48 +113,181 @@ const HistoryModal = ({ consumer, onClose }: { consumer: Consumer; onClose: () =
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    XLSX.utils.book_append_sheet(wb, ws, "History");
-    XLSX.writeFile(wb, `${consumer.consumer_number}_history.xlsx`);
+    // Auto column widths
+    ws['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Reading History");
+    XLSX.writeFile(wb, `${consumer.consumer_number}_reading_history_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   const handlePrint = () => {
+    const dateRange = fromDate || toDate
+      ? `${fromDate || 'Start'} → ${toDate || 'Today'}`
+      : 'All Time';
+
+    const rows = filteredHistory.map((r, i) => `
+      <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+        <td>${r.date}</td>
+        <td style="text-align:right">${r.reading.toLocaleString()}</td>
+        <td style="text-align:right;color:#6b7280">${r.prev.toLocaleString()}</td>
+        <td style="text-align:right">
+          <span style="
+            display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;
+            background:${r.usage > 0 ? '#dcfce7' : r.usage < 0 ? '#fee2e2' : '#f3f4f6'};
+            color:${r.usage > 0 ? '#16a34a' : r.usage < 0 ? '#dc2626' : '#6b7280'}
+          ">${r.usage > 0 ? '+' : ''}${r.usage} kWh</span>
+        </td>
+        <td style="color:#6b7280;font-size:12px">${r.recorded_by}</td>
+      </tr>
+    `).join('');
+
     const printContent = `
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>Reading History - ${consumer.name}</title>
+          <meta charset="UTF-8"/>
+          <title>Reading History — ${consumer.name}</title>
           <style>
-            body { font-family: sans-serif; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background-color: #f4f4f4; }
+            @page { margin: 20mm 16mm; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; color: #111; font-size: 13px; position: relative; }
+
+            /* Watermark */
+            body::before {
+              content: "";
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 500px;
+              height: 500px;
+              background-image: url('${window.location.origin}/assets/logo.png');
+              background-size: contain;
+              background-repeat: no-repeat;
+              background-position: center;
+              opacity: 0.04;
+              z-index: -1;
+              pointer-events: none;
+            }
+
+            /* Header */
+            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #1d9e75; padding-bottom: 14px; margin-bottom: 20px; }
+            .brand { display: flex; align-items: center; gap: 12px; }
+            .brand-icon { width: 46px; height: 46px; background: #1d9e75; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+            .brand-icon svg { width: 26px; height: 26px; fill: white; }
+            .brand-name { font-size: 20px; font-weight: 800; color: #1d9e75; letter-spacing: -0.5px; }
+            .brand-sub { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+            .print-meta { text-align: right; }
+            .print-meta p { font-size: 11px; color: #6b7280; line-height: 1.8; }
+
+            /* Consumer card */
+            .consumer-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 40px; }
+            .consumer-card h2 { font-size: 17px; font-weight: 700; color: #111; }
+            .consumer-card .label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 2px; }
+            .consumer-card .value { font-size: 13px; font-weight: 600; color: #111; font-family: monospace; }
+
+            /* Stats row */
+            .stats { display: flex; gap: 16px; margin-bottom: 20px; }
+            .stat-box { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+            .stat-box .s-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+            .stat-box .s-value { font-size: 18px; font-weight: 800; color: #1d9e75; margin-top: 4px; }
+            .stat-box .s-unit { font-size: 11px; color: #6b7280; margin-left: 2px; font-weight: 400; }
+
+            /* Table */
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            thead tr { background: #1d9e75; color: white; }
+            thead th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+            thead th:not(:first-child) { text-align: right; }
+            thead th:last-child { text-align: left; }
+            tbody td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+            tbody td:not(:first-child) { text-align: right; }
+            tbody td:last-child { text-align: left; }
+
+            /* Footer */
+            .footer { margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 12px; display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af; }
+            .total-row { margin-top: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+            .total-row span { font-size: 13px; font-weight: 700; color: #1d9e75; }
           </style>
         </head>
         <body>
-          <h2>Reading History — ${consumer.name}</h2>
-          <p><strong>Consumer Number:</strong> ${consumer.consumer_number}</p>
-          <p><strong>Meter Number:</strong> ${consumer.meter_number}</p>
+          <!-- Header -->
+          <div class="header">
+            <div class="brand">
+              <div class="brand-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </div>
+              <div>
+                <div class="brand-name">eMeter AMU</div>
+                <div class="brand-sub">Electricity Management System</div>
+              </div>
+            </div>
+            <div class="print-meta">
+              <p><strong>Reading History Report</strong></p>
+              <p>Date Range: ${dateRange}</p>
+              <p>Printed: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+
+          <!-- Consumer Info -->
+          <div class="consumer-card">
+            <div>
+              <h2>${consumer.name}</h2>
+              <div style="margin-top:4px;font-size:12px;color:#6b7280">Electricity Consumer Account</div>
+            </div>
+            <div>
+              <div class="label">Consumer Number</div>
+              <div class="value">${consumer.consumer_number}</div>
+            </div>
+            <div>
+              <div class="label">Meter Number</div>
+              <div class="value">${consumer.meter_number}</div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="stats">
+            <div class="stat-box">
+              <div class="s-label">Total Records</div>
+              <div class="s-value">${filteredHistory.length}<span class="s-unit">entries</span></div>
+            </div>
+            <div class="stat-box">
+              <div class="s-label">Total Usage</div>
+              <div class="s-value">${totalUsage.toLocaleString()}<span class="s-unit">kWh</span></div>
+            </div>
+            <div class="stat-box">
+              <div class="s-label">Average Usage</div>
+              <div class="s-value">${filteredHistory.length ? Math.round(totalUsage / filteredHistory.length).toLocaleString() : 0}<span class="s-unit">kWh/entry</span></div>
+            </div>
+            <div class="stat-box">
+              <div class="s-label">Latest Reading</div>
+              <div class="s-value">${filteredHistory[0]?.reading?.toLocaleString() ?? '—'}<span class="s-unit">kWh</span></div>
+            </div>
+          </div>
+
+          <!-- Table -->
           <table>
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Reading (kWh)</th>
                 <th>Previous (kWh)</th>
-                <th>Usage (kWh)</th>
-                <th>Recorded by</th>
+                <th>Usage</th>
+                <th>Recorded By</th>
               </tr>
             </thead>
-            <tbody>
-              ${filteredHistory.map(r => `
-                <tr>
-                  <td>${r.date}</td>
-                  <td>${r.reading}</td>
-                  <td>${r.prev}</td>
-                  <td>${r.usage}</td>
-                  <td>${r.recorded_by}</td>
-                </tr>
-              `).join('')}
-            </tbody>
+            <tbody>${rows}</tbody>
           </table>
+
+          <!-- Total Row -->
+          <div class="total-row">
+            <span>${filteredHistory.length} Records in this report</span>
+            <span>Total Usage: ${totalUsage.toLocaleString()} kWh</span>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <span>eMeter AMU — Electricity Management System</span>
+            <span>Generated: ${new Date().toLocaleString()}</span>
+          </div>
         </body>
       </html>
     `;
@@ -159,9 +296,10 @@ const HistoryModal = ({ consumer, onClose }: { consumer: Consumer; onClose: () =
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
-      printWindow.print();
+      setTimeout(() => printWindow.print(), 300);
     }
   };
+
 
   return (
     <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">

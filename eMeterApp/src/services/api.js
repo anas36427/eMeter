@@ -1,20 +1,22 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // ================================================
 // API Configuration
 // ================================================
-// Fallback BASE_URL if none stored in AsyncStorage
-const FALLBACK_URL = process.env.EXPO_PUBLIC_API_URL || '';
+// Always use the production URL from the environment variable.
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || '';
 
-if (!FALLBACK_URL) {
+if (!BASE_URL) {
     console.warn(
-        '⚠️ WARNING: EXPO_PUBLIC_API_URL is not set. Online API endpoints will be inaccessible, ' +
-        'but you can still fully use offline SQLite features.'
+        '⚠️ WARNING: EXPO_PUBLIC_API_URL is not set. API calls will fail. ' +
+        'Offline SQLite features remain fully functional.'
     );
 }
 
 const api = axios.create({
+    baseURL: BASE_URL,
     timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
@@ -23,23 +25,11 @@ const api = axios.create({
     // BUG-03 FIX: removed withCredentials: true as it has no effect on React Native and complicates CORS
 });
 
-// Attach dynamic baseURL and auth tokens to every request
+// Attach auth token to every request
+// Reads from SecureStore (encrypted) instead of AsyncStorage
 api.interceptors.request.use(async (config) => {
-    // BUG-01/02 FIX: Dynamically resolve server URL at request time
-    const storedUrl = await AsyncStorage.getItem('serverUrl');
-    const baseUrl = storedUrl?.trim() || FALLBACK_URL;
-    
-    if (!baseUrl) {
-        return Promise.reject(new Error('NO_SERVER_CONFIGURED'));
-    }
-    
-    // Only set baseURL if the URL isn't already absolute
-    if (!config.url.startsWith('http')) {
-        config.baseURL = baseUrl;
-    }
-
-    // Always fetch latest token from storage to avoid stale module variable state (BUG-05 FIX)
-    const currentToken = await AsyncStorage.getItem('authToken');
+    // Always fetch latest token from SecureStore to avoid stale module variable state (BUG-05 FIX)
+    const currentToken = await SecureStore.getItemAsync('authToken');
 
     if (currentToken) {
         config.headers['Authorization'] = `Token ${currentToken}`;
@@ -47,7 +37,7 @@ api.interceptors.request.use(async (config) => {
             console.log('DEBUG: Sending request with Token:', currentToken.substring(0, 5) + '...');
         }
     }
-    
+
     return config;
 });
 
@@ -57,8 +47,9 @@ api.interceptors.response.use(
     async (error) => {
         if (error.response && error.response.status === 401) {
             console.log('DEBUG: 401 Unauthorized detected. Clearing stale tokens.');
-            await AsyncStorage.multiRemove(['authToken', 'user', 'csrfToken', 'sessionId']);
-            // The app will naturally redirect to login on next reload or if it checks AsyncStorage
+            // Clear auth token from SecureStore; keep consumer cache in AsyncStorage intact
+            await SecureStore.deleteItemAsync('authToken');
+            await AsyncStorage.removeItem('user');
         }
         return Promise.reject(error);
     }
@@ -75,12 +66,12 @@ export const loginAPI = async (username, password) => {
         source: 'mobile',
     });
 
-    // Token Authentication: store the token returned by the server
+    // Token Authentication: store the token securely using SecureStore (encrypted)
     // The mobile app uses Token Auth exclusively — no CSRF cookies needed.
     if (response.data.token) {
         const authToken = response.data.token;
-        if (__DEV__) console.log('DEBUG: Auth token received and stored.');
-        await AsyncStorage.setItem('authToken', authToken);
+        if (__DEV__) console.log('DEBUG: Auth token received and stored securely.');
+        await SecureStore.setItemAsync('authToken', authToken);
     }
 
     if (response.data.success) {
@@ -99,8 +90,9 @@ export const logoutAPI = async () => {
     try {
         await api.post('/api/logout/');
     } finally {
-        // Clear only the auth token — no session/CSRF tokens used in mobile
-        await AsyncStorage.multiRemove(['authToken', 'user']);
+        // Clear auth token from SecureStore; keep SQLite consumer cache intact
+        await SecureStore.deleteItemAsync('authToken');
+        await AsyncStorage.removeItem('user');
     }
 };
 
@@ -212,10 +204,7 @@ export const getBillDetailAPI = async (billId) => {
 // ========================
 
 export const getBillPdfUrl = async (billId) => {
-    // BUG-06 FIX: use dynamic URL
-    const storedUrl = await AsyncStorage.getItem('serverUrl');
-    const baseUrl = storedUrl?.trim() || FALLBACK_URL || '';
-    return `${baseUrl}/api/bill/${billId}/pdf/`;
+    return `${BASE_URL}/api/bill/${billId}/pdf/`;
 };
 
 // ========================

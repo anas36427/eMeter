@@ -153,6 +153,12 @@ export const initDatabase = async () => {
                 phase_3_rent REAL DEFAULT 25.0,
                 surcharge_percentage REAL
             );
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY,
+                username TEXT UNIQUE,
+                name TEXT,
+                password_hash TEXT
+            );
         `);
 
         // Step 3: Seed default settings row (INSERT OR IGNORE = safe no-op if already exists)

@@ -51,4 +51,19 @@ urlpatterns = [
     path('notifications/', views.api_get_notifications, name='api_get_notifications'),
     path('notifications/mark-read/', views.api_mark_notifications_read, name='api_mark_notifications_read'),
     path('start-reading-cycle/', views.api_start_reading_cycle, name='api_start_reading_cycle'),
+
+    # ── Consumer Portal ───────────────────────────────────────
+    # Accessible only by role=consumer Token-authenticated users
+    path('consumer/portal/me/', views.consumer_portal_me, name='consumer_portal_me'),
+    path('consumer/portal/readings/', views.consumer_portal_readings, name='consumer_portal_readings'),
+    path('consumer/portal/bills/', views.consumer_portal_bills, name='consumer_portal_bills'),
+    path('consumer/portal/change-password/', views.consumer_portal_change_password, name='consumer_portal_change_password'),
+
+    # ── Admin: Consumer Portal Account Management ─────────────
+    # Only admin can create accounts or reset passwords
+    path('admin/consumer/<int:consumer_id>/create-portal-account/', views.admin_create_consumer_portal_account, name='admin_create_consumer_portal_account'),
+    path('admin/consumer/<int:consumer_id>/reset-password/', views.admin_reset_consumer_password, name='admin_reset_consumer_password'),
+
+    # ── Admin: Export Offline Sync File ───────────────────────
+    path('admin/export-mobile-sync/', views.export_mobile_sync, name='export_mobile_sync'),
 ]

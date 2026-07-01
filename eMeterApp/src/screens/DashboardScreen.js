@@ -24,8 +24,10 @@ import {
     getOfflineQueue, 
     removeFromOfflineQueue,
     pullRegistryFromServer,
-    pushOfflineQueueToServer
+    pushOfflineQueueToServer,
+    importSyncFile
 } from '../services/offlineStorage';
+import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -185,6 +187,31 @@ export default function DashboardScreen({ navigation }) {
         } catch (err) {
             console.warn(err);
             Alert.alert('Pull Failed', 'Could not fetch consumer registry. Check your network.');
+        } finally {
+            setPulling(false);
+        }
+    };
+
+    const handleImportFile = async () => {
+        if (pulling) return;
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'application/json',
+                copyToCacheDirectory: true,
+            });
+
+            if (result.canceled) return;
+
+            setPulling(true);
+            const fileUri = result.assets[0].uri;
+            
+            const stats = await importSyncFile(fileUri);
+            await addActivityLog(`Imported file: ${stats.consumers} consumers.`);
+            Alert.alert('Import Successful', `Setup Complete! Loaded ${stats.consumers} consumers.`);
+            await fetchOffline();
+        } catch (err) {
+            Alert.alert("Import Failed", "Error parsing sync file. Please ensure you selected the correct file.");
+            console.error(err);
         } finally {
             setPulling(false);
         }
@@ -500,7 +527,19 @@ export default function DashboardScreen({ navigation }) {
                         <View style={[styles.actionIconBg, { backgroundColor: colors.infoBg }]}>
                             <Ionicons name="cloud-download-outline" size={24} color={colors.info} />
                         </View>
-                        <Text style={[styles.actionGridText, { color: colors.textPrimary }]}>{pulling ? 'Pulling...' : 'Pull Registry'}</Text>
+                        <Text style={[styles.actionGridText, { color: colors.textPrimary }]}>{pulling ? 'Working...' : 'Pull Registry'}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionGridCard, { backgroundColor: colors.bgCard }]}
+                        onPress={handleImportFile}
+                        activeOpacity={0.8}
+                        disabled={pulling}
+                    >
+                        <View style={[styles.actionIconBg, { backgroundColor: colors.successBg }]}>
+                            <Ionicons name="document-text-outline" size={24} color={colors.success} />
+                        </View>
+                        <Text style={[styles.actionGridText, { color: colors.textPrimary }]}>{pulling ? 'Working...' : 'Import Data'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
