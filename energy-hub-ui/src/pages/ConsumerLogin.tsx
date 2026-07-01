@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { useConsumerAuth } from '@/contexts/ConsumerAuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ConsumerLogin() {
-  const { login } = useConsumerAuth();
+  const { login, token, isInitializing } = useConsumerAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -15,6 +15,12 @@ export default function ConsumerLogin() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isInitializing && token) {
+      navigate('/consumer/dashboard');
+    }
+  }, [isInitializing, token, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

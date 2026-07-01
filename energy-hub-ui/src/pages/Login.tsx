@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,20 @@ import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, role, isInitializing } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isInitializing && isAuthenticated) {
+      if (role === "consumer") navigate("/billing");
+      else if (role === "meter_reader") navigate("/readings");
+      else navigate("/dashboard");
+    }
+  }, [isInitializing, isAuthenticated, role, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
