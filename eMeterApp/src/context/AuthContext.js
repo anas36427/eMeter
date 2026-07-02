@@ -100,9 +100,6 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
             console.warn('Logout API failed:', err.message);
         } finally {
-            if (user?.username) {
-                await removeOfflineCredentials(user.username);
-            }
             setUser(null);
             setIsOfflineMode(false);
             await SecureStore.deleteItemAsync('authToken');
