@@ -6,112 +6,101 @@
     <style>
         @page { 
             size: A4; 
-            margin: 1.0cm; 
+            margin: 0.5cm; 
             @frame watermark_frame {
-                y: 30%;
-                x: 25%;
-                width: 350px;
-                height: 350px;
+                y: 25%;
+                x: 22%;
+                width: 400px;
+                height: 400px;
                 z-index: -1;
             }
         }
         body { 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-            color: #333333; 
+            color: #1f2937; 
             background-color: #ffffff;
             margin: 0; 
             padding: 0; 
-            line-height: 1.35;
-            font-size: 12px;
+            line-height: 1.25;
+            font-size: 10.5px;
         }
         .header-table {
             width: 100%;
-            border-bottom: 3px solid #064e3b;
-            padding-bottom: 8px;
-            margin-bottom: 12px;
+            border-bottom: 2px solid #064e3b;
+            padding-bottom: 5px;
+            margin-bottom: 8px;
         }
-        .header-left {
-            vertical-align: middle;
+        .header-center {
             text-align: center;
+            vertical-align: middle;
         }
-        .header-left h1 {
+        .header-center h1 {
             color: #064e3b;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             margin: 0;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        .header-left p {
+        .header-center p {
             color: #4b5563;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            margin: 4px 0 0 0;
-        }
-        .header-right {
-            width: 80px;
-            text-align: right;
-            vertical-align: middle;
-        }
-        .header-right img {
-            width: 70px;
-            height: 70px;
+            margin: 3px 0 0 0;
         }
         .meta-table {
             width: 100%;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
+            line-height: 1.35;
         }
         .meta-left {
             width: 50%;
             text-align: left;
-            line-height: 1.5;
+            vertical-align: top;
         }
         .meta-right {
             width: 50%;
             text-align: right;
-            line-height: 1.5;
+            vertical-align: top;
         }
         .section-title {
-            background-color: #f9fafb;
-            border-left: 4px solid #064e3b;
-            padding: 4px 10px;
+            background-color: #f0f4f8;
+            border-left: 3px solid #064e3b;
+            padding: 2.5px 7px;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 10.5px;
             color: #064e3b;
-            margin-bottom: 8px;
+            margin-top: 5px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .details-table {
+        .consumer-table {
             width: 100%;
-            margin-bottom: 12px;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+            font-size: 10px;
         }
-        .details-left {
-            width: 50%;
-            text-align: left;
-            line-height: 1.5;
-        }
-        .details-right {
-            width: 50%;
-            text-align: right;
-            line-height: 1.5;
+        .consumer-table td {
+            padding: 3.5px 6px;
+            border: 1px solid #e5e7eb;
         }
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
-            font-size: 11px;
+            margin-bottom: 6px;
+            font-size: 10px;
         }
         .data-table th {
             background-color: #064e3b;
             color: #ffffff;
             font-weight: bold;
             text-align: left;
-            padding: 6px 8px;
+            padding: 3.5px 6px;
             border: 1px solid #064e3b;
         }
         .data-table td {
-            padding: 6px 8px;
+            padding: 3.5px 6px;
             border: 1px solid #e5e7eb;
         }
         .text-right {
@@ -134,52 +123,60 @@
         .font-bold {
             font-weight: bold;
         }
+        .status-badge {
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 9px;
+        }
+        .status-paid { color: #065f46; background-color: #d1fae5; }
+        .status-issued, .status-unpaid { color: #1e3a8a; background-color: #dbeafe; }
+        .status-overdue { color: #991b1b; background-color: #fee2e2; }
+        .status-draft { color: #4b5563; background-color: #e5e7eb; }
         .total-box {
             background-color: #064e3b;
             color: #ffffff;
-            padding: 10px 15px;
-            border-radius: 6px;
+            padding: 7px 14px;
+            border-radius: 4px;
             text-align: right;
-            margin-top: 12px;
+            margin-top: 8px;
         }
         .total-label {
-            font-size: 12px;
+            font-size: 10.5px;
             margin-bottom: 2px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             opacity: 0.9;
         }
         .total-amount {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             margin: 0;
         }
         .footer {
-            margin-top: 20px;
+            margin-top: 10px;
             text-align: center;
-            font-size: 10px;
+            font-size: 9px;
             color: #6b7280;
             border-top: 1px solid #e5e7eb;
-            padding-top: 8px;
-            line-height: 1.4;
+            padding-top: 5px;
+            line-height: 1.3;
         }
     </style>
 </head>
 <body>
     <!-- Watermark Logo -->
     <div id="watermark_frame">
-        <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo watermark" style="opacity: 0.1;" />
+        <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo watermark" style="opacity: 0.08;" />
     </div>
 
-    <!-- Header Section -->
+    <!-- Header Section (Centered just like Print PDF template) -->
     <table class="header-table">
         <tr>
-            <td class="header-left">
+            <td class="header-center">
                 <h1>eMeter AMU</h1>
                 <p>Aligarh Muslim University Electricity Billing System</p>
-            </td>
-            <td class="header-right">
-                <img src="eMeterApp/assets/amu-logo.png" alt="AMU logo"/>
             </td>
         </tr>
     </table>
@@ -190,74 +187,109 @@
             <td class="meta-left">
                 <strong>Bill No:</strong> {{ bill_number|default:'N/A' }}<br/>
                 <strong>Bill Date:</strong> {{ bill_date }}<br/>
-                <strong>Due Date:</strong> <span class="text-red">{{ due_date }}</span>
+                <strong>Due Date:</strong> <span class="text-red">{{ due_date }}</span><br/>
+                <strong>Status:</strong> <span class="status-badge status-{{ raw_status|default:'draft' }}">{{ status|default:'DRAFT' }}</span>
+                {% if raw_status == 'paid' and payment_date and payment_date != 'N/A' %} <span style="font-size:10px; color:#065f46;">(Paid on {{ payment_date }})</span>{% endif %}
             </td>
             <td class="meta-right">
-                <strong>Connection Type:</strong> {{ connection_type|title|default:'N/A' }}<br/>
-                <strong>Load:</strong> {{ load_kw|default:1.0 }} KW<br/>
-                <strong>Billing Period:</strong> {{ billing_period }}
+                <strong>Connection Type:</strong> {{ connection_type|title|default:'N/A' }} ({% if meter_type == '1' %}1-Phase{% else %}3-Phase{% endif %})<br/>
+                <strong>Billing Category:</strong> {{ billing_type|title|default:'Salary' }}<br/>
+                <strong>Connected Load:</strong> {{ load_kw|default:1.0 }} KW<br/>
+                <strong>Billing Period:</strong> {{ billing_period|default:'N/A' }}
             </td>
         </tr>
     </table>
 
     <!-- Consumer Details Title -->
-    <div class="section-title">Consumer Details</div>
+    <div class="section-title">CONSUMER DETAILS</div>
     
-    <!-- Consumer Details Content -->
-    <table class="details-table">
+    <!-- Consumer Details Content (Matches Print PDF structure) -->
+    <table class="consumer-table">
         <tr>
-            <td class="details-left">
-                <strong>Name:</strong> {{ consumer_name }}<br/>
-                <strong>Address:</strong> {{ address|default:'N/A' }}
-            </td>
-            <td class="details-right">
-                <strong>Meter No:</strong> {{ meter_number }}<br/>
-                <strong>Consumer ID:</strong> {{ consumer_number }}
-            </td>
+            <td style="width: 32%;"><strong>Consumer Name</strong></td>
+            <td><strong>{{ consumer_name }}</strong></td>
         </tr>
+        {% if department and department != 'N/A' %}
+        <tr>
+            <td><strong>Department / Office</strong></td>
+            <td>{{ department }}</td>
+        </tr>
+        {% endif %}
+        {% if post and post != 'N/A' %}
+        <tr>
+            <td><strong>Designation / Post</strong></td>
+            <td>{{ post }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td><strong>Account ID / Consumer No</strong></td>
+            <td>{{ consumer_number }}</td>
+        </tr>
+        <tr>
+            <td><strong>Meter Number</strong></td>
+            <td style="font-family: monospace; font-weight: bold;">{{ meter_number }}</td>
+        </tr>
+        <tr>
+            <td><strong>Address</strong></td>
+            <td>{{ address|default:'N/A' }}</td>
+        </tr>
+        {% if phone %}
+        <tr>
+            <td><strong>Phone</strong></td>
+            <td>{{ phone }}</td>
+        </tr>
+        {% endif %}
+        {% if email %}
+        <tr>
+            <td><strong>Email</strong></td>
+            <td>{{ email }}</td>
+        </tr>
+        {% endif %}
     </table>
 
-    <!-- Meter Reading Title -->
-    <div class="section-title">Meter Reading</div>
+    <!-- Reading Details Title -->
+    <div class="section-title">READING DETAILS</div>
 
-    <!-- Meter Reading Data Table -->
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Previous Reading</th>
-                <th>Current Reading</th>
-                <th>Units Consumed</th>
-                <th>Rate (₹/Unit)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>{{ previous_reading }}</td>
-                <td>{{ current_reading }}</td>
-                <td class="font-bold">{{ units }}</td>
-                <td>₹ {{ rate_per_unit|floatformat:2|default:'0.00' }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Charges Breakdown Title -->
-    <div class="section-title">Charges Breakdown</div>
-
-    <!-- Charges Breakdown Table -->
+    <!-- Reading Details Data Table -->
     <table class="data-table">
         <thead>
             <tr>
                 <th>Description</th>
-                <th class="text-right" style="width: 150px;">Amount (₹)</th>
+                <th>Reading Date</th>
+                <th>Previous Reading</th>
+                <th>Current Reading</th>
+                <th>Consumption (Units)</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>Energy Charges ({{ units|default:0 }} units × ₹{{ rate_per_unit|floatformat:2|default:'0.00' }})</td>
+                <td>Meter Reading (kWh)</td>
+                <td>{{ reading_date|default:'N/A' }}</td>
+                <td>{{ previous_reading|floatformat:1 }}</td>
+                <td>{{ current_reading|floatformat:1 }}</td>
+                <td class="font-bold" style="font-size: 11.5px;">{{ units|floatformat:1 }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Billing Details Title -->
+    <div class="section-title">BILLING DETAILS (Charges in ₹)</div>
+
+    <!-- Billing Details Table -->
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th class="text-right" style="width: 140px;">Amount (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Energy Charges ({{ units|default:0|floatformat:1 }} units × ₹{{ rate_per_unit|floatformat:2|default:'0.00' }})</td>
                 <td class="text-right">{{ energy_charges|default:0|floatformat:2 }}</td>
             </tr>
             <tr>
-                <td>Fixed / Service Charges</td>
+                <td>Fixed / Demand Charges</td>
                 <td class="text-right">{{ fixed_charges|default:0|floatformat:2 }}</td>
             </tr>
             <tr>
@@ -287,22 +319,22 @@
             </tr>
             {% endif %}
             <tr class="bg-gray-light font-bold">
-                <td>Sub Total</td>
-                <td class="text-right">{{ total_amount|default:0|floatformat:2 }}</td>
+                <td>TOTAL NET AMOUNT</td>
+                <td class="text-right">₹ {{ total_amount|default:0|floatformat:2 }}</td>
             </tr>
         </tbody>
     </table>
 
     <!-- Total Payable Amount Callout Box -->
     <div class="total-box">
-        <div class="total-label">Total Amount Payable</div>
+        <div class="total-label">TOTAL PAYABLE AMOUNT</div>
         <p class="total-amount">₹ {{ total_payable }}</p>
     </div>
 
     <!-- Professional Footer -->
     <div class="footer">
-        <p>This is a computer-generated bill. For queries, contact the Electricity Section, AMU.</p>
-        <p>Generated by eMeter AMU — Aligarh Muslim University Electricity Billing System</p>
+        <p style="margin: 0; padding-bottom: 2px;">This is a computer-generated bill. For queries, contact the Electricity Section, AMU.</p>
+        <p style="margin: 0;">Generated by eMeter AMU — Aligarh Muslim University Electricity Billing System</p>
     </div>
 </body>
 </html>

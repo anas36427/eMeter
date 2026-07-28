@@ -120,7 +120,7 @@ class ConsumerAdmin(admin.ModelAdmin):
             'fields': ('consumer_number', 'name', 'email', 'phone', 'address', 'post', 'department')
         }),
         ('Meter & Billing', {
-            'fields': ('meter_number', 'meter_type', 'connection_type', 'billing_type', 'load_kw', 'status')
+            'fields': ('meter_number', 'connection_type', 'billing_type', 'load_kw', 'status')
         }),
     )
 

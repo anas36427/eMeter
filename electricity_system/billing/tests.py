@@ -42,7 +42,6 @@ def make_consumer(consumer_number="CN000001", meter_number="MTR000001",
         phone="0000000000",
         address="AMU Campus",
         load_kw=load_kw,
-        meter_type=meter_type,
         connection_type=connection_type,
         status="active",
     )
@@ -74,17 +73,16 @@ class BillingMathUnitTest(TestCase):
 
     def setUp(self):
         make_settings(rate=8.56, fixed=400.0, duty=7.5, p1=10.0, p3=25.0)
-        self.consumer = make_consumer(load_kw=1.0, meter_type="analog")
+        self.consumer = make_consumer(load_kw=1.0)
 
     # ── helpers ──────────────────────────────────────────────
 
-    def _create_bill(self, units, load_kw=None, meter_type=None, reading_date=None):
-        if load_kw:
+    def _create_bill(self, units, load_kw=None, meter_type=None, connection_type=None, reading_date=None):
+        if load_kw is not None:
             self.consumer.load_kw = load_kw
-            self.consumer.save()
-        if meter_type:
-            self.consumer.meter_type = meter_type
-            self.consumer.save()
+        if connection_type is not None:
+            self.consumer.connection_type = connection_type
+        self.consumer.save()
         r_date = reading_date or date.today()
         reading = MeterReading.objects.create(
             consumer=self.consumer,
@@ -130,14 +128,14 @@ class BillingMathUnitTest(TestCase):
             msg=f"duty_charge should be {expected_duty}, got {bill.duty_charge}")
 
     def test_phase1_meter_rent(self):
-        """phase-1 meter (type='10') → rent = phase_1_rent"""
-        bill = self._create_bill(units=50, meter_type="analog")
+        """phase-1 meter (connection_type='single_phase') → rent = phase_1_rent"""
+        bill = self._create_bill(units=50, connection_type="single_phase")
         self.assertEqual(bill.meter_rent, 10.0,
             msg=f"phase-1 meter_rent should be 10.0, got {bill.meter_rent}")
 
     def test_phase3_meter_rent(self):
-        """phase-3 meter (type='25') → rent = phase_3_rent"""
-        bill = self._create_bill(units=50, meter_type="digital")
+        """phase-3 meter (connection_type='three_phase') → rent = phase_3_rent"""
+        bill = self._create_bill(units=50, connection_type="three_phase")
         self.assertEqual(bill.meter_rent, 25.0,
             msg=f"phase-3 meter_rent should be 25.0, got {bill.meter_rent}")
 
@@ -213,6 +211,71 @@ class BillingMathUnitTest(TestCase):
         expected_lps = round(1000.0 * 0.015, 2)
         self.assertAlmostEqual(bill.late_payment_surcharge, expected_lps, places=2,
             msg=f"late_payment_surcharge should be {expected_lps}, got {bill.late_payment_surcharge}")
+
+    def test_immutable_snapshots_preserve_historical_rates_and_load(self):
+        """
+        When global BillingSettings rates or consumer connected load/phase upgrade later,
+        a locked historical bill must preserve its original calculated charges and snapshots.
+        """
+        from .services import BillingService
+        bill = self._create_bill(units=100, load_kw=1.0, connection_type="single_phase")
+        bill.is_locked = True
+        bill.status = 'issued'
+        bill.save()
+        
+        orig_total = bill.total_amount_snapshot
+        orig_energy = bill.energy_charges
+        orig_fixed = bill.fixed_charges
+        
+        # 1. Upgrade consumer personally to 5 kW Three Phase
+        self.consumer.load_kw = 5.0
+        self.consumer.connection_type = "three_phase"
+        self.consumer.save()
+        
+        # 2. Modify global tariff settings to much higher rates
+        make_settings(rate=15.00, fixed=800.0, duty=10.0, p1=50.0, p3=150.0)
+        
+        # 3. Refresh locked bill from DB and verify immunity
+        bill.refresh_from_db()
+        self.assertEqual(bill.load_kw_snapshot, 1.0)
+        self.assertEqual(bill.connection_type_snapshot, "single_phase")
+        self.assertEqual(bill.total_amount_snapshot, orig_total)
+        self.assertEqual(bill.energy_charges, orig_energy)
+        self.assertEqual(bill.fixed_charges, orig_fixed)
+        
+        # 4. Attempting to recalculate a locked bill must raise ValidationError
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            BillingService.calculate_bill(bill.id)
+
+    def test_fractional_load_decimal_precision_edge_case(self):
+        """
+        Verify that a consumer with fractional connected load (e.g., 1.33 kW) does not produce
+        floating-point overflow or excess decimal place exceptions during billing calculations.
+        """
+        bill = self._create_bill(units=73, load_kw=1.33, connection_type="single_phase")
+        # Fixed charges should round exactly to 2 decimal places: 1.33 * 400 = 532.00
+        # Energy charges: 73 * 8.56 = 624.88
+        # Duty: (624.88 + 532.00) * 0.075 = 86.77
+        self.assertAlmostEqual(float(bill.fixed_charges), 1.33 * 400.0, places=2)
+        self.assertEqual(len(str(bill.fixed_charges).split('.')[-1]), 2, "Must retain strict 2 decimal place financial precision")
+
+    def test_snapshot_tamper_protection_on_locked_bills(self):
+        """
+        Vulnerability check: Verify that direct database save attempts to tamper with snapshot
+        rates or amounts on a finalized bill are rejected by model-level protection.
+        """
+        from django.core.exceptions import ValidationError
+        bill = self._create_bill(units=100)
+        bill.is_locked = True
+        bill.save()
+        
+        # Attempt to tamper with historical snapshots after lock
+        bill.total_amount_snapshot = 0.0
+        bill.rate_snapshot = 1.00
+        with self.assertRaises(ValidationError) as ctx:
+            bill.save()
+        self.assertIn("Cannot modify immutable field", str(ctx.exception))
 
 
 # ═══════════════════════════════════════════════════════════════

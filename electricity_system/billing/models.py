@@ -167,11 +167,6 @@ class Consumer(models.Model):
         SINGLE_PHASE = 'single_phase', 'Single Phase'
         THREE_PHASE  = 'three_phase',  'Three Phase'
 
-    class MeterType(models.TextChoices):
-        ANALOG  = 'analog',  'Analog'
-        DIGITAL = 'digital', 'Digital'
-        SMART   = 'smart',   'Smart'
-
     class BillingType(models.TextChoices):
         SALARY     = 'salary',     'Salary'
         NON_SALARY = 'non_salary', 'Non-Salary'
@@ -208,11 +203,6 @@ class Consumer(models.Model):
         default=BillingType.SALARY,
     )
     load_kw         = models.DecimalField(max_digits=10, decimal_places=2, default=1.00)
-    meter_type      = models.CharField(
-        max_length=20,
-        choices=MeterType.choices,
-        default=MeterType.ANALOG,
-    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -229,7 +219,6 @@ class Consumer(models.Model):
         ordering            = ['consumer_number']
         constraints = [
             models.CheckConstraint(condition=models.Q(connection_type__in=['single_phase', 'three_phase']), name='chk_consumer_connection_type'),
-            models.CheckConstraint(condition=models.Q(meter_type__in=['analog', 'digital', 'smart']), name='chk_consumer_meter_type'),
             models.CheckConstraint(condition=models.Q(status__in=['active', 'inactive', 'disconnected']), name='chk_consumer_status'),
             models.CheckConstraint(condition=models.Q(billing_type__in=['salary', 'non_salary']), name='chk_consumer_billing_type'),
         ]
@@ -241,9 +230,10 @@ class Consumer(models.Model):
             from django.apps import apps
             Meter = apps.get_model('billing', 'Meter')
             ConsumerMeterAssignment = apps.get_model('billing', 'ConsumerMeterAssignment')
+            # Meter hardware type defaults to 'analog' — not derived from connection_type
             meter_obj, _ = Meter.objects.get_or_create(
                 meter_number=self.meter_number,
-                defaults={'meter_type': self.meter_type}
+                defaults={'meter_type': '10'}  # legacy Meter model uses '10'/'25'
             )
             if not ConsumerMeterAssignment.objects.filter(consumer=self, meter=meter_obj).exists():
                 ConsumerMeterAssignment.objects.create(
@@ -346,7 +336,7 @@ class MeterReading(models.Model):
                     if self.consumer.meter_number:
                         meter_obj, _ = Meter.objects.get_or_create(
                             meter_number=self.consumer.meter_number,
-                            defaults={'meter_type': self.consumer.meter_type}
+                            defaults={'meter_type': '10'}  # default physical meter type
                         )
                         assignment_obj, _ = ConsumerMeterAssignment.objects.get_or_create(
                             consumer=self.consumer,
@@ -490,6 +480,11 @@ class Bill(models.Model):
     total_amount_snapshot      = models.FloatField(null=True, blank=True)
     consumer_name_snapshot     = models.CharField(max_length=255, null=True, blank=True)
     meter_number_snapshot      = models.CharField(max_length=100, null=True, blank=True)
+    connection_type_snapshot   = models.CharField(max_length=50, null=True, blank=True)
+    load_kw_snapshot           = models.FloatField(null=True, blank=True)
+    department_snapshot        = models.CharField(max_length=150, null=True, blank=True)
+    post_snapshot              = models.CharField(max_length=150, null=True, blank=True)
+    address_snapshot           = models.TextField(null=True, blank=True)
 
     # ── Dates ──────────────────────────────────────────────
     bill_date            = models.DateField(auto_now_add=True)
@@ -516,13 +511,15 @@ class Bill(models.Model):
         from django.core.exceptions import ValidationError
         if self.pk:
             original = Bill.objects.get(pk=self.pk)
-            if original.is_locked and original.status == 'issued':
+            if original.is_locked:
                 protected_fields = [
                     'units', 'rate_per_unit', 'fixed_charges', 'energy_charges',
                     'duty_charge', 'regulatory_surcharge', 'meter_rent', 'arrears',
                     'late_payment_surcharge', 'total_amount', 'units_consumed_snapshot',
                     'rate_snapshot', 'total_amount_snapshot', 'consumer_name_snapshot',
-                    'meter_number_snapshot', 'billing_period_start', 'billing_period_end'
+                    'meter_number_snapshot', 'connection_type_snapshot', 'load_kw_snapshot',
+                    'department_snapshot', 'post_snapshot', 'address_snapshot',
+                    'billing_period_start', 'billing_period_end'
                 ]
                 for field in protected_fields:
                     if getattr(self, field) != getattr(original, field):

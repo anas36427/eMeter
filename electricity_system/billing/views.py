@@ -263,14 +263,14 @@ def api_reports_data(request):
         monthly_usage_data.reverse()
         
         # Revenue Breakdown (Salary vs Non-Salary)
-        revenue_breakdown = Bill.objects.filter(status='paid').values('consumer__connection_type').annotate(
-            total_revenue=Sum('total_amount')
+        revenue_breakdown = Bill.objects.filter(status='paid').values('consumer__billing_type').annotate(
+            value=Sum('total_amount')
         )
         
         revenue_data = []
         for item in revenue_breakdown:
-            label = 'Salary' if item['consumer__connection_type'] == 'salary' else 'Non Salary'
-            revenue_data.append({'name': label, 'value': round(float(item['total_revenue'] or 0), 2)})
+            label = 'Salary' if item['consumer__billing_type'] == 'salary' else 'Non-Salary'
+            revenue_data.append({'name': label, 'value': round(float(item['value'] or 0), 2)})
             
         return JsonResponse({
             'top_consumers': top_consumers_data,
@@ -452,36 +452,7 @@ def generate_bill(request):
             return HttpResponse(html)
         # ── Generate PDF using new AMU eMeter Generator ──
         try:
-            pdf_data = {
-                'bill_number': bill.bill_number,
-                'bill_date': bill.created_at.strftime('%d %b %Y') if bill.created_at else timezone.localtime().strftime('%d %b %Y'),
-                'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
-                'connection_type': bill.consumer.connection_type,
-                'load_kw': bill.consumer.load_kw,
-                'billing_period_start': bill.billing_period_start.strftime('%B %Y') if bill.billing_period_start else 'N/A',
-                'consumer_name': bill.consumer.name,
-                'consumer_number': bill.consumer.consumer_number,
-                'meter_number': bill.consumer.meter_number,
-                'address': bill.consumer.address,
-                'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
-                'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
-                'units': bill.units,
-                'rate_per_unit': bill.rate_per_unit,
-                'energy_charges': bill.energy_charges,
-                'fixed_charges': bill.fixed_charges,
-                'duty_charge': bill.duty_charge,
-                'meter_rent': bill.meter_rent,
-                'meter_type': '1' if bill.consumer.meter_type == 'analog' else '3',
-                'regulatory_surcharge': bill.regulatory_surcharge,
-                'arrears': bill.arrears,
-                'late_payment_surcharge': bill.late_payment_surcharge,
-                'total_amount': bill.total_amount,
-                'total_payable': int(round(bill.total_amount)),
-                'current_year': timezone.localtime().year,
-            }
-            
-            pdf_content = BillPDFGenerator.generate_bill_pdf(pdf_data)
-            
+            pdf_content = BillPDFGenerator.generate_bill_pdf(bill)
             if pdf_content:
                 response = HttpResponse(pdf_content, content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="AMU_Bill_{bill.bill_number}.pdf"'
@@ -769,7 +740,7 @@ def api_get_consumer(request, consumer_id):
         'previous_reading': last_reading.current_reading if last_reading else 0,
         # Safe fallbacks from model properties/methods
         'load_kw': getattr(consumer, 'load_kw', 1.0),
-        'meter_type': getattr(consumer, 'meter_type', '10'),
+        'meter_type': '10' if consumer.connection_type == 'single_phase' else '25',
     }
     
     return JsonResponse(data)
@@ -816,7 +787,7 @@ def api_consumer_list(request):
                 'address': c.address,
                 'status': c.status,
                 'load_kw': c.load_kw,
-                'meter_type': c.meter_type,
+                'meter_type': '10' if c.connection_type == 'single_phase' else '25',
                 'connection_type': c.connection_type,
                 'billing_type': c.billing_type,
                 'previous_reading': prev_val
@@ -860,16 +831,6 @@ def api_consumer_list(request):
             }
             connection_type = CONNECTION_TYPE_MAP.get(connection_type_raw, 'single_phase')
 
-            # Normalize meter_type: handle legacy numeric frontend values
-            meter_type_raw = data.get('meter_type', 'analog')
-            METER_TYPE_MAP = {
-                '10': 'analog',
-                '25': 'digital',
-                'analog': 'analog',
-                'digital': 'digital',
-                'smart': 'smart',
-            }
-            meter_type = METER_TYPE_MAP.get(str(meter_type_raw), 'analog')
 
             # Normalize billing_type
             billing_type_raw = data.get('billing_type', 'salary')
@@ -889,7 +850,6 @@ def api_consumer_list(request):
                 department=data.get('department', ''),
                 meter_number=data.get('meter_number'),
                 load_kw=float(data.get('load_kw', 1.0)),
-                meter_type=meter_type,
                 connection_type=connection_type,
                 billing_type=billing_type,
                 status=data.get('status', 'active'),
@@ -1088,7 +1048,7 @@ def api_consumer_detail(request, consumer_id):
             'address': consumer.address,
             'status': consumer.status,
             'load_kw': str(consumer.load_kw) if consumer.load_kw else '',
-            'meter_type': consumer.meter_type,
+            'meter_type': '10' if consumer.connection_type == 'single_phase' else '25',
             'connection_type': consumer.connection_type,
             'department': consumer.department,
             'post': consumer.post,
@@ -1207,7 +1167,7 @@ def api_consumer_search(request):
     except Exception as e:
         err_msg = str(e).lower()
         if 'no such column' in err_msg or 'does not exist' in err_msg:
-            consumers = consumers.defer('load_kw', 'meter_type')
+            consumers = consumers.defer('load_kw')
         else:
             raise e
 
@@ -1223,7 +1183,7 @@ def api_consumer_search(request):
             'status': c.status,
             'previous_reading': last_reading.current_reading if last_reading else 0,
             'load_kw': getattr(c, 'load_kw', 1.0),
-            'meter_type': getattr(c, 'meter_type', '10'),
+            'meter_type': '10' if getattr(c, 'connection_type', 'single_phase') == 'single_phase' else '25',
             'address': c.address
         })
     return JsonResponse({'consumers': results})
@@ -1301,22 +1261,28 @@ def api_bill_detail(request, bill_id):
     bill = get_object_or_404(Bill, id=bill_id)
 
     if request.method == 'GET':
+        conn_type_val = getattr(bill, 'connection_type_snapshot', None) or getattr(bill.consumer, 'connection_type', 'single_phase')
+        load_val = getattr(bill, 'load_kw_snapshot', None)
+        load_kw = float(load_val if load_val is not None else getattr(bill.consumer, 'load_kw', 1.0))
         data = {
             'id': bill.id,
             'bill_number': bill.bill_number,
             'consumer_id': bill.consumer.id,
-            'consumer_name': bill.consumer.name,
+            'consumer_name': bill.consumer_name_snapshot or bill.consumer.name,
             'consumer_number': bill.consumer.consumer_number,
-            'meter_number': bill.consumer.meter_number,
-            'address': bill.consumer.address,
-            'connection_type': bill.consumer.connection_type,
-            'load_kw': bill.consumer.load_kw,
-            'meter_type': bill.consumer.meter_type,
+            'meter_number': bill.meter_number_snapshot or (bill.meter.meter_number if getattr(bill, 'meter', None) else bill.consumer.meter_number),
+            'address': getattr(bill, 'address_snapshot', None) or bill.consumer.address,
+            'department': getattr(bill, 'department_snapshot', None) or getattr(bill.consumer, 'department', '') or '',
+            'post': getattr(bill, 'post_snapshot', None) or getattr(bill.consumer, 'post', '') or '',
+            'connection_type': conn_type_val,
+            'load_kw': load_kw,
+            'meter_type': '10' if conn_type_val == 'single_phase' else '25',
             'billing_type': bill.consumer.billing_type,
+            'reading_date': bill.meter_reading.reading_date.strftime('%Y-%m-%d') if (getattr(bill, 'meter_reading', None) and getattr(bill.meter_reading, 'reading_date', None)) else None,
             'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
-            'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
-            'units': bill.units,
-            'rate_per_unit': bill.rate_per_unit,
+            'current_reading': bill.meter_reading.current_reading if bill.meter_reading else (bill.units_consumed_snapshot or bill.units),
+            'units': bill.units_consumed_snapshot or bill.units,
+            'rate_per_unit': bill.rate_snapshot or bill.rate_per_unit,
             'fixed_charges': bill.fixed_charges,
             'energy_charges': bill.energy_charges,
             'duty_charge': bill.duty_charge,
@@ -1324,7 +1290,7 @@ def api_bill_detail(request, bill_id):
             'regulatory_surcharge': bill.regulatory_surcharge,
             'arrears': bill.arrears,
             'late_payment_surcharge': bill.late_payment_surcharge,
-            'total_amount': bill.total_amount,
+            'total_amount': bill.total_amount_snapshot or bill.total_amount,
             'status': bill.status,
             'billing_period_start': bill.billing_period_start.strftime('%B %Y') if bill.billing_period_start else None,
             'due_date': bill.due_date.strftime('%Y-%m-%d') if bill.due_date else None,
@@ -1690,7 +1656,7 @@ def api_calculate_estimate(request):
 
     fixed_charges  = round(load_kw * fixed_charge_per_kw, 2)
     duty_charge    = round((energy_charges + fixed_charges) * (duty_percentage / 100), 2)
-    meter_rent     = phase_1_rent if consumer.meter_type == 'analog' else phase_3_rent
+    meter_rent     = phase_1_rent if consumer.connection_type == 'single_phase' else phase_3_rent
     arrears        = 0.0
     late_payment_surcharge = 0.0
     regulatory_surcharge   = 0.0
@@ -1706,7 +1672,7 @@ def api_calculate_estimate(request):
         'success': True,
         'consumer_id': consumer.id,
         'consumer_name': consumer.name,
-        'meter_type': consumer.meter_type,
+        'meter_type': '10' if consumer.connection_type == 'single_phase' else '25',
         'load_kw': load_kw,
         'previous_reading': previous_reading,
         'current_reading': current_reading,
@@ -1893,68 +1859,7 @@ def api_get_bill_pdf(request, bill_id):
             return JsonResponse({'error': 'Permission denied. You do not have access to this bill.'}, status=403)
     
     try:
-        # Use snapshot data for PDF if bill is locked
-        if bill.is_locked:
-            pdf_data = {
-                'bill_number': bill.bill_number,
-                'bill_date': bill.locked_at.strftime('%d %b %Y') if bill.locked_at else timezone.now().strftime('%d %b %Y'),
-                'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
-                'connection_type': bill.consumer.connection_type,
-                'load_kw': bill.consumer.load_kw,
-                'billing_period_start': bill.billing_period_start.strftime('%B %Y') if bill.billing_period_start else 'N/A',
-                'consumer_name': bill.consumer_name_snapshot or bill.consumer.name,
-                'consumer_number': bill.consumer.consumer_number,
-                'meter_number': bill.meter_number_snapshot or bill.consumer.meter_number,
-                'address': bill.consumer.address,
-                'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0.0,
-                'current_reading': bill.meter_reading.current_reading if bill.meter_reading else (bill.units_consumed_snapshot or bill.units),
-                'units': bill.units_consumed_snapshot or bill.units,
-                'rate_per_unit': bill.rate_snapshot or bill.rate_per_unit,
-                'energy_charges': bill.energy_charges,
-                'fixed_charges': bill.fixed_charges,
-                'duty_charge': bill.duty_charge,
-                'meter_rent': bill.meter_rent,
-                'meter_type': '1' if bill.consumer.meter_type == 'analog' else '3',
-                'regulatory_surcharge': bill.regulatory_surcharge,
-                'arrears': bill.arrears,
-                'late_payment_surcharge': bill.late_payment_surcharge,
-                'total_amount': bill.total_amount_snapshot or bill.total_amount,
-                'total_payable': int(round(bill.total_amount_snapshot or bill.total_amount)),
-                'current_year': timezone.now().year,
-                'is_finalized': True
-            }
-        else:
-            # Fallback for draft bills (limited preview)
-            pdf_data = {
-                'bill_number': bill.bill_number,
-                'bill_date': timezone.now().strftime('%d %b %Y'),
-                'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
-                'connection_type': bill.consumer.connection_type,
-                'load_kw': bill.consumer.load_kw,
-                'billing_period_start': bill.billing_period_start.strftime('%B %Y') if bill.billing_period_start else 'N/A',
-                'consumer_name': bill.consumer.name,
-                'consumer_number': bill.consumer.consumer_number,
-                'meter_number': bill.consumer.meter_number,
-                'address': bill.consumer.address,
-                'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
-                'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
-                'units': bill.units,
-                'rate_per_unit': bill.rate_per_unit,
-                'energy_charges': bill.energy_charges,
-                'fixed_charges': bill.fixed_charges,
-                'duty_charge': bill.duty_charge,
-                'meter_rent': bill.meter_rent,
-                'meter_type': '1' if bill.consumer.meter_type == 'analog' else '3',
-                'regulatory_surcharge': bill.regulatory_surcharge,
-                'arrears': bill.arrears,
-                'late_payment_surcharge': bill.late_payment_surcharge,
-                'total_amount': bill.total_amount,
-                'total_payable': int(round(bill.total_amount)),
-                'current_year': timezone.now().year,
-                'is_finalized': False
-            }
-        
-        pdf_content = BillPDFGenerator.generate_bill_pdf(pdf_data)
+        pdf_content = BillPDFGenerator.generate_bill_pdf(bill)
         
         AuditLog.objects.create(
             user=request.user,
@@ -2008,7 +1913,7 @@ def api_manual_generate_bill(request):
                 elif consumer.meter_number:
                     meter, _ = Meter.objects.get_or_create(
                         meter_number=consumer.meter_number,
-                        defaults={'meter_type': consumer.meter_type}
+                        defaults={'meter_type': '10'}  # Meter physical default
                     )
             
             if meter:
@@ -2218,7 +2123,7 @@ def api_import_readings(request):
                 elif consumer.meter_number:
                     meter, _ = Meter.objects.get_or_create(
                         meter_number=consumer.meter_number,
-                        defaults={'meter_type': consumer.meter_type}
+                        defaults={'meter_type': '10'}  # Meter physical default
                     )
                 else:
                     errors.append(f"Row {row_idx} ({consumer_number}): No active meter assignment found on {reading_date}.")
@@ -2567,18 +2472,21 @@ def consumer_portal_bills(request):
             'billing_period_end': b.billing_period_end.strftime('%Y-%m-%d') if b.billing_period_end else None,
             'billing_period': f"{b.billing_period_start.strftime('%b-%y')} to {b.billing_period_end.strftime('%b-%y')}" if b.billing_period_start and b.billing_period_end else None,
             'due_date': b.due_date.strftime('%Y-%m-%d') if b.due_date else None,
-            'connection_type': b.consumer.connection_type,
+            'connection_type': getattr(b, 'connection_type_snapshot', None) or b.consumer.connection_type,
             'billing_type': b.consumer.billing_type,
-            'load_kw': float(b.consumer.load_kw),
-            'meter_type': b.consumer.meter_type,
-            'consumer_name': b.consumer.name,
+            'load_kw': float(getattr(b, 'load_kw_snapshot', None) if getattr(b, 'load_kw_snapshot', None) is not None else b.consumer.load_kw),
+            'meter_type': '10' if (getattr(b, 'connection_type_snapshot', None) or b.consumer.connection_type) == 'single_phase' else '25',
+            'consumer_name': b.consumer_name_snapshot or b.consumer.name,
             'consumer_number': b.consumer.consumer_number,
-            'meter_number': b.consumer.meter_number,
-            'address': b.consumer.address,
+            'meter_number': b.meter_number_snapshot or (b.meter.meter_number if getattr(b, 'meter', None) else b.consumer.meter_number),
+            'address': getattr(b, 'address_snapshot', None) or b.consumer.address,
+            'department': getattr(b, 'department_snapshot', None) or getattr(b.consumer, 'department', '') or '',
+            'post': getattr(b, 'post_snapshot', None) or getattr(b.consumer, 'post', '') or '',
+            'reading_date': b.meter_reading.reading_date.strftime('%Y-%m-%d') if (hasattr(b, 'meter_reading') and b.meter_reading and getattr(b.meter_reading, 'reading_date', None)) else None,
             'previous_reading': b.meter_reading.previous_reading if hasattr(b, 'meter_reading') and b.meter_reading else 0,
-            'current_reading': b.meter_reading.current_reading if hasattr(b, 'meter_reading') and b.meter_reading else 0,
-            'units': b.units,
-            'rate_per_unit': float(b.rate_per_unit),
+            'current_reading': b.meter_reading.current_reading if hasattr(b, 'meter_reading') and b.meter_reading else (b.units_consumed_snapshot or b.units),
+            'units': b.units_consumed_snapshot or b.units,
+            'rate_per_unit': float(b.rate_snapshot or b.rate_per_unit),
             'energy_charges': float(b.energy_charges),
             'fixed_charges': float(b.fixed_charges),
             'duty_charge': float(b.duty_charge),
@@ -2586,7 +2494,7 @@ def consumer_portal_bills(request):
             'regulatory_surcharge': float(b.regulatory_surcharge),
             'arrears': float(b.arrears),
             'late_payment_surcharge': float(b.late_payment_surcharge),
-            'total_amount': float(b.total_amount),
+            'total_amount': float(b.total_amount_snapshot or b.total_amount),
             'paid_amount': float(b.paid_amount),
             'status': b.status,
             'is_paid': b.status == 'paid',
@@ -2741,7 +2649,8 @@ def export_mobile_sync(request):
             'phone': c.phone,
             'address': c.address,
             'meter_number': c.meter_number,
-            'meter_type': c.connection_type,
+            # meter_type encoded as '10'=single-phase, '25'=three-phase for mobile compatibility
+            'meter_type': '10' if c.connection_type == 'single_phase' else '25',
             'load_kw': float(c.load_kw) if c.load_kw else 1.0,
             'previous_reading': float(prev_val),
             'status': c.status

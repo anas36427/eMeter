@@ -16,39 +16,14 @@ def test_pdf():
     if not bill:
         print("No bills found")
         return
-
-    pdf_data = {
-        'bill_number': bill.bill_number,
-        'bill_date': bill.created_at.strftime('%d %b %Y') if bill.created_at else datetime.now().strftime('%d %b %Y'),
-        'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
-        'connection_type': bill.consumer.connection_type,
-        'load_kw': bill.consumer.load_kw,
-        'billing_period': bill.billing_period.strftime('%B %Y') if bill.billing_period else 'N/A',
-        'consumer_name': bill.consumer.name,
-        'consumer_number': bill.consumer.consumer_number,
-        'meter_number': bill.consumer.meter_number,
-        'address': bill.consumer.address,
-        'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0,
-        'current_reading': bill.meter_reading.current_reading if bill.meter_reading else 0,
-        'units': bill.units,
-        'rate_per_unit': bill.rate_per_unit,
-        'energy_charges': bill.energy_charges,
-        'fixed_charges': bill.fixed_charges,
-        'duty_charge': bill.duty_charge,
-        'meter_rent': bill.meter_rent,
-        'regulatory_surcharge': bill.regulatory_surcharge,
-        'arrears': bill.arrears,
-        'late_payment_surcharge': bill.late_payment_surcharge,
-        'total_amount': bill.total_amount,
-        'total_payable': int(round(bill.total_amount)),
-        'current_year': datetime.now().year,
-    }
-    
     try:
-        print("Generating PDF...")
-        pdf = BillPDFGenerator.generate_bill_pdf(pdf_data)
+        print(f"Generating PDF for Bill #{bill.bill_number}...")
+        pdf = BillPDFGenerator.generate_bill_pdf(bill)
         if pdf:
             print("PDF generated successfully! Size:", len(pdf))
+            with open("test_output.pdf", "wb") as f:
+                f.write(pdf)
+            print("Saved verification file as test_output.pdf")
         else:
             print("PDF generation returned None")
     except Exception as e:

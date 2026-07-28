@@ -43,7 +43,7 @@ class BillingService:
                 elif consumer.meter_number:
                     meter, _ = Meter.objects.get_or_create(
                         meter_number=consumer.meter_number,
-                        defaults={'meter_type': consumer.meter_type}
+                        defaults={'meter_type': '10'}  # Meter physical default
                     )
                 else:
                     raise ValidationError("No active meter assignment found for this consumer on the reading date.")
@@ -121,7 +121,7 @@ class BillingService:
                 elif consumer.meter_number:
                     meter, _ = Meter.objects.get_or_create(
                         meter_number=consumer.meter_number,
-                        defaults={'meter_type': consumer.meter_type}
+                        defaults={'meter_type': '10'}  # Meter physical default
                     )
                 else:
                     raise ValidationError("No active meter assignment found for this consumer on the reading date.")
@@ -167,12 +167,17 @@ class BillingService:
         # 4. Calculate Charges using central function
         bill = BillingService.calculate_bill(bill.id)
 
-        # 5. Populate Immutable Snapshots
-        bill.units_consumed_snapshot   = bill.units
-        bill.rate_snapshot             = bill.rate_per_unit
+        # 5. Populate Immutable Snapshots at time of reading/generation
+        bill.units_consumed_snapshot   = float(bill.units)
+        bill.rate_snapshot             = float(bill.rate_per_unit)
         bill.total_amount_snapshot     = float(bill.total_amount)
         bill.consumer_name_snapshot    = bill.consumer.name
-        bill.meter_number_snapshot     = bill.meter.meter_number if bill.meter else ''
+        bill.meter_number_snapshot     = bill.meter.meter_number if bill.meter else (getattr(bill.consumer, 'meter_number', '') or '')
+        bill.connection_type_snapshot  = getattr(bill.consumer, 'connection_type', 'single_phase')
+        bill.load_kw_snapshot          = float(getattr(bill.consumer, 'load_kw', 1.0))
+        bill.department_snapshot       = getattr(bill.consumer, 'department', '') or ''
+        bill.post_snapshot             = getattr(bill.consumer, 'post', '') or ''
+        bill.address_snapshot          = getattr(bill.consumer, 'address', '') or ''
         
         bill.locked_at = timezone.now()
         bill.locked_by = user
@@ -194,7 +199,8 @@ class BillingService:
     @transaction.atomic
     def calculate_bill(bill_id):
         """
-        Calculate bill using flat rate tariff from BillingSettings.
+        Calculate bill using flat rate tariff from BillingSettings at the moment of billing.
+        Once locked, charges and rates remain immutable against future settings changes.
         """
         from decimal import Decimal
         bill = Bill.objects.select_for_update().get(id=bill_id)
@@ -209,60 +215,46 @@ class BillingService:
 
         load = Decimal(str(getattr(bill.consumer, 'load_kw', 1.0)))
         fixed_rate = Decimal(str(getattr(settings, 'fixed_charge_per_kw', 400.0)))
-        bill.fixed_charges = load * fixed_rate
+        bill.fixed_charges = round(load * fixed_rate, 2)
         
-        duty_pct = float(getattr(settings, 'duty_percentage', 7.5))
-        bill.duty_charge = round((float(bill.energy_charges) + float(bill.fixed_charges)) * (duty_pct / 100), 2)
+        duty_pct = Decimal(str(getattr(settings, 'duty_percentage', 7.5)))
+        bill.duty_charge = round((Decimal(str(bill.energy_charges)) + Decimal(str(bill.fixed_charges))) * (duty_pct / Decimal('100')), 2)
         
-        m_type = getattr(bill.consumer, 'meter_type', 'analog')
-        bill.meter_rent = float(settings.phase_1_rent if m_type == 'analog' else settings.phase_3_rent)
-        bill.late_payment_surcharge = round(bill.arrears * 0.015, 2) if bill.arrears > 0 else 0.0
+        # Use connection_type (single_phase/three_phase) — NOT meter_type (analog/digital/smart)
+        # meter_type describes the physical hardware; connection_type determines the phase tariff.
+        conn_type = getattr(bill.consumer, 'connection_type', 'single_phase')
+        bill.meter_rent = round(Decimal(str(settings.phase_1_rent if conn_type == 'single_phase' else settings.phase_3_rent)), 2)
+        bill.late_payment_surcharge = round(Decimal(str(bill.arrears)) * Decimal('0.015'), 2) if bill.arrears > 0 else Decimal('0.00')
         
         bill.total_amount = round(
             Decimal(str(bill.energy_charges)) + Decimal(str(bill.fixed_charges)) + Decimal(str(bill.duty_charge)) + 
             Decimal(str(bill.regulatory_surcharge)) + Decimal(str(bill.meter_rent)) + Decimal(str(bill.arrears)) + 
             Decimal(str(bill.late_payment_surcharge)), 0
         )
+        
+        # Always capture snapshot attributes during calculation so rates and meter state reflect this exact day
+        bill.units_consumed_snapshot   = float(bill.units)
+        bill.rate_snapshot             = float(bill.rate_per_unit)
+        bill.total_amount_snapshot     = float(bill.total_amount)
+        if bill.consumer:
+            bill.consumer_name_snapshot   = bill.consumer.name
+            bill.meter_number_snapshot    = bill.meter.meter_number if bill.meter else (getattr(bill.consumer, 'meter_number', '') or '')
+            bill.connection_type_snapshot = getattr(bill.consumer, 'connection_type', 'single_phase')
+            bill.load_kw_snapshot         = float(getattr(bill.consumer, 'load_kw', 1.0))
+            bill.department_snapshot      = getattr(bill.consumer, 'department', '') or ''
+            bill.post_snapshot            = getattr(bill.consumer, 'post', '') or ''
+            bill.address_snapshot         = getattr(bill.consumer, 'address', '') or ''
+            
         bill.save()
         
         return bill
 
     @staticmethod
     def generate_bill_pdf(bill_id):
-        """Generate PDF using snapshot data"""
+        """Generate PDF using snapshot data via centralized generator"""
         bill = Bill.objects.get(id=bill_id)
         if not bill.is_locked:
             raise ValidationError("PDF can only be generated for issued bills.")
 
         from .pdf_generator import BillPDFGenerator
-        
-        pdf_data = {
-            'bill_number': bill.bill_number,
-            'bill_date': bill.locked_at.strftime('%d %b %Y') if bill.locked_at else timezone.now().strftime('%d %b %Y'),
-            'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'N/A',
-            'connection_type': bill.consumer.connection_type,
-            'load_kw': bill.consumer.load_kw,
-            'billing_period': bill.billing_period_start.strftime('%B %Y') if bill.billing_period_start else 'N/A',
-            'consumer_name': bill.consumer_name_snapshot or bill.consumer.name,
-            'consumer_number': bill.consumer.consumer_number,
-            'meter_number': bill.meter_number_snapshot or (bill.meter.meter_number if bill.meter else (bill.consumer.meter_number or 'N/A')),
-            'address': bill.consumer.address,
-            'previous_reading': bill.meter_reading.previous_reading if bill.meter_reading else 0.0,
-            'current_reading': bill.meter_reading.current_reading if bill.meter_reading else (bill.units_consumed_snapshot or bill.units),
-            'units': bill.units_consumed_snapshot or bill.units,
-            'rate_per_unit': bill.rate_snapshot or bill.rate_per_unit,
-            'energy_charges': bill.energy_charges,
-            'fixed_charges': bill.fixed_charges,
-            'duty_charge': bill.duty_charge,
-            'meter_rent': bill.meter_rent,
-            'meter_type': '1' if bill.consumer.meter_type == 'analog' else '3',
-            'regulatory_surcharge': bill.regulatory_surcharge,
-            'arrears': bill.arrears,
-            'late_payment_surcharge': bill.late_payment_surcharge,
-            'total_amount': bill.total_amount_snapshot or bill.total_amount,
-            'total_payable': int(round(bill.total_amount_snapshot or bill.total_amount)),
-            'current_year': timezone.now().year,
-            'is_finalized': True
-        }
-        
-        return BillPDFGenerator.generate_bill_pdf(pdf_data)
+        return BillPDFGenerator.generate_bill_pdf(bill)
