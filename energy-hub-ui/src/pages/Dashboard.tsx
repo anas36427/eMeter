@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Users, Gauge, IndianRupee, FileText, Activity, CreditCard, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDashboardStats } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardSkeleton } from "@/components/ui/page-skeletons";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
@@ -94,12 +94,9 @@ const Dashboard = () => {
       </div>
 
       {/* Summary Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          Array(6).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-          ))
-        ) : (
+      {loading && <DashboardSkeleton />}
+      {!loading && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {(
           summaryCards.map((card) => (
             <div 
               key={card.label} 
@@ -126,10 +123,10 @@ const Dashboard = () => {
             </div>
           ))
         )}
-      </div>
+      </div>}
 
       {/* Action Prompt */}
-      <div className="stat-card bg-secondary/5 border-dashed border-secondary/20 flex flex-col items-center justify-center py-12 text-center">
+      {!loading && <div className="stat-card bg-secondary/5 border-dashed border-secondary/20 flex flex-col items-center justify-center py-12 text-center">
         <Activity className="w-12 h-12 text-secondary/40 mb-4" />
         <h3 className="text-lg font-semibold">Detailed Analysis Available</h3>
         <p className="text-sm text-muted-foreground max-w-sm mt-2">
@@ -138,7 +135,7 @@ const Dashboard = () => {
         <Button variant="link" className="mt-4 text-secondary" onClick={() => navigate('/reports')}>
           Go to Reports &rarr;
         </Button>
-      </div>
+      </div>}
     </div>
   );
 };

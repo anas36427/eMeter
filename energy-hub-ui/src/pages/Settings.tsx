@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Settings as SettingsIcon } from "lucide-react";
+import { FormSkeleton } from "@/components/ui/page-skeletons";
 import { api, getBillingSettings, updateBillingSettings } from "@/lib/api";
 
 const Settings = () => {
@@ -92,12 +93,7 @@ const Settings = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Loading settings configurations...</p>
-      </div>
-    );
+    return <FormSkeleton />;
   }
 
   return (

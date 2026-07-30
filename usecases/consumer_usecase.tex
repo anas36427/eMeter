@@ -1,0 +1,49 @@
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.8\textwidth}{!}{
+    \begin{tikzpicture}[
+        usecase/.style={ellipse, draw=black!70, fill=blue!5, text width=3.5cm, align=center, font={\footnotesize\bfseries}, minimum height=1.2cm, inner sep=2pt},
+        actor/.style={rectangle, draw=black!70, fill=gray!10, text width=2.5cm, align=center, minimum height=1.5cm, font={\footnotesize\bfseries}, rounded corners=2pt},
+        line/.style={thick, -},
+        include/.style={thick, dashed, ->, >=stealth},
+        extend/.style={thick, dashed, <-, >=stealth}
+    ]
+
+        % System Boundary
+        \draw[thick, draw=black!50, fill=gray!2, rounded corners=15pt, dashed] (-1, -7) rectangle (9, 7);
+        \node[font={\footnotesize\bfseries}, text=black!70] at (4, 6.5) {<< Consumer Self-Service Portal >>};
+
+        % Actor
+        \node (consumer) [actor] at (-4, 0) {Consumer \\ (End User)};
+
+        % Use Cases
+        \node (uc_login) [usecase] at (2, 4) {Authenticate \& Login};
+        \node (uc_dashboard) [usecase] at (2, 1.5) {View Dashboard};
+        \node (uc_history) [usecase] at (2, -1) {View Bill History};
+        \node (uc_details) [usecase] at (2, -3.5) {View Bill Details};
+        \node (uc_download) [usecase] at (7, -3.5) {Download PDF Invoice};
+        \node (uc_payment) [usecase] at (7, -1) {Verify Payment Status};
+
+        % Actor to Use Case connections
+        \draw [line] (consumer) -- (uc_login);
+        \draw [line] (consumer) -- (uc_dashboard);
+        \draw [line] (consumer) -- (uc_history);
+        \draw [line] (consumer) -- (uc_details);
+
+        % Includes and Extends Relationships
+        % All actions require authentication
+        \draw [include] (uc_dashboard) -- node[right, font=\scriptsize] {<<include>>} (uc_login);
+        \draw [include] (uc_history) edge[bend right=20] node[right, font=\scriptsize] {<<include>>} (uc_login);
+        \draw [include] (uc_details) edge[bend right=40] node[right, font=\scriptsize] {<<include>>} (uc_login);
+
+        % Downloading a PDF extends viewing the details
+        \draw [extend] (uc_details) -- node[above, font=\scriptsize] {<<extend>>} (uc_download);
+
+        % Verifying payment status extends viewing history
+        \draw [extend] (uc_history) -- node[above, font=\scriptsize] {<<extend>>} (uc_payment);
+
+    \end{tikzpicture}
+    }
+    \caption{Use Case Diagram: Consumer Bill Viewing and Downloading Process}
+    \label{fig:usecase_consumer_bill}
+\end{figure}

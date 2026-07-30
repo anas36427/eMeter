@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import { getReportsData } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/ui/page-skeletons";
 
 const COLORS = ["hsl(217, 91%, 60%)", "hsl(160, 84%, 39%)"];
 
@@ -22,16 +22,7 @@ const Reports = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="space-y-6 animate-fade-in p-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-80 w-full" />
-        </div>
-      </div>
-    );
+    return <ChartSkeleton />;
   }
 
   const { monthly_usage = [], revenue_breakdown = [], top_consumers = [] } = data || {};

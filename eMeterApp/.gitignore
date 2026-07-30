@@ -9,3 +9,12 @@ yarn-error.log*
 .env
 dist/
 web-build/
+
+# --- Additional Standard Ignores ---
+*.pem
+*.key
+*.p12
+*.p8
+*.jks
+*.keystore
+*eas-build*.json

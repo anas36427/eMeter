@@ -1,0 +1,313 @@
+% ============================================================
+%  eMeter AMU — API Documentation
+%  Aligarh Muslim University Electricity Management System
+%  Author: Project Documentation
+%  Date:   2026
+% ============================================================
+
+\documentclass[12pt, a4paper]{report}
+
+% ─── Packages ──────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage{tabularx}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{parskip}
+
+% ─── Page Geometry ─────────────────────────────────────────
+\geometry{
+    left=2.5cm, right=2.5cm,
+    top=3cm, bottom=3cm,
+    headheight=15pt
+}
+
+% ─── Colour Palette ────────────────────────────────────────
+\definecolor{primaryGreen}{HTML}{1D9E75}
+\definecolor{darkGreen}{HTML}{155E47}
+\definecolor{lightGreen}{HTML}{D1FAE5}
+\definecolor{accentAmber}{HTML}{F59E0B}
+\definecolor{deepBlue}{HTML}{1E3A5F}
+\definecolor{lightBlue}{HTML}{DBEAFE}
+\definecolor{codeGray}{HTML}{F3F4F6}
+\definecolor{textDark}{HTML}{111827}
+\definecolor{textMid}{HTML}{374151}
+\definecolor{borderColor}{HTML}{E5E7EB}
+
+% ─── Hyperref Setup ────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryGreen,
+    urlcolor=deepBlue,
+    citecolor=primaryGreen,
+    pdfauthor={eMeter AMU Project},
+    pdftitle={eMeter AMU — API Endpoints Documentation},
+    pdfsubject={RESTful API Reference},
+}
+
+% ─── Section Formatting ────────────────────────────────────
+\titleformat{\chapter}[display]
+    {\normalfont\huge\bfseries\color{deepBlue}}
+    {\chaptertitlename\ \thechapter}{20pt}{\Huge\color{primaryGreen}}
+
+\titleformat{\section}
+    {\normalfont\Large\bfseries\color{deepBlue}}
+    {\thesection}{1em}{}[{\titlerule[1.5pt]}]
+
+% ─── Header / Footer ───────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryGreen}{\textbf{eMeter AMU}}}
+\fancyhead[R]{\small\textcolor{textMid}{\leftmark}}
+\fancyfoot[C]{\small\textcolor{textMid}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% ─── Custom Boxes ──────────────────────────────────────────
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+    colback=lightBlue, colframe=deepBlue,
+    fonttitle=\bfseries,
+    title={\faServer\ \ API Information},
+    #1
+}
+
+% ─── Helper Command: HTTP Method Badge ─────────────────────
+\newcommand{\httpget}{\colorbox{lightGreen}{\textcolor{darkGreen}{\textbf{\small GET}}}}
+\newcommand{\httppost}{\colorbox{lightBlue}{\textcolor{deepBlue}{\textbf{\small POST}}}}
+\newcommand{\httppatch}{\colorbox{warningBg}{\textcolor{accentAmber}{\textbf{\small PATCH}}}}
+\newcommand{\httpdelete}{\colorbox{red!10}{\textcolor{red!70!black}{\textbf{\small DELETE}}}}
+\newcommand{\httpput}{\colorbox{purple!10}{\textcolor{purple!70!black}{\textbf{\small PUT}}}}
+
+% ============================================================
+\begin{document}
+
+% ─── Cover Page ─────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    % Title Block
+    \begin{tcolorbox}[
+        colback=deepBlue, colframe=primaryGreen,
+        width=\textwidth, arc=8pt, boxrule=2pt
+    ]
+        \centering
+        \vspace{0.5cm}
+        {\Huge\bfseries\color{primaryGreen} eMeter AMU}\\[0.4cm]
+        {\Large\color{white} Electricity Billing Management System}\\[0.3cm]
+        {\large\color{lightGreen} Aligarh Muslim University}\\[0.2cm]
+        {\normalsize\color{borderColor} Official API Endpoints Documentation}
+        \vspace{0.5cm}
+    \end{tcolorbox}
+    
+    \vspace{1.5cm}
+    
+    {\large\bfseries\color{textMid} Prepared For:}\\[0.4cm]
+    \begin{tabular}{c c}
+        \colorbox{primaryGreen!15}{\textcolor{darkGreen}{\textbf{\ Backend Developers\ }}}
+        &
+        \colorbox{deepBlue!10}{\textcolor{deepBlue}{\textbf{\ Frontend Integrators\ }}}
+    \end{tabular}
+    
+    \vfill
+    
+    {\small\color{textMid}
+        Version: 1.0\\
+        Framework: Django REST Framework (DRF)\\[0.3cm]
+        \textcolor{borderColor}{\rule{6cm}{0.4pt}}\\[0.3cm]
+        \textit{This document provides a comprehensive list of all RESTful API\\
+        endpoints exposed by the eMeter backend to facilitate\\
+        integration, debugging, and future development.}
+    }
+\end{titlepage}
+
+% ─── Table of Contents ──────────────────────────────────────
+\tableofcontents
+
+\newpage
+
+% ============================================================
+\chapter{API Endpoints Reference}
+% ============================================================
+
+\begin{infobox}
+All API routes are prefixed with \texttt{/api/} in the Django project configuration. All requests expecting JSON must set the \texttt{Content-Type: application/json} header.
+\end{infobox}
+
+\section{System Health}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily}l c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/health/ & \httpget & Health check endpoint used for uptime monitoring (e.g., Render). Returns a simple JSON status. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Authentication \& Session}
+These endpoints manage user sessions for Administrators and Meter Readers.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily}l c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/login/ & \httppost & Authenticates a user (Admin/Reader) and issues a JWT token. \\
+/api/me/ & \httpget & Retrieves the profile details of the currently authenticated user. \\
+/api/profile/update/ & \httpput & Updates the profile information of the authenticated user. \\
+/api/logout/ & \httppost & Logs out the current user and invalidates the session token. \\
+/api/csrf/ & \httpget & Retrieves a CSRF token for securing subsequent state-changing requests. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Dashboard Statistics \& Reports}
+Endpoints serving aggregated data for the administrative dashboard.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.35\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/dashboard-stats/ & \httpget & Fetches high-level KPIs (Total Revenue, Pending Dues, Total Consumers, etc.) for dashboard display. \\
+/api/reports-data/ & \httpget & Retrieves detailed aggregated data used to render charts and financial reports. \\
+/api/settings/ & \httpget & Retrieves the global \texttt{BillingSettings} (unit rates, duty \%, fixed charges, meter rents). \\
+/api/settings/update/ & \httppost / \httpput & Updates the global billing tariff policies. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Consumer Management}
+Endpoints for managing the lifecycle of consumer records.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.4\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/consumers/ & \httpget / \httppost & Lists all consumers (\texttt{GET}) or registers a new consumer (\texttt{POST}). \\
+/api/consumers/<id>/ \newline /api/consumer/<id>/ & \httpget / \httpput / \httpdelete & Retrieves, updates, or soft-deletes a specific consumer by ID. \\
+/api/consumers/search/ & \httpget & Searches for consumers by name, consumer number, or meter number. \\
+/api/consumer/<id>/readings/ & \httpget & Fetches the historical meter readings for a specific consumer. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Meter Reading \& Billing Core}
+The primary data ingestion endpoints for field operations and bulk uploads.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.38\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/readings/ & \httpget & Lists all recorded meter readings in the system. \\
+/api/readings/import-excel/ & \httppost & Processes a bulk upload of \texttt{.xlsx} files, generating bills for multiple readings in batch. \\
+/api/submit-reading/ & \httppost & Submits a single meter reading into the system without automatically generating a bill. \\
+/api/reading-and-bill/ & \httppost & Submits a reading and atomically triggers the billing calculation engine to generate a bill. Used heavily by the mobile app sync. \\
+/api/edit-reading/<id>/ & \httppatch / \httpput & Edits an existing meter reading (restricted to readings submitted on the current day). \\
+/api/calculate-estimate/ & \httppost & Returns a live billing calculation estimate without saving to DB. Used for mobile app previews. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Bill Management}
+Endpoints for managing generated invoices and their payment lifecycles.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.38\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/bills/ & \httpget & Lists all generated bills with pagination and filtering options. \\
+/api/bill/<id>/ & \httpget & Retrieves comprehensive details for a specific generated bill. \\
+/api/bill/<id>/pdf/ & \httpget & Downloads the specified bill rendered as a print-ready PDF document. \\
+/api/bills/<id>/mark-paid/ & \httppost & Updates the status of a specific bill to "Paid". \\
+/api/bills/<id>/mark-unpaid/ & \httppost & Reverts the status of a specific bill to "Unpaid". \\
+/api/bills/manual-generate/ & \httppost & Manually forces the generation of a bill for a consumer based on existing data. \\
+/api/send-bill-sms/ & \httppost & Triggers a notification (SMS/WhatsApp) to send a bill link to the consumer. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Administrative Workflows}
+Specialized operational endpoints for department administrators.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.4\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/notifications/ & \httpget & Retrieves system alerts and notifications for administrators. \\
+/api/notifications/mark-read/ & \httppost & Marks pending notifications as read. \\
+/api/start-reading-cycle/ & \httppost & Initializes a new monthly reading cycle (resets flags, prepares queues). \\
+/api/admin/export-mobile-sync/ & \httpget & Exports the consumer registry as \texttt{eMeter\_Offline\_Sync.json} to initialize mobile devices for offline operations. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Consumer Portal (Self-Service)}
+Endpoints accessible \textbf{only} to end-consumers using scoped token authentication. 
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.45\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/consumer/portal/me/ & \httpget & Retrieves the authenticated consumer's profile information. \\
+/api/consumer/portal/readings/ & \httpget & Retrieves the authenticated consumer's own reading history (Strict data isolation). \\
+/api/consumer/portal/bills/ & \httpget & Retrieves the authenticated consumer's own billing history. \\
+/api/consumer/portal/change-password/ & \httppost & Allows the consumer to securely change their portal password. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Consumer Portal Administration}
+Endpoints for administrators to manage consumer portal access.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{0.55\textwidth} c X}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/api/admin/consumer/<id>/create-portal-account/ & \httppost & Generates initial portal credentials for a consumer. \\
+/api/admin/consumer/<id>/reset-password/ & \httppost & Forces a password reset for a consumer's portal account. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\vspace{2em}
+\hrule
+\vspace{1em}
+
+\begin{center}
+\textit{Document generated for eMeter AMU — Electricity Billing and Meter Management System}\\[0.2cm]
+\textit{Aligarh Muslim University, Department of Computer Science}\\[0.2cm]
+{\small API is built on Django REST Framework}
+\end{center}
+
+\end{document}

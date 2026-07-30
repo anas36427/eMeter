@@ -1,0 +1,66 @@
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.9\textwidth}{!}{
+    \begin{tikzpicture}[
+        usecase/.style={ellipse, draw=black!70, fill=blue!5, text width=3.5cm, align=center, font={\footnotesize\bfseries}, minimum height=1.2cm, inner sep=2pt},
+        actor/.style={rectangle, draw=black!70, fill=gray!10, text width=2.5cm, align=center, minimum height=1.5cm, font={\footnotesize\bfseries}, rounded corners=2pt},
+        line/.style={thick, -},
+        include/.style={thick, dashed, ->, >=stealth},
+        extend/.style={thick, dashed, <-, >=stealth}
+    ]
+
+        % System Boundary
+        \draw[thick, draw=black!50, fill=gray!2, rounded corners=15pt, dashed] (-1, -11) rectangle (10, 6);
+        \node[font={\footnotesize\bfseries}, text=black!70] at (4.5, 5.5) {<< Mobile Field Module (Offline-First) >>};
+
+        % Actors
+        \node (reader) [actor] at (-4, -2.5) {Meter Reader \\ (Field Worker)};
+        \node (backend) [actor] at (13, -8.5) {Backend System \\ (Cloud DB)};
+
+        % Use Cases
+        \node (uc_login) [usecase] at (2, 4) {Authenticate Reader};
+        \node (uc_cache) [usecase] at (2, 1.5) {Cache Consumer Data};
+        \node (uc_search) [usecase] at (2, -1) {Search Consumer Localy};
+        \node (uc_capture) [usecase] at (2, -3.5) {Capture Current Reading};
+        
+        \node (uc_validate) [usecase] at (7, -3.5) {Validate Consumption Limits};
+        \node (uc_queue) [usecase] at (2, -6) {Queue Reading Locally};
+        \node (uc_sync) [usecase] at (2, -8.5) {Sync Data to Cloud};
+        \node (uc_notify) [usecase] at (7, -8.5) {Notify Sync Status};
+
+        % Actor to Use Case connections (Meter Reader)
+        \draw [line] (reader) -- (uc_login);
+        \draw [line] (reader) -- (uc_cache);
+        \draw [line] (reader) -- (uc_search);
+        \draw [line] (reader) -- (uc_capture);
+        \draw [line] (reader) -- (uc_sync);
+
+        % Actor to Use Case connections (Backend System)
+        \draw [line] (backend) -- (uc_cache);
+        \draw [line] (backend) -- (uc_sync);
+
+        % Includes and Extends Relationships
+        
+        % Capturing reading includes searching the consumer first
+        \draw [include] (uc_capture) -- node[right, font=\scriptsize] {<<include>>} (uc_search);
+        
+        % Caching data and Searching data requires authentication
+        \draw [include] (uc_cache) -- node[right, font=\scriptsize] {<<include>>} (uc_login);
+        
+        % Validation is a mandatory part of Capturing
+        \draw [include] (uc_capture) -- node[above, font=\scriptsize] {<<include>>} (uc_validate);
+        
+        % Queueing locally extends the capture process (happens when offline)
+        \draw [extend] (uc_capture) -- node[right, font=\scriptsize] {<<extend>>} (uc_queue);
+        
+        % Syncing to cloud notifies the user
+        \draw [include] (uc_sync) -- node[above, font=\scriptsize] {<<include>>} (uc_notify);
+        
+        % Syncing conceptually extends Queueing (happens when network is active)
+        \draw [extend] (uc_queue) -- node[right, font=\scriptsize] {<<extend>>} (uc_sync);
+
+    \end{tikzpicture}
+    }
+    \caption{Use Case Diagram: Mobile Meter Reader Offline Reading and Synchronization Process}
+    \label{fig:usecase_meter_reader}
+\end{figure}

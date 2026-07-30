@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { getConsumers, createConsumer, updateConsumer, getConsumer, deleteConsumer, resetConsumerPassword } from "@/lib/api";
 import type { Consumer } from "@emeter/models";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useSearch } from "@/contexts/SearchContext";
 
@@ -203,11 +204,12 @@ const Consumers = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-10 w-full max-w-md" />
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <TableSkeleton
+        columns={6}
+        rows={8}
+        showFilterBar
+        pageTitle
+      />
     );
   }
 
@@ -387,7 +389,7 @@ const Consumers = () => {
                 onClick={handleSaveConsumer}
                 disabled={saving}
               >
-                {saving ? "Saving..." : editingId ? "Update Consumer" : "Save Consumer"}
+                {saving ? <><Spinner size={14} className="mr-2" />{editingId ? "Updating..." : "Saving..."}</> : editingId ? "Update Consumer" : "Save Consumer"}
               </Button>
             </div>
           </DialogContent>

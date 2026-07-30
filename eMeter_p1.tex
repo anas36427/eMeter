@@ -1,0 +1,178 @@
+\documentclass[12pt, a4paper, onecolumn]{report}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    left=1.2in,
+    right=0.8in,
+    top=0.8in,
+    bottom=0.8in
+}
+\usepackage{setspace}
+\onehalfspacing % 1.5 line spacing (Guideline 3)
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{fancyhdr}
+\usepackage{newtxtext,newtxmath} % Times New Roman (Guideline 12)
+\usepackage{tikz} % Required for side stripe positioning
+\usetikzlibrary{arrows.meta, shapes, positioning, calc}
+\usepackage{array}
+\usepackage{ragged2e}
+\newcolumntype{E}{>{\RaggedRight\ttfamily\small}p{5.2cm}}
+\newcolumntype{M}{>{\centering\arraybackslash\small}p{2.2cm}}
+\newcolumntype{D}{>{\RaggedRight\arraybackslash\small}X}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{booktabs}
+
+% --- Font Sizes (Guideline 12) ---
+\titleformat{\chapter}[display]
+  {\normalfont\fontsize{16}{19}\bfseries}{\chaptertitlename\ \thechapter}{10pt}{\Huge}
+\titleformat{\section}
+  {\normalfont\fontsize{14}{17}\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\fontsize{12}{15}\bfseries}{\thesubsection}{1em}{}
+\renewcommand{\normalsize}{\fontsize{12}{15}\selectfont}
+
+% --- Page Numbering (Guideline 4 & 11) ---
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\pagestyle{plain}
+
+% --- Code Styling ---
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstset{
+    backgroundcolor=\color{backcolour},  
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,        
+    breaklines=true,                
+    captionpos=b,                    
+    keepspaces=true,                
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\begin{document}
+\pagenumbering{roman}
+
+% --- 1. Title Page ---
+\begin{titlepage}
+    \centering
+    \textbf{eMETER -- ELECTRICITY BILLING AND METER MANAGEMENT SYSTEM}
+   
+    \vspace{1.5cm}
+    \fontsize{14}{17}\selectfont
+    \textbf{DISSERTATION}\\
+    SUBMITTED IN PARTIAL FULFILLMENT OF THE REQUIREMENTS\\
+    FOR THE AWARD OF THE DEGREE OF\\
+   
+    \vspace{1.5cm}
+    \fontsize{16}{19}\selectfont
+    \textbf{Master of Computer Applications}\\[0.5em]
+    \textbf{MCA}
+   
+    \vspace{1.5cm}
+    \fontsize{12}{15}\selectfont
+    By\\
+    \textbf{Anas Julfikar}
+   
+    \vspace{1cm}
+    % \includegraphics[width=0.3\textwidth]{LOGO.jpeg}
+   
+    \vspace{1cm}
+    \fontsize{12}{15}\selectfont
+    \textbf{DEPARTMENT OF COMPUTER SCIENCE}\\
+    \textbf{ALIGARH MUSLIM UNIVERSITY}\\
+    \textbf{ALIGARH (INDIA)}
+   
+    \vfill
+    \fontsize{12}{15}\selectfont
+    \textbf{Year of submission: 2026}
+
+    % --- Side Stripe ---
+    \begin{tikzpicture}[remember picture, overlay]
+        \node[rotate=90, anchor=west] at ([xshift=1cm, yshift=-4cm]current page.west) {\fontsize{10}{12}\selectfont Anas Julfikar};
+        \node[rotate=90, anchor=west] at ([xshift=1cm, yshift=-12cm]current page.west) {\fontsize{10}{12}\selectfont eMeter System};
+        \node[rotate=90, anchor=west] at ([xshift=1cm, yshift=-22cm]current page.west) {\fontsize{10}{12}\selectfont 2026};
+    \end{tikzpicture}
+\end{titlepage}
+
+% --- 2. Certificate ---
+\newpage
+\begin{center}
+    \Huge \textbf{CERTIFICATE}
+\end{center}
+\vspace{1cm}
+This is to certify that the dissertation/project work entitled \textbf{``eMeter -- Electricity Billing and Meter Management System''} being submitted by \textbf{Mr. Anas Julfikar} in partial fulfillment of the requirements for the award of the \textbf{Master of Computer Applications (MCA)} degree of Aligarh Muslim University, Aligarh, is a record of the student's own work, carried out under my supervision and guidance.
+
+It is further certified that the student has worked on the \textbf{eMeter} system, at \textbf{Aligarh Muslim University} for completion of this work from \textbf{January 2026} to \textbf{July 2026}.
+
+\vspace{3cm}
+\noindent
+Signature \\
+(of the supervisor) \\
+
+
+% --- 3. Acknowledgement ---
+\newpage
+\chapter*{ACKNOWLEDGMENT}
+\addcontentsline{toc}{chapter}{Acknowledgment}
+The completion of this dissertation marks the end of a long and deeply personal journey; one that began with an idea and was carried forward through months of dedication, late nights, and the quiet determination that grows in the presence of people who truly care.
+\vspace{1em}
+First and foremost, I express my profound gratitude to Almighty Allah, the Most Gracious and Most Merciful, for blessing me with the health, strength, and patience to complete this journey. Every step forward has been by His grace.
+\vspace{1em}
+I extend my sincere thanks to my supervisor, Prof. Aasim Zafar, Department of Computer Science, Aligarh Muslim University, for his guidance, support, and thoughtful mentorship. His expertise brought academic clarity to this work, and his encouragement provided direction whenever the path felt uncertain.
+\vspace{1em}
+I am also grateful to the Department of Computer Science, Aligarh Muslim University, and its faculty and staff for providing the academic environment and resources necessary to complete this Master of Computer Applications programme.
+\vspace{1em}
+I would like to express my special thanks to Dr. Faraz Masood for his invaluable contribution, guidance, and help. His support as both a faculty member and an older brother has been instrumental in the successful completion of this work.
+\vspace{1em}
+Building \textbf{eMeter} extended beyond a formal academic task, offering an opportunity to apply theoretical knowledge in a practical context. It demanded consistent effort, careful design decisions, and a grounded approach to addressing real-world challenges within the utility management domain.
+
+% --- 4. Contents ---
+\newpage
+\tableofcontents
+\listoffigures
+\listoftables
+
+% --- 5. Abstract ---
+\newpage
+\chapter*{ABSTRACT}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Efficient electricity billing and utility management are essential for modern infrastructure systems. However, traditional electricity billing methods still rely heavily on manual meter reading, paper-based records, delayed bill generation, and fragmented administrative workflows. These limitations often result in operational inefficiencies, human errors, revenue leakage, and reduced consumer transparency, especially in areas with poor network connectivity.
+
+This dissertation presents \textbf{eMeter}, a comprehensive Electricity Billing and Meter Management System designed to automate and modernize the complete utility billing workflow. The system follows a three-tier architecture consisting of a \textbf{Django REST Framework} backend, a \textbf{React 18} web dashboard for administrative management, and an offline-first \textbf{React Native} mobile application for field meter readers. \textbf{PostgreSQL} is used for secure and scalable data storage.
+
+A major contribution of the proposed system is its resilient offline synchronization mechanism. Using \textbf{AsyncStorage} and the \textbf{NetInfo} API, the mobile application enables meter readers to capture readings without internet connectivity and automatically synchronize the data once connectivity is restored. This ensures uninterrupted field operations and reliable data consistency.
+
+The system also implements a dynamic \textbf{BillingSettings} policy engine that automates electricity bill calculation, including energy charges, fixed charges per kilowatt of load, electricity duty, meter rent, arrears, and late payment surcharges. Additional features include a \textbf{Consumer Self-Service Portal} for end-user access to billing history and PDF invoices, bulk meter reading import via Excel spreadsheets with automatic bill generation, server-side \textbf{PDF bill generation}, role-based authentication, analytics dashboards, and integrated \textbf{WhatsApp bill sharing}.
+
+By digitizing the complete billing lifecycle, eMeter significantly improves operational efficiency, reduces human error, and enhances transparency in utility management. The scalable architecture of the system also provides a strong foundation for future integration with \textbf{Smart Meter} and \textbf{IoT-based} utility systems.
+
+\clearpage
+\pagenumbering{arabic}
+
+\end{document}

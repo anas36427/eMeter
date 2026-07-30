@@ -48,10 +48,14 @@ export default function ConsumerBills() {
         billing_type: fullBill.billing_type,
         load_kw: fullBill.load_kw,
         meter_type: fullBill.meter_type,
+        reading_date: fullBill.reading_date || fullBill.meter_reading_date || 'N/A',
+        payment_date: fullBill.payment_date || fullBill.paid_date || 'N/A',
         consumer_name: fullBill.consumer_name,
         consumer_number: fullBill.consumer_number,
         meter_number: fullBill.meter_number,
         address: fullBill.address,
+        department: fullBill.department || fullBill.consumer_department || 'N/A',
+        post: fullBill.post || fullBill.designation || fullBill.consumer_designation || 'N/A',
         previous_reading: fullBill.previous_reading,
         current_reading: fullBill.current_reading,
         units: fullBill.units || fullBill.units_consumed,
@@ -67,8 +71,16 @@ export default function ConsumerBills() {
         status: fullBill.status,
       });
 
+      // Position iframe off-screen without display:none so browser layout engine retains canonical styling and print rules
       const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '800px';
+      iframe.style.height = '1000px';
+      iframe.style.border = '0';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
       document.body.appendChild(iframe);
       iframe.contentDocument!.write(html);
       iframe.contentDocument!.close();

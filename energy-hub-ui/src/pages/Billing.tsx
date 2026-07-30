@@ -15,6 +15,7 @@ import {
 import { getBills, getBill, markPaid, markUnpaid } from "@/lib/api";
 import { generateBillHtml } from "@/lib/billHtml";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 import { useSearch } from "@/contexts/SearchContext";
@@ -171,10 +172,14 @@ const Billing = () => {
         billing_type: b.billing_type,
         load_kw: b.load_kw,
         meter_type: b.meter_type,
+        reading_date: b.reading_date || b.meter_reading_date || 'N/A',
+        payment_date: b.payment_date || b.paid_date || 'N/A',
         consumer_name: b.consumer_name,
         consumer_number: b.consumer_number,
         meter_number: b.meter_number,
         address: b.address,
+        department: b.department || b.consumer_department || 'N/A',
+        post: b.post || b.designation || b.consumer_designation || 'N/A',
         previous_reading: b.previous_reading,
         current_reading: b.current_reading,
         units: b.units,
@@ -189,9 +194,16 @@ const Billing = () => {
         grand_total: b.total_amount,
         status: b.status,
       });
-      // Use print-to-PDF via a hidden iframe
+      // Position iframe off-screen without display:none so browser layout engine retains canonical styling and print rules
       const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '800px';
+      iframe.style.height = '1000px';
+      iframe.style.border = '0';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
       document.body.appendChild(iframe);
       iframe.contentDocument!.write(html);
       iframe.contentDocument!.close();
@@ -222,10 +234,14 @@ const Billing = () => {
         billing_type: b.billing_type,
         load_kw: b.load_kw,
         meter_type: b.meter_type,
+        reading_date: b.reading_date || b.meter_reading_date || 'N/A',
+        payment_date: b.payment_date || b.paid_date || 'N/A',
         consumer_name: b.consumer_name,
         consumer_number: b.consumer_number,
         meter_number: b.meter_number,
         address: b.address,
+        department: b.department || b.consumer_department || 'N/A',
+        post: b.post || b.designation || b.consumer_designation || 'N/A',
         previous_reading: b.previous_reading,
         current_reading: b.current_reading,
         units: b.units,
@@ -319,13 +335,13 @@ const Billing = () => {
 
   if (initialLoad) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
-        </div>
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <TableSkeleton
+        columns={9}
+        rows={8}
+        showFilterBar
+        showSummaryCards
+        pageTitle
+      />
     );
   }
 

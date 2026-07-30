@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getConsumers, submitReading, getConsumerReadings, bulkGenerateBills, manualGenerateBill, importReadingsExcel } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -552,10 +552,12 @@ const Readings = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <TableSkeleton
+        columns={5}
+        rows={8}
+        showFilterBar={false}
+        pageTitle
+      />
     );
   }
 
