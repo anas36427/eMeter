@@ -1595,6 +1595,7 @@ def api_get_settings(request):
         'phase_1_rent': settings_obj.phase_1_rent,
         'phase_3_rent': settings_obj.phase_3_rent,
         'duty_percentage': settings_obj.duty_percentage,
+        'lps_rate': float(settings_obj.lps_rate),
     }
     return JsonResponse(data)
 
@@ -1624,6 +1625,11 @@ def api_update_settings(request):
             settings_obj.phase_3_rent = float(data['phase_3_rent'])
         if 'duty_percentage' in data:
             settings_obj.duty_percentage = float(data['duty_percentage'])
+        if 'lps_rate' in data:
+            lps_val = float(data['lps_rate'])
+            if not (0 < lps_val <= 100):
+                return JsonResponse({'success': False, 'error': 'lps_rate must be between 0 and 100.'}, status=400)
+            settings_obj.lps_rate = lps_val
             
         settings_obj.save()
         return JsonResponse({'success': True, 'message': 'Settings updated successfully'})

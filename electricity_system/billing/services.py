@@ -164,7 +164,35 @@ class BillingService:
             manual_override_reason=manual_override_reason
         )
 
-        # 4. Calculate Charges using central function
+        # 4a. Carry-Forward Arrear Injection (Hybrid Model)
+        # Query all locked, unpaid bills for this consumer (excluding the bill just created).
+        from decimal import Decimal as D
+        unpaid_bills = Bill.objects.filter(
+            consumer=consumer,
+            status__in=['issued', 'overdue'],
+            is_locked=True
+        ).exclude(pk=bill.pk)
+
+        if unpaid_bills.exists():
+            s = BillingSettings.get_settings()
+            lps_rate = D(str(s.lps_rate)) / D('100')  # e.g. 1.50 -> 0.0150
+            unpaid_principal = D('0')
+            for unpaid in unpaid_bills:
+                # Use snapshot total if available; subtract any partial payment
+                principal = D(str(unpaid.total_amount_snapshot or unpaid.total_amount))
+                paid = D(str(unpaid.paid_amount or 0))
+                unpaid_principal += max(D('0'), principal - paid)
+
+            lps_amount = round(unpaid_principal * lps_rate, 2)
+            # Update the bill's arrear fields on the DB object so calculate_bill picks them up
+            Bill.objects.filter(pk=bill.pk).update(
+                arrears=unpaid_principal,
+                late_payment_surcharge=lps_amount
+            )
+            bill.arrears = float(unpaid_principal)
+            bill.late_payment_surcharge = float(lps_amount)
+
+        # 4b. Calculate Charges using central function
         bill = BillingService.calculate_bill(bill.id)
 
         # 5. Populate Immutable Snapshots
@@ -216,7 +244,10 @@ class BillingService:
         
         m_type = getattr(bill.consumer, 'meter_type', 'analog')
         bill.meter_rent = float(settings.phase_1_rent if m_type == 'analog' else settings.phase_3_rent)
-        bill.late_payment_surcharge = round(bill.arrears * 0.015, 2) if bill.arrears > 0 else 0.0
+        # Use dynamic lps_rate from BillingSettings — NOT a hardcoded constant
+        from decimal import Decimal as D
+        lps_rate = D(str(settings.lps_rate)) / D('100')  # e.g. 1.50 → 0.0150
+        bill.late_payment_surcharge = float(round(D(str(bill.arrears)) * lps_rate, 2)) if bill.arrears > 0 else 0.0
         
         bill.total_amount = round(
             Decimal(str(bill.energy_charges)) + Decimal(str(bill.fixed_charges)) + Decimal(str(bill.duty_charge)) + 
@@ -259,6 +290,7 @@ class BillingService:
             'regulatory_surcharge': bill.regulatory_surcharge,
             'arrears': bill.arrears,
             'late_payment_surcharge': bill.late_payment_surcharge,
+            'lps_rate': float(BillingSettings.get_settings().lps_rate),
             'total_amount': bill.total_amount_snapshot or bill.total_amount,
             'total_payable': int(round(bill.total_amount_snapshot or bill.total_amount)),
             'current_year': timezone.now().year,

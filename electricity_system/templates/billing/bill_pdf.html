@@ -276,13 +276,11 @@
             {% endif %}
             {% if arrears|default:0 > 0 %}
             <tr class="bg-red-light">
-                <td class="text-red-dark">Previous Arrears</td>
+                <td class="text-red-dark">Prior Arrears (Outstanding Balance)</td>
                 <td class="text-right text-red-dark font-bold">{{ arrears|default:0|floatformat:2 }}</td>
             </tr>
-            {% endif %}
-            {% if late_payment_surcharge|default:0 > 0 %}
             <tr class="bg-red-light">
-                <td class="text-red-dark">Late Payment Surcharge</td>
+                <td class="text-red-dark">Late Payment Surcharge ({{ lps_rate|default:'1.50' }}%)</td>
                 <td class="text-right text-red-dark font-bold">{{ late_payment_surcharge|default:0|floatformat:2 }}</td>
             </tr>
             {% endif %}

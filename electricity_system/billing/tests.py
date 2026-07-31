@@ -197,7 +197,7 @@ class BillingMathUnitTest(TestCase):
         self.assertAlmostEqual(bill.fixed_charges, 5.0 * 400.0, places=2)
 
     def test_late_payment_surcharge_on_arrears(self):
-        """late_payment_surcharge = arrears × 0.015 when arrears > 0."""
+        """late_payment_surcharge = arrears × (lps_rate / 100) when arrears > 0."""
         reading = MeterReading.objects.create(
             consumer=self.consumer, previous_reading=0,
             current_reading=100, reading_date=date.today())
@@ -208,9 +208,11 @@ class BillingMathUnitTest(TestCase):
             due_date=date.today() + timedelta(days=30),
         )
         from .services import BillingService
+        from decimal import Decimal
         BillingService.calculate_bill(bill.id)
         bill.refresh_from_db()
-        expected_lps = round(1000.0 * 0.015, 2)
+        lps_rate = float(BillingSettings.get_settings().lps_rate) / 100.0
+        expected_lps = round(1000.0 * lps_rate, 2)
         self.assertAlmostEqual(bill.late_payment_surcharge, expected_lps, places=2,
             msg=f"late_payment_surcharge should be {expected_lps}, got {bill.late_payment_surcharge}")
 
@@ -317,9 +319,19 @@ class ReadingAndBillIntegrationTest(TestCase):
 
     def test_units_consumed_calculated_correctly(self):
         """When previous reading is 200 and current is 350, units = 150."""
-        MeterReading.objects.create(
-            consumer=self.consumer, previous_reading=0,
-            current_reading=200, reading_date=date.today() - timedelta(days=30))
+        # Use the full service to create the seed reading so meter assignment is properly linked.
+        # Use 35 days ago to guarantee the seed falls in a DIFFERENT calendar month from today.
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.get(username="reader")
+        from .services import BillingService
+        seed_date = date.today() - timedelta(days=35)
+        BillingService.generate_final_bill(
+            consumer=self.consumer,
+            current_reading=200,
+            reading_date=seed_date,
+            user=user,
+        )
 
         payload = {"consumer_id": self.consumer.id,
                    "current_reading": 350,
@@ -420,11 +432,13 @@ class DuplicateReadingTest(TestCase):
             msg="DB must have exactly 1 bill even after a duplicate attempt")
 
     def test_different_dates_both_succeed(self):
-        """Two readings on different dates must both be accepted."""
-        r1 = self._submit(300, date.today() - timedelta(days=30))
+        """Two readings on different dates in DIFFERENT calendar months must both be accepted."""
+        # Use 35 days ago to guarantee the first reading falls in a different calendar month.
+        r1 = self._submit(300, date.today() - timedelta(days=35))
+        self.assertEqual(r1.status_code, 200, msg=f"First reading failed: {r1.json()}")
+        # Second reading is today (a different month from 35 days ago).
         r2 = self._submit(450, date.today())
-        self.assertEqual(r1.status_code, 200)
-        self.assertEqual(r2.status_code, 200)
+        self.assertEqual(r2.status_code, 200, msg=f"Second reading failed: {r2.json()}")
         self.assertEqual(MeterReading.objects.filter(consumer=self.consumer).count(), 2)
         self.assertEqual(Bill.objects.filter(consumer=self.consumer).count(), 2)
 

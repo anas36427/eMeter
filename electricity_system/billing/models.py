@@ -624,6 +624,10 @@ class BillingSettings(models.Model):
     phase_1_rent       = models.FloatField(default=10.0)
     phase_3_rent       = models.FloatField(default=25.0)
     duty_percentage    = models.FloatField(default=7.5)
+    lps_rate           = models.DecimalField(
+        max_digits=5, decimal_places=2, default=1.50,
+        help_text="Late Payment Surcharge rate in % applied per billing cycle on the total outstanding principal."
+    )
     updated_at         = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -651,6 +655,7 @@ class BillingSettings(models.Model):
                 phase_1_rent        = 10.0
                 phase_3_rent        = 25.0
                 duty_percentage     = 7.5
+                lps_rate            = 1.50
                 updated_at          = None
                 def save(self, *args, **kwargs):
                     pass  # no-op fallback
