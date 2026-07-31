@@ -178,10 +178,14 @@ class BillingService:
             lps_rate = D(str(s.lps_rate)) / D('100')  # e.g. 1.50 -> 0.0150
             unpaid_principal = D('0')
             for unpaid in unpaid_bills:
-                # Use snapshot total if available; subtract any partial payment
-                principal = D(str(unpaid.total_amount_snapshot or unpaid.total_amount))
+                # To prevent double-counting, we extract ONLY the new charges + LPS generated in this specific bill.
+                # We subtract the carried-forward arrears, because those are already accounted for in older bills.
+                bill_total = D(str(unpaid.total_amount_snapshot or unpaid.total_amount))
+                bill_arrears = D(str(unpaid.arrears or 0))
+                net_new_charges = bill_total - bill_arrears
+                
                 paid = D(str(unpaid.paid_amount or 0))
-                unpaid_principal += max(D('0'), principal - paid)
+                unpaid_principal += max(D('0'), net_new_charges - paid)
 
             lps_amount = round(unpaid_principal * lps_rate, 2)
             # Update the bill's arrear fields on the DB object so calculate_bill picks them up
