@@ -36,6 +36,7 @@ export interface BillHtmlData {
   regulatory_surcharge?: number;
   arrears?: number;
   late_payment_surcharge?: number;
+  lps_rate?: number;
   grand_total?: number;
   total_amount?: number;
   status?: string;
@@ -55,8 +56,8 @@ const escapeHtml = (str?: string | number | null): string => {
 export function generateBillHtml(bill: BillHtmlData): string {
   const grandTotal = Number(bill.grand_total ?? bill.total_amount ?? 0);
   const totalPayable = Math.round(grandTotal);
-  const arrears = Number(bill.arrears ?? 0);
   const lps = Number(bill.late_payment_surcharge ?? 0);
+  const lpsRate = bill.lps_rate ? Number(bill.lps_rate).toFixed(2) : '1.50';
   const regulatory = Number(bill.regulatory_surcharge ?? 0);
 
   const connType = bill.connection_type
@@ -353,12 +354,12 @@ export function generateBillHtml(bill: BillHtmlData): string {
                 </tr>` : ''}
                 ${arrears > 0 ? `
                 <tr class="arrear-row">
-                    <td class="arrear-text">Previous Arrears</td>
+                    <td class="arrear-text">Prior Arrears (Outstanding Balance)</td>
                     <td class="text-right arrear-text"><strong>${fmt2(arrears)}</strong></td>
                 </tr>` : ''}
                 ${lps > 0 ? `
                 <tr class="arrear-row">
-                    <td class="arrear-text">Late Payment Surcharge</td>
+                    <td class="arrear-text">Late Payment Surcharge (${lpsRate}%)</td>
                     <td class="text-right arrear-text"><strong>${fmt2(lps)}</strong></td>
                 </tr>` : ''}
                 <tr class="bold" style="background-color: #f9fafb;">
